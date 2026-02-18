@@ -45,9 +45,6 @@ const initialResources: Resource[] = [];
 
 
 export default function ResourcesPage() {
-  // Search state for dropdowns (to avoid hooks-in-render error)
-  const [yearSearch, setYearSearch] = React.useState("");
-  const [moduleSearch, setModuleSearch] = React.useState("");
 
   const [resources, setResources] = useState<Resource[]>(initialResources);
   const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string }>({ year: '', semester: '', module_name: '' });
@@ -237,42 +234,30 @@ export default function ResourcesPage() {
                 <FormField
                   control={form.control}
                   name="year"
-                  render={({ field }) => {
-                    const filteredYears = yearOptions.filter((y) => y.label.toLowerCase().includes(yearSearch.toLowerCase()));
-                    return (
-                      <FormItem>
-                        <FormLabel>Year</FormLabel>
-                        <Select
-                          onValueChange={(val) => {
-                            field.onChange(val);
-                            form.setValue('semester', '');
-                            form.setValue('module_name', '');
-                          }}
-                          value={field.value}
-                          defaultValue=""
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <div className="px-2 py-1">
-                              <input
-                                type="text"
-                                placeholder="Search year..."
-                                className="w-full border rounded px-2 py-1 mb-2 text-sm"
-                                value={yearSearch}
-                                onChange={e => setYearSearch(e.target.value)}
-                              />
-                            </div>
-                            {filteredYears.map((y) => (
-                              <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Year</FormLabel>
+                      <Select
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                          form.setValue('semester', '');
+                          form.setValue('module_name', '');
+                        }}
+                        value={field.value}
+                        defaultValue=""
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {yearOptions.map((y) => (
+                            <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 {/* Semester Dropdown */}
                 <FormField
@@ -311,7 +296,6 @@ export default function ResourcesPage() {
                     const year = form.watch('year');
                     const semester = form.watch('semester');
                     const moduleOptions = year && semester ? modulesByYearSemester[year]?.[semester] || [] : [];
-                    const filteredModules = moduleOptions.filter((m) => m.label.toLowerCase().includes(moduleSearch.toLowerCase()));
                     return (
                       <FormItem>
                         <FormLabel>Module</FormLabel>
@@ -325,16 +309,7 @@ export default function ResourcesPage() {
                             <SelectValue placeholder="Select Module" />
                           </SelectTrigger>
                           <SelectContent>
-                            <div className="px-2 py-1">
-                              <input
-                                type="text"
-                                placeholder="Search module..."
-                                className="w-full border rounded px-2 py-1 mb-2 text-sm"
-                                value={moduleSearch}
-                                onChange={e => setModuleSearch(e.target.value)}
-                              />
-                            </div>
-                            {filteredModules.map((m) => (
+                            {moduleOptions.map((m) => (
                               <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                             ))}
                           </SelectContent>

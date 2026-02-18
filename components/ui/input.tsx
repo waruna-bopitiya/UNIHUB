@@ -15,11 +15,13 @@ function Input({ className, type, value, defaultValue, ...props }: React.Compone
     ),
     ...props,
   };
-  // Only set value/defaultValue for non-file inputs
-  if (type !== 'file') {
+  // Never set value/defaultValue for file inputs
+  if (type === 'file') {
+    delete inputProps.value;
+    delete inputProps.defaultValue;
+  } else {
     if (value !== undefined) {
       inputProps.value = value ?? '';
-      // Do NOT set defaultValue if value is set
     } else if (defaultValue !== undefined) {
       inputProps.defaultValue = defaultValue;
     }
