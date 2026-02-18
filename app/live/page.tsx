@@ -1,7 +1,9 @@
+"use client";
 import { AppLayout } from '@/components/layout/app-layout'
 import { StreamPlayer } from '@/components/live/stream-player'
 import { ChatPanel } from '@/components/live/chat-panel'
 import { Users, Clock, Share2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const mockMessages = [
   { id: '1', author: 'Emma', message: 'Great explanation!', timestamp: '2m' },
@@ -40,9 +42,22 @@ const upcomingSessions = [
 ]
 
 export default function LivePage() {
+  const router = useRouter();
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto p-6">
+        {/* Create Live Stream Button */}
+        <div className="flex justify-end mb-6">
+          <button
+            className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground rounded-lg font-semibold shadow hover:opacity-90 transition-opacity"
+            onClick={() => router.push('/live/create')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Create Live Stream
+          </button>
+        </div>
         {/* Current Live Stream */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Main Stream */}
