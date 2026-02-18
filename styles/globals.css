@@ -1,3 +1,77 @@
+/* Resources Page Styles */
+.resources-container {
+  padding: 2rem;
+}
+.resources-form {
+  margin-bottom: 2rem;
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+.resources-form h2 {
+  margin-bottom: 1rem;
+}
+.resources-form select,
+.resources-form input[type="text"],
+.resources-form input[type="file"] {
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-input);
+}
+.resources-form button {
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.resources-form button:hover {
+  background: var(--color-sidebar-primary);
+}
+.resources-filter {
+  margin-bottom: 1.5rem;
+}
+.resources-filter select {
+  margin-right: 1rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-input);
+}
+.resource-card {
+  border: 1px solid var(--color-border);
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+}
+.resource-card b {
+  font-size: 1.1rem;
+}
+.resource-card button {
+  margin-left: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-muted);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.resource-card button:hover {
+  background: var(--color-accent);
+}
+.resource-card a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  margin-top: 0.5rem;
+  display: inline-block;
+}
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
