@@ -67,44 +67,60 @@ export default function CreateLiveStreamPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // 4. Create Stream Handler
+  // 4. Create Stream Handler – calls the real YouTube Data API v3 server route
   const handleCreateStream = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-        const data = new FormData();
-        data.append('title', formData.title);
-        // ... append other fields
+      const res = await fetch('/api/live/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          description: `${academicData.year} – ${academicData.semester} – ${academicData.module_name}`,
+          scheduledStartTime: new Date(formData.scheduledStartTime).toISOString(),
+        }),
+      });
 
-        console.log("Creating Stream...");
-        
-        // *** Backend API Call Simulation ***
-        setTimeout(() => {
-            setLoading(false);
-            setStreamCreated(true);
-            setStreamInfo({
-                ...streamInfo,
-                streamKey: "abcd-1234-efgh-5678",
-                videoId: "jfKfPfyJRdk" // Example 'Lofi Girl' video ID for demo (Replace with real ID)
-            });
-            // Initially waiting for OBS
-            setConnectionStatus('offline'); 
-        }, 2000);
+      const data = await res.json();
 
-    } catch (error) {
-        console.error("Error creating stream", error);
-        setLoading(false);
+      if (!res.ok) throw new Error(data.error ?? 'Failed to create stream');
+
+      setStreamCreated(true);
+      setStreamInfo({
+        streamKey: data.streamKey,
+        streamUrl: data.streamUrl,
+        videoId: data.videoId,
+      });
+      setConnectionStatus('offline');
+    } catch (error: any) {
+      console.error('Error creating stream', error);
+      alert(`Could not create stream: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // *** TEST FUNCTION: Simulate OBS Connecting ***
-  // (Aththa wadedi meka Backend eken polling walin check karanna one)
-  const simulateOBSConnection = () => {
+  // *** TEST FUNCTION: Poll YouTube for stream active status ***
+  const simulateOBSConnection = async () => {
+    if (!streamInfo.videoId) return;
     setConnectionStatus('connecting');
-    setTimeout(() => {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails&id=${streamInfo.videoId}&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ?? ''}`
+      );
+      const data = await res.json();
+      const status = data.items?.[0]?.snippet?.liveBroadcastContent;
+      if (status === 'live') {
         setConnectionStatus('live');
-    }, 2000);
+      } else {
+        setConnectionStatus('offline');
+        alert('Stream is not live yet. Start streaming in OBS first, then check again.');
+      }
+    } catch {
+      setConnectionStatus('offline');
+    }
   };
 
   return (
@@ -150,14 +166,13 @@ export default function CreateLiveStreamPage() {
                                     <WifiOff className="w-12 h-12 text-gray-600" />
                                 </div>
                                 <h3 className="text-gray-400 font-medium">Stream Created & Ready</h3>
-                                <p className="text-gray-500 text-sm mt-1">Connect streaming software (OBS) to start preview.</p>
+                                <p className="text-gray-500 text-sm mt-1">Open OBS → Settings → Stream → paste the key &amp; URL from the right panel, then click "Start Streaming".</p>
                                 
-                                {/* TEST BUTTON: Remove this in production */}
                                 <button 
                                     onClick={simulateOBSConnection}
-                                    className="mt-6 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs text-white rounded border border-gray-700 transition"
+                                    className="mt-6 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs text-white rounded border border-gray-700 transition flex items-center gap-2 mx-auto"
                                 >
-                                    (Simulate OBS Connection)
+                                    <RefreshCw className="w-3 h-3" /> Check if stream is live
                                 </button>
                             </div>
                         ) : (
