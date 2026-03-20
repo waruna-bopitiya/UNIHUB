@@ -8,6 +8,7 @@ const navItems = [
   { href: '/', label: 'Home Feed', icon: Home },
   { href: '/live', label: 'Kuppi Live', icon: Video },
   { href: '/library', label: 'Library', icon: BookOpen },
+  { href: '/library/resources', label: 'Resources', icon: BookOpen },
   { href: '/community', label: 'Community', icon: Users },
 ]
 
