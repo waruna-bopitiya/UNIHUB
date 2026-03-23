@@ -1,6 +1,6 @@
 import QuestionCard from "@/components/qna/QuestionCard"
 import Link from "next/link"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, ArrowLeft } from "lucide-react"
 
 // Step 1: Mock data array එක (මේකත් මෙතනම)
 const mockQuestions = [
@@ -58,6 +58,15 @@ const mockQuestions = [
 export default function QnaPage() {
   return (
     <div className="container max-w-4xl mx-auto py-6 px-4">
+      {/* Back button */}
+      <Link 
+        href="/"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to home
+      </Link>
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Questions & Answers</h1>
