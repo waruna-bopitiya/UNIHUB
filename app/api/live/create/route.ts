@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYouTubeClient } from '@/lib/youtube'
+import { Readable } from 'stream'
 
 export async function POST(req: NextRequest) {
   try {
-    const { title, description, scheduledStartTime } = await req.json()
+    const { title, description, scheduledStartTime, thumbnailBase64, thumbnailMime } =
+      await req.json()
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Stream title is required' }, { status: 400 })
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest) {
           scheduledStartTime: scheduledStartTime ?? new Date().toISOString(),
         },
         status: {
-          privacyStatus: 'public',
+          privacyStatus: 'unlisted',
           selfDeclaredMadeForKids: false,
         },
         contentDetails: {
@@ -63,7 +65,24 @@ export async function POST(req: NextRequest) {
       streamId,
     })
 
-    return NextResponse.json({ videoId, streamKey, streamUrl })
+    // ── Step 4: Upload custom thumbnail (if provided) ─────────────────────────
+    let thumbnailUrl: string | null = null
+    if (thumbnailBase64 && thumbnailMime) {
+      try {
+        const imageBuffer = Buffer.from(thumbnailBase64, 'base64')
+        const readable = Readable.from(imageBuffer)
+        await youtube.thumbnails.set({
+          videoId,
+          media: { mimeType: thumbnailMime, body: readable },
+        })
+        // YouTube thumbnail URL (available after a few seconds, use standard format)
+        thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      } catch (thumbErr: any) {
+        console.warn('[Thumbnail upload skipped]', thumbErr?.message)
+      }
+    }
+
+    return NextResponse.json({ videoId, streamKey, streamUrl, thumbnailUrl })
   } catch (error: any) {
     const message =
       error?.response?.data?.error?.message ??
