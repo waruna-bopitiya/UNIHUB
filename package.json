@@ -8,6 +8,7 @@
   "main": "index.js",
   "directories": {
     "lib": "lib"
+
   },
   "scripts": {
     "dev": "next dev",
