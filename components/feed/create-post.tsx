@@ -1,17 +1,45 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, Image, FileText } from 'lucide-react'
+import { Send, Image, FileText, Loader2 } from 'lucide-react'
 
-export function CreatePost() {
+interface CreatePostProps {
+  onPostCreated?: (post: any) => void
+}
+
+export function CreatePost({ onPostCreated }: CreatePostProps) {
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle post submission
-    setContent('')
-    setCategory('')
+    if (!content.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          author_name: 'You',
+          author_avatar: 'Y',
+          author_role: 'Student',
+          content: content.trim(),
+          category: category || 'General',
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to post')
+      const newPost = await res.json()
+      onPostCreated?.(newPost)
+      setContent('')
+      setCategory('')
+    } catch {
+      setError('Could not post. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -50,6 +78,8 @@ export function CreatePost() {
         </select>
       </div>
 
+      {error && <p className="text-sm text-destructive mb-3">{error}</p>}
+
       {/* Action Buttons */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
@@ -68,11 +98,11 @@ export function CreatePost() {
         </div>
         <button
           type="submit"
-          disabled={!content.trim()}
+          disabled={!content.trim() || loading}
           className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          <Send className="w-4 h-4" />
-          Post
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          {loading ? 'Posting…' : 'Post'}
         </button>
       </div>
     </form>
