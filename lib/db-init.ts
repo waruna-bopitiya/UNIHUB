@@ -41,5 +41,30 @@ export async function ensureTablesExist() {
     )
   `
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS subject4years (
+      id              SERIAL PRIMARY KEY,
+      year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
+      semester        INTEGER       NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      subject_code    VARCHAR(50)   NOT NULL,
+      subject_name    VARCHAR(500)  NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      UNIQUE(year, semester, subject_code)
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS resources (
+      id              SERIAL PRIMARY KEY,
+      year            VARCHAR(50)   NOT NULL,
+      semester        VARCHAR(50)   NOT NULL,
+      module_name     VARCHAR(500)  NOT NULL,
+      name            VARCHAR(500)  NOT NULL,
+      resource_type   VARCHAR(50)   NOT NULL,
+      link            TEXT,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `
+
   initialized = true
 }
