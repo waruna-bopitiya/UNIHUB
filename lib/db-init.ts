@@ -6,6 +6,31 @@ export async function ensureTablesExist() {
   if (initialized) return
 
   await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id                   VARCHAR(50)  PRIMARY KEY,
+      first_name           VARCHAR(255) NOT NULL,
+      second_name          VARCHAR(255),
+      email                VARCHAR(255) NOT NULL UNIQUE,
+      phone_number         VARCHAR(20)  NOT NULL,
+      country_code         VARCHAR(10),
+      address              TEXT,
+      gender               VARCHAR(50),
+      year_of_university   INTEGER      NOT NULL CHECK (year_of_university BETWEEN 1 AND 4),
+      semester             INTEGER      NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      password             TEXT         NOT NULL,
+      created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      updated_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      last_login           TIMESTAMPTZ
+    )
+  `
+
+  // Create indexes for performance
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_year_semester ON users(year_of_university, semester)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC NULLS LAST)`
+
+  await sql`
     CREATE TABLE IF NOT EXISTS posts (
       id            SERIAL PRIMARY KEY,
       author_name   VARCHAR(255)  NOT NULL DEFAULT 'Student',
