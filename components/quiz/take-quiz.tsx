@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Clock, CheckCircle, XCircle, ArrowRight } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, ArrowRight, Star } from 'lucide-react'
 
 interface Question {
   id: string
@@ -18,11 +18,37 @@ interface TakeQuizProps {
     duration: number
     questions: Question[]
   }
+  participantScores: {
+    name: string
+    score: number
+    totalQuestions: number
+  }[]
+  quizComments: {
+    name: string
+    message: string
+    date: string
+  }[]
+  quizRatings: {
+    name: string
+    rating: number
+    date: string
+  }[]
+  onAddComment: (name: string, message: string) => void
+  onAddRating: (name: string, rating: number) => void
   onComplete: (score: number, answers: number[]) => void
   onCancel: () => void
 }
 
-export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
+export function TakeQuiz({
+  quiz,
+  participantScores,
+  quizComments,
+  quizRatings,
+  onAddComment,
+  onAddRating,
+  onComplete,
+  onCancel,
+}: TakeQuizProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>(
     Array(quiz.questions.length).fill(null)
@@ -30,6 +56,10 @@ export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
   const [timeRemaining, setTimeRemaining] = useState(quiz.duration * 60) // in seconds
   const [showResults, setShowResults] = useState(false)
   const [score, setScore] = useState(0)
+  const [commentName, setCommentName] = useState('')
+  const [commentMessage, setCommentMessage] = useState('')
+  const [ratingName, setRatingName] = useState('')
+  const [selectedRating, setSelectedRating] = useState<number>(0)
 
   useEffect(() => {
     if (timeRemaining > 0 && !showResults) {
@@ -80,6 +110,28 @@ export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
 
   const getAnsweredCount = () => {
     return answers.filter((a) => a !== null).length
+  }
+
+  const handleAddCommentClick = () => {
+    const trimmedName = commentName.trim()
+    const trimmedMessage = commentMessage.trim()
+
+    if (!trimmedName || !trimmedMessage) {
+      return
+    }
+
+    onAddComment(trimmedName, trimmedMessage)
+    setCommentMessage('')
+  }
+
+  const handleAddRatingClick = () => {
+    const trimmedName = ratingName.trim()
+    if (!trimmedName || selectedRating < 1 || selectedRating > 5) {
+      return
+    }
+
+    onAddRating(trimmedName, selectedRating)
+    setSelectedRating(0)
   }
 
   if (showResults) {
@@ -154,6 +206,127 @@ export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
           })}
         </div>
 
+        <div className="border border-border rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-foreground mb-3">Comments</h3>
+
+          <div className="space-y-3 mb-4">
+            <input
+              type="text"
+              value={commentName}
+              onChange={(e) => setCommentName(e.target.value)}
+              placeholder="Your name"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
+            />
+            <textarea
+              value={commentMessage}
+              onChange={(e) => setCommentMessage(e.target.value)}
+              placeholder="Leave a comment about this quiz"
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground resize-none"
+            />
+            <div className="flex justify-end">
+              <button
+                onClick={handleAddCommentClick}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
+              >
+                Post Comment
+              </button>
+            </div>
+          </div>
+
+          {quizComments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No comments yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {quizComments.map((comment, index) => (
+                <div key={`${comment.name}-${comment.date}-${index}`} className="border border-border rounded-md p-3">
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <p className="font-medium text-foreground">{comment.name}</p>
+                    <p className="text-xs text-muted-foreground">{comment.date}</p>
+                  </div>
+                  <p className="text-sm text-foreground">{comment.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border border-border rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-foreground mb-3">Ratings</h3>
+
+          <div className="space-y-3 mb-4">
+            <input
+              type="text"
+              value={ratingName}
+              onChange={(e) => setRatingName(e.target.value)}
+              placeholder="Your name"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
+            />
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  onClick={() => setSelectedRating(value)}
+                  aria-label={`Rate ${value} star${value > 1 ? 's' : ''}`}
+                  className={`p-2 rounded-md border transition-colors ${
+                    value <= selectedRating
+                      ? 'bg-purple-500/15 text-purple-500 border-purple-500'
+                      : 'bg-background text-muted-foreground border-border hover:border-purple-400'
+                  }`}
+                >
+                  <Star className="w-5 h-5" fill="currentColor" />
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={handleAddRatingClick}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
+              >
+                Submit Rating
+              </button>
+            </div>
+          </div>
+
+          {quizRatings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No ratings yet.</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Average rating:{' '}
+                <span className="font-medium text-foreground">
+                  {(
+                    quizRatings.reduce((sum, item) => sum + item.rating, 0) / quizRatings.length
+                  ).toFixed(1)}
+                  /5
+                </span>
+              </p>
+              {quizRatings.map((rating, index) => (
+                <div
+                  key={`${rating.name}-${rating.date}-${index}`}
+                  className="border border-border rounded-md p-3"
+                >
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <p className="font-medium text-foreground">{rating.name}</p>
+                    <p className="text-xs text-muted-foreground">{rating.date}</p>
+                  </div>
+                  <div className="flex items-center gap-1" aria-label={`Rating ${rating.rating} out of 5`}>
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <Star
+                        key={value}
+                        className={`w-4 h-4 ${
+                          value <= rating.rating ? 'text-purple-500' : 'text-muted-foreground/40'
+                        }`}
+                        fill={value <= rating.rating ? 'currentColor' : 'none'}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           onClick={onCancel}
           className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
@@ -167,8 +340,11 @@ export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
   const question = quiz.questions[currentQuestion]
   const progress = ((currentQuestion + 1) / quiz.questions.length) * 100
 
+  const sortedParticipantScores = [...participantScores].sort((a, b) => b.score - a.score)
+
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
+    <div className="space-y-6">
+      <div className="bg-card border border-border rounded-lg p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -200,7 +376,6 @@ export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
         </div>
       </div>
 
-      {/* Question */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
           {question.question}
@@ -272,6 +447,28 @@ export function TakeQuiz({ quiz, onComplete, onCancel }: TakeQuizProps) {
             </button>
           )}
         </div>
+      </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-lg p-4">
+        <h4 className="font-semibold text-foreground mb-3">Quiz Summary</h4>
+        {sortedParticipantScores.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No results yet for this quiz.</p>
+        ) : (
+          <div className="space-y-2">
+            {sortedParticipantScores.map((entry, index) => (
+              <div
+                key={`${entry.name}-${index}`}
+                className="flex items-center justify-between text-sm border border-border rounded-md px-3 py-2"
+              >
+                <span className="font-medium text-foreground">{entry.name}</span>
+                <span className="text-muted-foreground">
+                  {entry.score}/{entry.totalQuestions}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
