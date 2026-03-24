@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          message: `OTP has been sent to ${email}. ${process.env.NODE_ENV === 'development' ? `(Dev: OTP is ${newOTP})` : ''} Please check your inbox.`,
+          message: `OTP has been sent to ${email}. Please check your inbox.`,
         },
         { status: 200 }
       )
