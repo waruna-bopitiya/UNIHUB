@@ -19,7 +19,7 @@ async function sendOTPEmailWithRetry(email: string, otp: string, maxRetries: num
       const mailOptions = {
         from: process.env.GMAIL_EMAIL,
         to: email,
-        subject: 'UniHub - Password Reset OTP',
+        subject: 'UniHub OTP to Reset Your Password',
         html: `<!DOCTYPE html>
 <html>
   <head>
@@ -32,7 +32,7 @@ async function sendOTPEmailWithRetry(email: string, otp: string, maxRetries: num
         <h1 style="color: white; margin: 0; font-size: 28px;">UniHub</h1>
       </div>
       <div style="padding: 30px 20px;">
-        <h2 style="color: #333; margin-top: 0; text-align: center;">Password Reset OTP</h2>
+        <h2 style="color: #333; margin-top: 0; text-align: center;">UniHub OTP to Reset Your Password</h2>
         <p style="color: #666; font-size: 16px; line-height: 1.6;">
           You requested to reset your password. Use the code below to proceed:
         </p>
