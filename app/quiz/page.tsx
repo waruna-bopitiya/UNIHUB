@@ -595,6 +595,30 @@ const mockQuizCommentsByQuiz: Record<string, QuizComment[]> = {
       message: 'Good quiz. Questions are clear and useful.',
       date: '3/23/2026, 9:15:00 AM',
     },
+    {
+      name: 'Sajee',
+      message: 'Nice for quick revision before class.',
+      date: '3/23/2026, 12:05:00 PM',
+    },
+  ],
+  '2': [
+    {
+      name: 'Malithi',
+      message: 'Algebra section was balanced and fair.',
+      date: '3/22/2026, 4:10:00 PM',
+    },
+  ],
+  '6': [
+    {
+      name: 'Tharushi',
+      message: 'Pattern-based questions were very practical.',
+      date: '3/21/2026, 8:40:00 AM',
+    },
+    {
+      name: 'Dilan',
+      message: 'A bit challenging, but helpful examples.',
+      date: '3/21/2026, 9:25:00 AM',
+    },
   ],
 }
 
@@ -609,6 +633,30 @@ const mockQuizRatingsByQuiz: Record<string, QuizRating[]> = {
       name: 'Ishara',
       rating: 5,
       date: '3/23/2026, 11:20:00 AM',
+    },
+  ],
+  '2': [
+    {
+      name: 'Kasun',
+      rating: 4,
+      date: '3/22/2026, 4:15:00 PM',
+    },
+    {
+      name: 'Malithi',
+      rating: 5,
+      date: '3/22/2026, 5:02:00 PM',
+    },
+  ],
+  '6': [
+    {
+      name: 'Ruvin',
+      rating: 5,
+      date: '3/21/2026, 10:10:00 AM',
+    },
+    {
+      name: 'Tharushi',
+      rating: 4,
+      date: '3/21/2026, 10:22:00 AM',
     },
   ],
 }
