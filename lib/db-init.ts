@@ -44,6 +44,20 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_password_reset_otp_email ON password_reset_otp(email)`
   await sql`CREATE INDEX IF NOT EXISTS idx_password_reset_otp_expires_at ON password_reset_otp(expires_at)`
 
+  // Table for storing OTP for signup email verification
+  await sql`
+    CREATE TABLE IF NOT EXISTS signup_otp (
+      id          SERIAL PRIMARY KEY,
+      email       VARCHAR(255) NOT NULL,
+      otp         VARCHAR(6)   NOT NULL,
+      expires_at  TIMESTAMPTZ  NOT NULL,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_signup_otp_email ON signup_otp(email)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_signup_otp_expires_at ON signup_otp(expires_at)`
+
   await sql`
     CREATE TABLE IF NOT EXISTS posts (
       id            SERIAL PRIMARY KEY,
