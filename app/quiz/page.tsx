@@ -18,6 +18,8 @@ interface Quiz {
   participants: number
   category: string
   difficulty: 'Easy' | 'Medium' | 'Hard'
+  year: number
+  semester: number
 }
 
 interface QuizResult {
@@ -68,6 +70,8 @@ const mockQuizzes: Quiz[] = [
     participants: 234,
     category: 'Computer Science',
     difficulty: 'Medium',
+    year: 1,
+    semester: 1,
   },
   {
     id: '2',
@@ -92,6 +96,8 @@ const mockQuizzes: Quiz[] = [
     participants: 189,
     category: 'Mathematics',
     difficulty: 'Hard',
+    year: 1,
+    semester: 2,
   },
   {
     id: '3',
@@ -137,6 +143,133 @@ const mockQuizzes: Quiz[] = [
     participants: 412,
     category: 'Computer Science',
     difficulty: 'Easy',
+    year: 2,
+    semester: 1,
+  },
+  {
+    id: '4',
+    title: 'Web Development Basics',
+    description: 'Learn the fundamentals of web development',
+    creator: 'Prof. Emily Davis',
+    questions: [
+      {
+        id: '1',
+        question: 'What does HTML stand for?',
+        options: [
+          'Hyper Text Markup Language',
+          'High Tech Modern Language',
+          'Home Tool Markup Language',
+          'Hyperlinks and Text Markup Language',
+        ],
+        correctAnswer: 0,
+      },
+    ],
+    duration: 12,
+    participants: 356,
+    category: 'Computer Science',
+    difficulty: 'Easy',
+    year: 2,
+    semester: 2,
+  },
+  {
+    id: '5',
+    title: 'Database Design and SQL',
+    description: 'Master SQL and relational database concepts',
+    creator: 'Dr. Robert Chen',
+    questions: [
+      {
+        id: '1',
+        question: 'What is a primary key?',
+        options: [
+          'A key that opens databases',
+          'A unique identifier for each record in a table',
+          'The first key in a keyboard',
+          'A password for the database',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 18,
+    participants: 298,
+    category: 'Computer Science',
+    difficulty: 'Medium',
+    year: 3,
+    semester: 1,
+  },
+  {
+    id: '6',
+    title: 'Software Architecture Patterns',
+    description: 'Understand common software architecture patterns',
+    creator: 'Prof. Michael Rodriguez',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the MVC pattern?',
+        options: [
+          'Model-View-Controller',
+          'Multiple-Version-Control',
+          'Memory-Virtual-Cache',
+          'Module-Variable-Container',
+        ],
+        correctAnswer: 0,
+      },
+    ],
+    duration: 20,
+    participants: 245,
+    category: 'Computer Science',
+    difficulty: 'Hard',
+    year: 3,
+    semester: 2,
+  },
+  {
+    id: '7',
+    title: 'Machine Learning Fundamentals',
+    description: 'Introduction to machine learning concepts and algorithms',
+    creator: 'Dr. Lisa Anderson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is supervised learning?',
+        options: [
+          'Learning with a teacher/labeled data',
+          'Learning without labels',
+          'Learning with supervision camera',
+          'A type of unsupervised learning',
+        ],
+        correctAnswer: 0,
+      },
+    ],
+    duration: 25,
+    participants: 189,
+    category: 'Computer Science',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 1,
+  },
+  {
+    id: '8',
+    title: 'Advanced Cloud Computing',
+    description: 'Explore advanced cloud computing technologies and strategies',
+    creator: 'Prof. David Thompson',
+    questions: [
+      {
+        id: '1',
+        question: 'What are the three main cloud service models?',
+        options: [
+          'IaaS, PaaS, SaaS',
+          'Mac, Linux, Windows',
+          'HTTP, FTP, SMTP',
+          'SQL, NoSQL, GraphQL',
+        ],
+        correctAnswer: 0,
+      },
+    ],
+    duration: 22,
+    participants: 167,
+    category: 'Computer Science',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 2,
   },
 ]
 
@@ -145,6 +278,8 @@ export default function QuizPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>(mockQuizzes)
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
 
   const downloadCsv = (fileName: string, rows: string[][]) => {
     const escapeCsv = (value: string | number) => {
@@ -310,7 +445,11 @@ export default function QuizPage() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('create')}
+              onClick={() => {
+                setActiveTab('create')
+                setSelectedYear(null)
+                setSelectedSemester(null)
+              }}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 activeTab === 'create'
                   ? 'text-primary'
@@ -323,7 +462,11 @@ export default function QuizPage() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('results')}
+              onClick={() => {
+                setActiveTab('results')
+                setSelectedYear(null)
+                setSelectedSemester(null)
+              }}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 activeTab === 'results'
                   ? 'text-primary'
@@ -341,23 +484,107 @@ export default function QuizPage() {
         {/* Content */}
         {activeTab === 'browse' && (
           <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quizzes.map((quiz) => (
-                <QuizCard
-                  key={quiz.id}
-                  id={quiz.id}
-                  title={quiz.title}
-                  description={quiz.description}
-                  creator={quiz.creator}
-                  questions={quiz.questions.length}
-                  duration={quiz.duration}
-                  participants={quiz.participants}
-                  category={quiz.category}
-                  difficulty={quiz.difficulty}
-                  onTakeQuiz={handleTakeQuiz}
-                />
-              ))}
-            </div>
+            {/* Year Selection */}
+            {selectedYear === null ? (
+              <div>
+                <h2 className="text-2xl font-bold text-foreground mb-6">Select Year</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => setSelectedYear(year)}
+                      className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-8 hover:bg-gradient-to-br hover:from-primary/20 hover:to-primary/10 hover:border-primary/40 transition-all duration-200 cursor-pointer group"
+                    >
+                      <div className="text-4xl font-bold text-primary mb-2 group-hover:scale-110 transition-transform duration-200">
+                        {year}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Year {year}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : selectedSemester === null ? (
+              /* Semester Selection */
+              <div>
+                <button
+                  onClick={() => setSelectedYear(null)}
+                  className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  ← Back to Years
+                </button>
+                <h2 className="text-2xl font-bold text-foreground mb-6">
+                  Year {selectedYear} - Select Semester
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[1, 2].map((semester) => (
+                    <button
+                      key={semester}
+                      onClick={() => setSelectedSemester(semester)}
+                      className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-lg p-8 hover:bg-gradient-to-br hover:from-secondary/20 hover:to-secondary/10 hover:border-secondary/40 transition-all duration-200 cursor-pointer group"
+                    >
+                      <div className="text-4xl font-bold text-secondary mb-2 group-hover:scale-110 transition-transform duration-200">
+                        {semester}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Semester {semester}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Quiz List */
+              <div>
+                <button
+                  onClick={() => {
+                    setSelectedYear(null)
+                    setSelectedSemester(null)
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  ← Back to Years
+                </button>
+                <h2 className="text-2xl font-bold text-foreground mb-6">
+                  Year {selectedYear} - Semester {selectedSemester}
+                </h2>
+                {(() => {
+                  const filteredQuizzes = quizzes.filter(
+                    (q) => q.year === selectedYear && q.semester === selectedSemester
+                  )
+                  return filteredQuizzes.length === 0 ? (
+                    <div className="text-center py-12">
+                      <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-foreground mb-2">
+                        No quizzes available
+                      </h3>
+                      <p className="text-muted-foreground mb-6">
+                        No quizzes found for Year {selectedYear}, Semester {selectedSemester}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredQuizzes.map((quiz) => (
+                        <QuizCard
+                          key={quiz.id}
+                          id={quiz.id}
+                          title={quiz.title}
+                          description={quiz.description}
+                          creator={quiz.creator}
+                          questions={quiz.questions.length}
+                          duration={quiz.duration}
+                          participants={quiz.participants}
+                          category={quiz.category}
+                          difficulty={quiz.difficulty}
+                          onTakeQuiz={handleTakeQuiz}
+                        />
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
           </div>
         )}
 
