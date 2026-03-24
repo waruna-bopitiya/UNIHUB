@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    const { email, password, rememberMe } = body
+    let { email, password, rememberMe } = body
 
     // Validate required fields
     if (!email || !password) {
@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Normalize email to lowercase for consistency
+    email = email.toLowerCase().trim()
+
     // Validate email format
     if (!email.endsWith('@my.sliit.lk')) {
       return NextResponse.json(
@@ -24,8 +27,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user by email and get last login
-    const users = await sql`SELECT id, first_name, password, last_login FROM users WHERE email = ${email}`
+    // Find user by email and get last login (case-insensitive)
+    const users = await sql`SELECT id, first_name, password, last_login FROM users WHERE LOWER(email) = LOWER(${email})`
 
     if (users.length === 0) {
       return NextResponse.json(

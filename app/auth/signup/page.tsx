@@ -132,7 +132,7 @@ export default function SignupPage() {
       return false
     }
 
-    if (!formData.email.endsWith('@my.sliit.lk')) {
+    if (!formData.email.toLowerCase().endsWith('@my.sliit.lk')) {
       setError('Email must end with @my.sliit.lk')
       return false
     }

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    const { firstName, secondName, email, countryCode, phoneNumber, address, gender, yearOfUniversity, semester, password } = body
+    let { firstName, secondName, email, countryCode, phoneNumber, address, gender, yearOfUniversity, semester, password } = body
 
     // Validate required fields
     if (!firstName || !email || !countryCode || !phoneNumber || !yearOfUniversity || !semester || !password) {
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Normalize email to lowercase for consistency
+    email = email.toLowerCase().trim()
 
     // Combine country code and phone number
     const fullPhoneNumber = `${countryCode} ${phoneNumber}`
@@ -48,8 +51,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if email already exists
-    const existingUser = await sql`SELECT id FROM users WHERE email = ${email}`
+    // Check if email already exists (case-insensitive)
+    const existingUser = await sql`SELECT id FROM users WHERE LOWER(email) = LOWER(${email})`
     if (existingUser.length > 0) {
       return NextResponse.json(
         { error: 'Email already registered' },

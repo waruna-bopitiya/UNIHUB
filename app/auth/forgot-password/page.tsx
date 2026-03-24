@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    if (!email.endsWith('@my.sliit.lk')) {
+    if (!email.toLowerCase().endsWith('@my.sliit.lk')) {
       setError('Email must end with @my.sliit.lk')
       return
     }
@@ -169,10 +169,8 @@ export default function ForgotPasswordPage() {
       }
 
       setSuccess(data.message || 'Password reset successfully')
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push('/auth/login')
-      }, 2000)
+      // Redirect to login immediately
+      router.push('/auth/login')
     } catch (err) {
       setError('An error occurred. Please try again.')
       console.error(err)

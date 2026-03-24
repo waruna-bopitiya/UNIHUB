@@ -262,16 +262,26 @@ export function TopBar({ onMenuClick }: TopBarProps) {
                 </Link>
               </div>
             ) : (
-              /* User Profile Button - show if logged in */
-              <button
-                onClick={handleProfileClick}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-secondary transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <User className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium hidden sm:inline">{firstName || 'Profile'}</span>
-              </button>
+              /* User Profile Button & Logout - show if logged in */
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleProfileClick}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-secondary transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-medium hidden sm:inline">{firstName || 'Profile'}</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-sm font-medium hidden sm:inline">Logout</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
