@@ -436,65 +436,65 @@ const mockQuizzes: Quiz[] = [
   },
   {
     id: '13',
-    title: 'Probability & Statistics - Core Concepts',
-    description: 'Test your understanding of basic probability and statistics principles',
+    title: 'Internet & Web Technology - Core Concepts',
+    description: 'Test your understanding of internet and web technology fundamentals',
     creator: 'Dr. James Wilson',
     questions: [
       {
         id: '1',
-        question: 'What is the probability of getting heads in a fair coin toss?',
-        options: ['0', '0.25', '0.5', '1'],
+        question: 'Which protocol is primarily used to securely load web pages?',
+        options: ['FTP', 'SMTP', 'HTTPS', 'SSH'],
         correctAnswer: 2,
       },
     ],
     duration: 18,
     participants: 191,
-    category: 'Mathematics',
+    category: 'Computer Science',
     difficulty: 'Easy',
-    year: 2,
+    year: 1,
     semester: 2,
-    course: 'Probability & Statistics',
+    course: 'Internet & Web Technology',
   },
   {
     id: '14',
-    title: 'Employability Skill Development - Career Readiness',
-    description: 'Assess practical employability and workplace readiness skills',
+    title: 'Information System & Data Modeling - Foundations',
+    description: 'Assess practical concepts in information systems and data modeling',
     creator: 'Prof. Sarah Chen',
     questions: [
       {
         id: '1',
-        question: 'Which is most important in a professional CV?',
+        question: 'Which model is commonly used for relational database design?',
         options: [
-          'Unrelated personal details',
-          'Clear structure and relevant skills',
-          'Decorative fonts only',
-          'Very long paragraphs',
+          'ER model',
+          'OSI model',
+          'Waterfall model',
+          'MVC model',
         ],
-        correctAnswer: 1,
+        correctAnswer: 0,
       },
     ],
     duration: 14,
     participants: 170,
-    category: 'Professional Development',
+    category: 'Computer Science',
     difficulty: 'Easy',
-    year: 2,
+    year: 1,
     semester: 2,
-    course: 'Employability Skills Development',
+    course: 'Information System & Data Modeling',
   },
   {
     id: '15',
-    title: 'Professional Skills - Workplace Communication',
-    description: 'Practice communication and teamwork in professional environments',
+    title: 'English for Academic Purposes - Academic Writing',
+    description: 'Practice English skills needed for academic communication',
     creator: 'Prof. Emily Davis',
     questions: [
       {
         id: '1',
-        question: 'What improves teamwork effectiveness the most?',
+        question: 'Which is most important in academic writing?',
         options: [
-          'Ignoring feedback',
-          'Clear communication and accountability',
-          'Avoiding meetings always',
-          'Working in isolation',
+          'Informal slang usage',
+          'Clear structure and evidence-based arguments',
+          'Very long sentences only',
+          'No references',
         ],
         correctAnswer: 1,
       },
@@ -503,41 +503,41 @@ const mockQuizzes: Quiz[] = [
     participants: 177,
     category: 'Professional Development',
     difficulty: 'Easy',
-    year: 2,
+    year: 1,
     semester: 2,
-    course: 'Professional Skills',
+    course: 'English for Academic Purposes',
   },
   {
     id: '16',
-    title: 'IT Project - Project Planning Essentials',
-    description: 'Understand planning and execution basics for IT projects',
+    title: 'Software Process Modeling - Process Lifecycle',
+    description: 'Understand software process models and lifecycle practices',
     creator: 'Alex Kumar',
     questions: [
       {
         id: '1',
-        question: 'Which document typically defines project scope?',
-        options: ['Project charter', 'Source code', 'User story map only', 'Email thread'],
-        correctAnswer: 0,
+        question: 'Which model is iterative and risk-driven?',
+        options: ['Waterfall', 'Spiral', 'Big Bang', 'V-Model only'],
+        correctAnswer: 1,
       },
     ],
     duration: 17,
     participants: 183,
-    category: 'Project Management',
+    category: 'Computer Science',
     difficulty: 'Medium',
-    year: 2,
+    year: 1,
     semester: 2,
-    course: 'IT Project',
+    course: 'Software Process Modeling',
   },
   {
     id: '17',
-    title: 'Data Structures & Alogorithms - Fundamentals',
-    description: 'Evaluate your knowledge of key data structure and algorithm concepts',
+    title: 'Object Oriented Concept - Core Principles',
+    description: 'Evaluate your understanding of object-oriented concepts and design',
     creator: 'Dr. Robert Chen',
     questions: [
       {
         id: '1',
-        question: 'Which data structure uses FIFO ordering?',
-        options: ['Stack', 'Queue', 'Tree', 'Graph'],
+        question: 'Which OOP concept allows one interface with many implementations?',
+        options: ['Encapsulation', 'Polymorphism', 'Compilation', 'Serialization'],
         correctAnswer: 1,
       },
     ],
@@ -545,9 +545,9 @@ const mockQuizzes: Quiz[] = [
     participants: 239,
     category: 'Computer Science',
     difficulty: 'Medium',
-    year: 2,
+    year: 1,
     semester: 2,
-    course: 'Data Structures & Alogrithms',
+    course: 'Object Oriented Concept',
   },
   {
     id: '18',
@@ -577,18 +577,97 @@ const mockQuizzes: Quiz[] = [
   },
 ]
 
-const mockParticipantScoresByQuiz: Record<string, ParticipantScoreSummary[]> = {
-  '1': [
-    { name: 'Nimal', score: 8, totalQuestions: 10 },
-    { name: 'Kasuni', score: 7, totalQuestions: 10 },
-  ],
-  '6': [
-    { name: 'Ishara', score: 6, totalQuestions: 10 },
-    { name: 'Tharindu', score: 9, totalQuestions: 10 },
-  ],
+const ensureThreeQuestions = (quiz: Quiz): Quiz => {
+  if (quiz.questions.length >= 3) {
+    return quiz
+  }
+
+  const topic = quiz.course || quiz.category
+  const generatedQuestions = [
+    {
+      id: `auto-${quiz.id}-1`,
+      question: `Which statement best describes a core concept in ${topic}?`,
+      options: [
+        'Only memorizing definitions matters',
+        'Understanding concepts and applying them to problems is essential',
+        'There is always only one way to solve tasks',
+        'Practice is not required if theory is known',
+      ],
+      correctAnswer: 1,
+    },
+    {
+      id: `auto-${quiz.id}-2`,
+      question: `Which practice most improves performance in ${topic}?`,
+      options: [
+        'Skipping revision',
+        'Ignoring feedback',
+        'Regular practice with feedback and reflection',
+        'Studying only the night before',
+      ],
+      correctAnswer: 2,
+    },
+    {
+      id: `auto-${quiz.id}-3`,
+      question: `When solving a ${topic} problem, what should you do first?`,
+      options: [
+        'Guess an answer immediately',
+        'Identify requirements and constraints',
+        'Avoid reading the full question',
+        'Pick the longest option',
+      ],
+      correctAnswer: 1,
+    },
+  ]
+
+  const needed = 3 - quiz.questions.length
+  return {
+    ...quiz,
+    questions: [...quiz.questions, ...generatedQuestions.slice(0, needed)],
+  }
 }
 
-const mockQuizCommentsByQuiz: Record<string, QuizComment[]> = {
+const normalizedQuizzes: Quiz[] = mockQuizzes.map(ensureThreeQuestions)
+
+const studentNames = [
+  'Nimal Perera',
+  'Kasuni Fernando',
+  'Ishara Silva',
+  'Tharindu Jayasuriya',
+  'Sajee Wickramasinghe',
+  'Malithi Gunawardena',
+  'Tharushi Madushani',
+  'Dilan Weerasinghe',
+  'Ruvin Senanayake',
+  'Ayesha Karunaratne',
+  'Chamodi Peris',
+  'Gihan Abeysekera',
+  'Dinuka Sandaruwan',
+  'Piumi Rathnayake',
+  'Kavindu Lakshan',
+  'Hasini Bandara',
+  'Nethmi Upeksha',
+  'Sahan Rajapaksha',
+  'Madhavi Ekanayake',
+  'Naveen Wijesinghe',
+]
+
+const mockParticipantScoresByQuiz: Record<string, ParticipantScoreSummary[]> =
+  normalizedQuizzes.reduce((acc, quiz) => {
+    acc[quiz.id] = studentNames.map((name, index) => {
+      const key = `${quiz.id}-${name}-${index}`
+      const scoreSeed = key.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
+      const score = scoreSeed % (quiz.questions.length + 1)
+      return {
+        name,
+        score,
+        totalQuestions: quiz.questions.length,
+      }
+    })
+
+    return acc
+  }, {} as Record<string, ParticipantScoreSummary[]>)
+
+const baseQuizCommentsByQuiz: Record<string, QuizComment[]> = {
   '1': [
     {
       name: 'Nimal',
@@ -622,7 +701,7 @@ const mockQuizCommentsByQuiz: Record<string, QuizComment[]> = {
   ],
 }
 
-const mockQuizRatingsByQuiz: Record<string, QuizRating[]> = {
+const baseQuizRatingsByQuiz: Record<string, QuizRating[]> = {
   '1': [
     {
       name: 'Kasuni',
@@ -661,6 +740,50 @@ const mockQuizRatingsByQuiz: Record<string, QuizRating[]> = {
   ],
 }
 
+const mockQuizCommentsByQuiz: Record<string, QuizComment[]> = normalizedQuizzes.reduce(
+  (acc, quiz, index) => {
+    const existing = baseQuizCommentsByQuiz[quiz.id] || []
+    const fallbackComments: QuizComment[] = [
+      {
+        name: `Student ${index + 1}`,
+        message: `This ${quiz.course} quiz was helpful for revision.`,
+        date: '3/24/2026, 9:00:00 AM',
+      },
+      {
+        name: `Learner ${index + 1}`,
+        message: 'Good balance of theory and practical questions.',
+        date: '3/24/2026, 10:20:00 AM',
+      },
+    ]
+
+    acc[quiz.id] = existing.length > 0 ? [...existing, fallbackComments[0]] : fallbackComments
+    return acc
+  },
+  {} as Record<string, QuizComment[]>,
+)
+
+const mockQuizRatingsByQuiz: Record<string, QuizRating[]> = normalizedQuizzes.reduce(
+  (acc, quiz, index) => {
+    const existing = baseQuizRatingsByQuiz[quiz.id] || []
+    const fallbackRatings: QuizRating[] = [
+      {
+        name: `Student ${index + 1}`,
+        rating: 4,
+        date: '3/24/2026, 10:45:00 AM',
+      },
+      {
+        name: `Learner ${index + 1}`,
+        rating: 5,
+        date: '3/24/2026, 11:05:00 AM',
+      },
+    ]
+
+    acc[quiz.id] = existing.length > 0 ? [...existing, fallbackRatings[0]] : fallbackRatings
+    return acc
+  },
+  {} as Record<string, QuizRating[]>,
+)
+
 const scoreChartConfig = {
   participants: {
     label: 'Participants',
@@ -678,7 +801,9 @@ const scoreChartConfig = {
 
 export default function QuizPage() {
   const [activeTab, setActiveTab] = useState<'browse' | 'create' | 'results' | 'score'>('browse')
-  const [quizzes, setQuizzes] = useState<Quiz[]>(mockQuizzes)
+  const [scoreView, setScoreView] = useState<'courseByYear' | 'quizTakers'>('courseByYear')
+  const [selectedScoreYear, setSelectedScoreYear] = useState<number | 'all'>('all')
+  const [quizzes, setQuizzes] = useState<Quiz[]>(normalizedQuizzes)
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null)
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
@@ -687,6 +812,7 @@ export default function QuizPage() {
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
+  const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
 
   const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
     const escapeCsv = (value: string | number) => {
@@ -901,6 +1027,159 @@ export default function QuizPage() {
             10,
         ) / 10
       : 0
+
+  const availableScoreYears = Array.from(new Set(quizzes.map((q) => q.year))).sort((a, b) => a - b)
+
+  const filteredCategorizedScoreData =
+    selectedScoreYear === 'all'
+      ? categorizedScoreData
+      : categorizedScoreData.filter((group) => group.year === selectedScoreYear)
+
+  const participantAttemptRows = [
+    ...Object.entries(mockParticipantScoresByQuiz).flatMap(([quizId, entries]) => {
+      const quiz = quizzes.find((q) => q.id === quizId)
+      if (!quiz) return []
+
+      return entries.map((entry) => ({
+        name: entry.name,
+        quizId,
+        year: quiz.year,
+        semester: quiz.semester,
+        course: quiz.course,
+        quizTitle: quiz.title,
+        percentage: Math.round((entry.score / entry.totalQuestions) * 100),
+      }))
+    }),
+    ...quizResults.map((result) => {
+      const quiz = quizzes.find((q) => q.id === result.quizId)
+      return {
+        name: result.participantName,
+        quizId: result.quizId,
+        year: quiz?.year ?? 0,
+        semester: quiz?.semester ?? 0,
+        course: quiz?.course ?? 'Unknown Course',
+        quizTitle: result.quizTitle,
+        percentage: Math.round((result.score / result.totalQuestions) * 100),
+      }
+    }),
+  ]
+
+  const participantScoreData = Array.from(
+    participantAttemptRows
+      .reduce((map, row) => {
+      if (!map.has(row.name)) {
+        map.set(row.name, {
+          name: row.name,
+          attempts: 0,
+          totalPercentage: 0,
+          quizzes: new Set<string>(),
+        })
+      }
+
+      const participant = map.get(row.name)!
+      participant.attempts += 1
+      participant.totalPercentage += row.percentage
+      participant.quizzes.add(row.quizId)
+
+      return map
+      }, new Map<string, { name: string; attempts: number; totalPercentage: number; quizzes: Set<string> }>())
+      .values(),
+  )
+    .map((participant) => ({
+      name: participant.name,
+      attempts: participant.attempts,
+      quizzesTaken: participant.quizzes.size,
+      averageScore: Math.round((participant.totalPercentage / participant.attempts) * 10) / 10,
+    }))
+    .sort((a, b) => b.averageScore - a.averageScore)
+
+  const allYearCourseEntries = Array.from(
+    quizzes.reduce((map, quiz) => {
+      const key = `${quiz.year}::${quiz.semester}::${quiz.course}`
+      if (!map.has(key)) {
+        map.set(key, { year: quiz.year, semester: quiz.semester, course: quiz.course })
+      }
+      return map
+    }, new Map<string, { year: number; semester: number; course: string }>()),
+  )
+    .map(([, value]) => value)
+    .sort((a, b) =>
+      a.year === b.year
+        ? a.semester === b.semester
+          ? a.course.localeCompare(b.course)
+          : a.semester - b.semester
+        : a.year - b.year,
+    )
+
+  const courseTakerScoreData = allYearCourseEntries.map((entry) => {
+    const rowsForCourse = participantAttemptRows.filter(
+      (row) =>
+        row.year === entry.year &&
+        row.semester === entry.semester &&
+        row.course === entry.course,
+    )
+    const uniqueTakers = new Set(rowsForCourse.map((row) => row.name)).size
+    const attempts = rowsForCourse.length
+    const averageScore =
+      attempts > 0
+        ? Math.round(
+            (rowsForCourse.reduce((sum, row) => sum + row.percentage, 0) / attempts) * 10,
+          ) / 10
+        : 0
+
+    return {
+      year: entry.year,
+      semester: entry.semester,
+      course: entry.course,
+      takers: uniqueTakers,
+      attempts,
+      averageScore,
+    }
+  })
+
+  const courseTakerScoreByYearSemester = Array.from(
+    courseTakerScoreData.reduce((map, row) => {
+      const key = `${row.year}-${row.semester}`
+      if (!map.has(key)) {
+        map.set(key, { year: row.year, semester: row.semester, rows: [] as typeof courseTakerScoreData })
+      }
+      map.get(key)!.rows.push(row)
+      return map
+    }, new Map<string, { year: number; semester: number; rows: typeof courseTakerScoreData }>()),
+  )
+    .map(([, value]) => value)
+    .sort((a, b) => (a.year === b.year ? a.semester - b.semester : a.year - b.year))
+
+  const childScoresByCourseGroup = Array.from(
+    participantAttemptRows
+      .reduce((map, row) => {
+        const groupKey = `${row.year}-${row.semester}-${row.course}`
+        if (!map.has(groupKey)) {
+          map.set(groupKey, new Map<string, { name: string; attempts: number; totalPercentage: number }>())
+        }
+
+        const childMap = map.get(groupKey)!
+        if (!childMap.has(row.name)) {
+          childMap.set(row.name, { name: row.name, attempts: 0, totalPercentage: 0 })
+        }
+
+        const child = childMap.get(row.name)!
+        child.attempts += 1
+        child.totalPercentage += row.percentage
+
+        return map
+      }, new Map<string, Map<string, { name: string; attempts: number; totalPercentage: number }>>())
+      .entries(),
+  ).reduce((acc, [groupKey, childMap]) => {
+    acc[groupKey] = Array.from(childMap.values())
+      .map((child) => ({
+        ...child,
+        averageScore: Math.round((child.totalPercentage / child.attempts) * 10) / 10,
+      }))
+      .sort((a, b) => b.averageScore - a.averageScore)
+
+    return acc
+  }, {} as Record<string, Array<{ name: string; attempts: number; totalPercentage: number; averageScore: number }>>)
 
   if (selectedQuiz) {
     const participantScores: ParticipantScoreSummary[] = [
@@ -1323,6 +1602,40 @@ export default function QuizPage() {
               </p>
             </div>
 
+            <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Score View</label>
+                <select
+                  value={scoreView}
+                  onChange={(e) => setScoreView(e.target.value as 'courseByYear' | 'quizTakers')}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
+                >
+                  <option value="courseByYear">Course Scores by Year</option>
+                  <option value="quizTakers">Quiz Takers Scores</option>
+                </select>
+              </div>
+
+              {scoreView === 'courseByYear' && (
+                <div>
+                  <label className="text-sm text-muted-foreground mb-2 block">Year</label>
+                  <select
+                    value={selectedScoreYear}
+                    onChange={(e) =>
+                      setSelectedScoreYear(e.target.value === 'all' ? 'all' : Number(e.target.value))
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
+                  >
+                    <option value="all">All Years</option>
+                    {availableScoreYears.map((year) => (
+                      <option key={year} value={year}>
+                        Year {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-card border border-border rounded-lg p-5">
                 <p className="text-sm text-muted-foreground mb-1">Total Quizzes</p>
@@ -1330,57 +1643,208 @@ export default function QuizPage() {
               </div>
               <div className="bg-card border border-border rounded-lg p-5">
                 <p className="text-sm text-muted-foreground mb-1">Year/Semester Groups</p>
-                <p className="text-2xl font-bold text-foreground">{categorizedScoreData.length}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {scoreView === 'courseByYear'
+                    ? filteredCategorizedScoreData.length
+                    : courseTakerScoreByYearSemester.length}
+                </p>
               </div>
               <div className="bg-card border border-border rounded-lg p-5">
                 <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
-                <p className="text-2xl font-bold text-foreground">{totalAttempts}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {scoreView === 'courseByYear' ? totalAttempts : participantAttemptRows.length}
+                </p>
               </div>
             </div>
 
-            {categorizedScoreData.map((group) => (
-              <div key={`${group.year}-${group.semester}`} className="bg-card border border-border rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-foreground mb-1">
-                  Year {group.year} - Semester {group.semester}
-                </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Course-wise participants, attempts, and average scores.
-                </p>
-                <ChartContainer
-                  id={`score-${group.year}-${group.semester}`}
-                  config={scoreChartConfig}
-                  className="h-[360px] w-full"
-                >
-                  <BarChart data={group.chartData} margin={{ left: 12, right: 12, top: 16, bottom: 32 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="shortCourse"
-                      tickLine={false}
-                      axisLine={false}
-                      interval={0}
-                      angle={-20}
-                      textAnchor="end"
-                      height={72}
-                    />
-                    <YAxis yAxisId="left" tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={
-                        <ChartTooltipContent
-                          labelFormatter={(_, payload) =>
-                            payload?.[0]?.payload?.course ?? 'Course summary'
+            {scoreView === 'courseByYear' ? (
+              filteredCategorizedScoreData.length === 0 ? (
+                <div className="bg-card border border-border rounded-lg p-8 text-center">
+                  <p className="text-muted-foreground">No course score data for the selected year.</p>
+                </div>
+              ) : (
+                filteredCategorizedScoreData.map((group) => (
+                  <div key={`${group.year}-${group.semester}`} className="bg-card border border-border rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-foreground mb-1">
+                      Year {group.year} - Semester {group.semester}
+                    </h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Course-wise participants, attempts, and average scores.
+                    </p>
+                    <ChartContainer
+                      id={`score-${group.year}-${group.semester}`}
+                      config={scoreChartConfig}
+                      className="h-[360px] w-full"
+                    >
+                      <BarChart data={group.chartData} margin={{ left: 12, right: 12, top: 16, bottom: 32 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                          dataKey="shortCourse"
+                          tickLine={false}
+                          axisLine={false}
+                          interval={0}
+                          angle={-20}
+                          textAnchor="end"
+                          height={72}
+                        />
+                        <YAxis yAxisId="left" tickLine={false} axisLine={false} />
+                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} />
+                        <ChartTooltip
+                          cursor={false}
+                          content={
+                            <ChartTooltipContent
+                              labelFormatter={(_, payload) =>
+                                payload?.[0]?.payload?.course ?? 'Course summary'
+                              }
+                            />
                           }
                         />
-                      }
-                    />
-                    <Bar yAxisId="left" dataKey="participants" fill="var(--color-participants)" radius={4} />
-                    <Bar yAxisId="left" dataKey="attempts" fill="var(--color-attempts)" radius={4} />
-                    <Bar yAxisId="right" dataKey="avgScore" fill="var(--color-avgScore)" radius={4} />
-                  </BarChart>
-                </ChartContainer>
+                        <Bar yAxisId="left" dataKey="participants" fill="var(--color-participants)" radius={4} />
+                        <Bar yAxisId="left" dataKey="attempts" fill="var(--color-attempts)" radius={4} />
+                        <Bar yAxisId="right" dataKey="avgScore" fill="var(--color-avgScore)" radius={4} />
+                      </BarChart>
+                    </ChartContainer>
+                  </div>
+                ))
+              )
+            ) : (
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h4 className="text-lg font-semibold text-foreground mb-1">Quiz Takers Score Summary</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Score summary for students who took quizzes across all courses.
+                </p>
+
+                <div className="space-y-4">
+                  {courseTakerScoreByYearSemester.map((yearGroup) => (
+                    <div
+                      key={`${yearGroup.year}-${yearGroup.semester}`}
+                      className="border border-border rounded-lg p-4"
+                    >
+                      <h5 className="text-base font-semibold text-foreground mb-3">
+                        Year {yearGroup.year} - Semester {yearGroup.semester}
+                      </h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Course</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Takers</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Attempts</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Average Score</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {yearGroup.rows.map((courseRow) => (
+                              <tr
+                                key={`${courseRow.year}-${courseRow.semester}-${courseRow.course}`}
+                                className="border-b border-border/60"
+                              >
+                                <td className="py-2 pr-4 text-foreground font-medium">
+                                  <div
+                                    className="relative inline-block"
+                                    onMouseEnter={() =>
+                                      setHoveredCourseKey(
+                                        `${courseRow.year}-${courseRow.semester}-${courseRow.course}`,
+                                      )
+                                    }
+                                    onMouseLeave={() => setHoveredCourseKey(null)}
+                                  >
+                                    <span className="cursor-help underline decoration-dotted underline-offset-4">
+                                      {courseRow.course}
+                                    </span>
+
+                                    {hoveredCourseKey ===
+                                      `${courseRow.year}-${courseRow.semester}-${courseRow.course}` && (
+                                      <div className="absolute left-0 top-full mt-2 z-20 min-w-[420px] max-w-[520px] rounded-lg border border-border bg-card p-3 shadow-xl">
+                                        <p className="text-xs font-semibold text-foreground mb-2">
+                                          Child Scores
+                                        </p>
+                                        {(childScoresByCourseGroup[
+                                          `${courseRow.year}-${courseRow.semester}-${courseRow.course}`
+                                        ] || []).length === 0 ? (
+                                          <p className="text-xs text-muted-foreground">
+                                            No child scores yet.
+                                          </p>
+                                        ) : (
+                                          <div>
+                                            <p className="text-[11px] text-muted-foreground mb-2">
+                                              Student name and score
+                                            </p>
+                                            <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
+                                              {(childScoresByCourseGroup[
+                                                `${courseRow.year}-${courseRow.semester}-${courseRow.course}`
+                                              ] || []).map((child) => (
+                                                <div key={child.name} className="space-y-1">
+                                                  <div className="flex items-center justify-between gap-3 text-[11px]">
+                                                    <span className="text-foreground font-medium truncate">
+                                                      {child.name}
+                                                    </span>
+                                                    <span className="text-foreground font-semibold">
+                                                      {child.averageScore}%
+                                                    </span>
+                                                  </div>
+                                                  <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                                                    <div
+                                                      className={`h-full rounded-full transition-all ${
+                                                        child.averageScore >= 75
+                                                          ? 'bg-green-500'
+                                                          : child.averageScore >= 50
+                                                          ? 'bg-yellow-500'
+                                                          : 'bg-red-500'
+                                                      }`}
+                                                      style={{ width: `${Math.max(0, Math.min(100, child.averageScore))}%` }}
+                                                    />
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2 pr-4 text-foreground">{courseRow.takers}</td>
+                                <td className="py-2 pr-4 text-foreground">{courseRow.attempts}</td>
+                                <td className="py-2 pr-4 text-foreground">{courseRow.averageScore}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {participantScoreData.length > 0 && (
+                  <div className="mt-6">
+                    <h5 className="text-base font-semibold text-foreground mb-2">Top Takers</h5>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Name</th>
+                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Attempts</th>
+                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Quizzes Taken</th>
+                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Average Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {participantScoreData.slice(0, 8).map((participant) => (
+                            <tr key={participant.name} className="border-b border-border/60">
+                              <td className="py-2 pr-4 text-foreground font-medium">{participant.name}</td>
+                              <td className="py-2 pr-4 text-foreground">{participant.attempts}</td>
+                              <td className="py-2 pr-4 text-foreground">{participant.quizzesTaken}</td>
+                              <td className="py-2 pr-4 text-foreground">{participant.averageScore}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            )}
           </div>
         )}
 

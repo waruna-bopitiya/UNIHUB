@@ -56,10 +56,15 @@ export function TakeQuiz({
   const [timeRemaining, setTimeRemaining] = useState(quiz.duration * 60) // in seconds
   const [showResults, setShowResults] = useState(false)
   const [score, setScore] = useState(0)
+  const [showPreviousScores, setShowPreviousScores] = useState(false)
   const [commentName, setCommentName] = useState('')
   const [commentMessage, setCommentMessage] = useState('')
   const [ratingName, setRatingName] = useState('')
   const [selectedRating, setSelectedRating] = useState<number>(0)
+
+  const previousParticipantScores = [...participantScores]
+    .filter((entry) => entry.name !== 'You')
+    .sort((a, b) => b.score / b.totalQuestions - a.score / a.totalQuestions)
 
   useEffect(() => {
     if (timeRemaining > 0 && !showResults) {
@@ -204,6 +209,55 @@ export function TakeQuiz({
               </div>
             )
           })}
+        </div>
+
+        <div className="border border-border rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="font-semibold text-foreground">Previous Takers Scores</h3>
+            <button
+              onClick={() => setShowPreviousScores((prev) => !prev)}
+              className="px-3 py-1.5 text-sm rounded-md border border-border bg-background text-foreground hover:bg-secondary transition-colors"
+            >
+              {showPreviousScores ? 'Hide Scores' : 'Show Scores'}
+            </button>
+          </div>
+
+          {!showPreviousScores ? (
+            <p className="text-sm text-muted-foreground">
+              Click "Show Scores" to view how previous students scored.
+            </p>
+          ) : previousParticipantScores.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No previous scores yet.</p>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {previousParticipantScores.map((entry, index) => {
+                const percentage = Math.round((entry.score / entry.totalQuestions) * 100)
+                return (
+                  <div
+                    key={`${entry.name}-${entry.score}-${index}`}
+                    className="border border-border rounded-md p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <span className="text-sm font-medium text-foreground">{entry.name}</span>
+                      <span className="text-sm font-semibold text-foreground">{percentage}%</span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          percentage >= 75
+                            ? 'bg-green-500'
+                            : percentage >= 50
+                            ? 'bg-yellow-500'
+                            : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.max(0, Math.min(100, percentage))}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="border border-border rounded-lg p-4 mb-6">
