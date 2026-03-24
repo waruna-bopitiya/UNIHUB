@@ -20,6 +20,7 @@ interface Quiz {
   difficulty: 'Easy' | 'Medium' | 'Hard'
   year: number
   semester: number
+  course: string
 }
 
 interface QuizResult {
@@ -33,108 +34,65 @@ interface QuizResult {
 const mockQuizzes: Quiz[] = [
   {
     id: '1',
-    title: 'Advanced React Hooks & Patterns',
-    description: 'Test your knowledge on React hooks, custom hooks, and advanced patterns',
+    title: 'Communication Skills - Written Communication',
+    description: 'Test your knowledge on written communication techniques',
     creator: 'Prof. Sarah Chen',
     questions: [
       {
         id: '1',
-        question: 'What is the purpose of useEffect hook in React?',
+        question: 'What is the primary goal of written communication?',
         options: [
-          'To manage component state',
-          'To perform side effects in function components',
-          'To create custom hooks',
-          'To handle routing',
-        ],
-        correctAnswer: 1,
-      },
-      {
-        id: '2',
-        question: 'Which hook would you use to memoize a value?',
-        options: ['useState', 'useCallback', 'useMemo', 'useRef'],
-        correctAnswer: 2,
-      },
-      {
-        id: '3',
-        question: 'What does useContext hook do?',
-        options: [
-          'Creates a new context',
-          'Consumes a context value',
-          'Updates context value',
-          'Deletes a context',
+          'To entertain the reader',
+          'To clearly convey information and ideas',
+          'To use complex vocabulary',
+          'To make the text longer',
         ],
         correctAnswer: 1,
       },
     ],
     duration: 15,
     participants: 234,
-    category: 'Computer Science',
-    difficulty: 'Medium',
+    category: 'Communication',
+    difficulty: 'Easy',
     year: 1,
     semester: 1,
+    course: 'Communication Skills',
   },
   {
     id: '2',
-    title: 'Linear Algebra Fundamentals',
-    description: 'Test your understanding of matrices, vectors, and linear transformations',
+    title: 'Mathematics - Algebra Fundamentals',
+    description: 'Test your understanding of algebraic concepts',
     creator: 'Dr. James Wilson',
     questions: [
       {
         id: '1',
-        question: 'What is the determinant of a 2x2 identity matrix?',
-        options: ['0', '1', '2', 'Undefined'],
-        correctAnswer: 1,
-      },
-      {
-        id: '2',
-        question: 'Which operation is NOT commutative for matrices?',
-        options: ['Addition', 'Multiplication', 'Scalar multiplication', 'None of the above'],
+        question: 'What is the solution to 2x + 5 = 13?',
+        options: ['2', '4', '6', '8'],
         correctAnswer: 1,
       },
     ],
     duration: 20,
     participants: 189,
     category: 'Mathematics',
-    difficulty: 'Hard',
+    difficulty: 'Medium',
     year: 1,
-    semester: 2,
+    semester: 1,
+    course: 'Mathematics for Computing',
   },
   {
     id: '3',
-    title: 'Introduction to JavaScript ES6',
-    description: 'Learn about modern JavaScript features and syntax',
+    title: 'Computer Systems - Hardware Basics',
+    description: 'Learn about computer hardware components',
     creator: 'Alex Kumar',
     questions: [
       {
         id: '1',
-        question: 'What is the difference between let and const?',
+        question: 'What does CPU stand for?',
         options: [
-          'let is block-scoped, const is function-scoped',
-          'const cannot be reassigned, let can be',
-          'There is no difference',
-          'let is for strings, const is for numbers',
-        ],
-        correctAnswer: 1,
-      },
-      {
-        id: '2',
-        question: 'What does the spread operator (...) do?',
-        options: [
-          'Deletes elements from an array',
-          'Expands an iterable into individual elements',
-          'Creates a loop',
-          'Checks if an element exists',
-        ],
-        correctAnswer: 1,
-      },
-      {
-        id: '3',
-        question: 'What is a Promise in JavaScript?',
-        options: [
-          'A type of variable',
-          'An object representing eventual completion or failure of an async operation',
-          'A loop structure',
-          'A conditional statement',
+          'Central Process Unit',
+          'Central Processing Unit',
+          'Computer Personal Unit',
+          'Central Processor Utility',
         ],
         correctAnswer: 1,
       },
@@ -143,58 +101,61 @@ const mockQuizzes: Quiz[] = [
     participants: 412,
     category: 'Computer Science',
     difficulty: 'Easy',
-    year: 2,
+    year: 1,
     semester: 1,
+    course: 'Introduction to Computer Systems',
   },
   {
     id: '4',
-    title: 'Web Development Basics',
-    description: 'Learn the fundamentals of web development',
+    title: 'Computing Systems - Operating Systems',
+    description: 'Understand operating systems and their functions',
     creator: 'Prof. Emily Davis',
     questions: [
       {
         id: '1',
-        question: 'What does HTML stand for?',
+        question: 'What is the main role of an operating system?',
         options: [
-          'Hyper Text Markup Language',
-          'High Tech Modern Language',
-          'Home Tool Markup Language',
-          'Hyperlinks and Text Markup Language',
+          'To provide user entertainment',
+          'To manage hardware and software resources',
+          'To create programs',
+          'To store files only',
         ],
-        correctAnswer: 0,
+        correctAnswer: 1,
       },
     ],
     duration: 12,
     participants: 356,
     category: 'Computer Science',
     difficulty: 'Easy',
-    year: 2,
-    semester: 2,
+    year: 1,
+    semester: 1,
+    course: 'Introduction to Computing Systems',
   },
   {
     id: '5',
-    title: 'Database Design and SQL',
-    description: 'Master SQL and relational database concepts',
+    title: 'Programming - Variables and Data Types',
+    description: 'Master variables and data types in programming',
     creator: 'Dr. Robert Chen',
     questions: [
       {
         id: '1',
-        question: 'What is a primary key?',
+        question: 'What is a variable in programming?',
         options: [
-          'A key that opens databases',
-          'A unique identifier for each record in a table',
-          'The first key in a keyboard',
-          'A password for the database',
+          'A named container for storing data values',
+          'A type of loop',
+          'A function parameter',
+          'A conditional statement',
         ],
-        correctAnswer: 1,
+        correctAnswer: 0,
       },
     ],
     duration: 18,
     participants: 298,
     category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 3,
+    difficulty: 'Easy',
+    year: 1,
     semester: 1,
+    course: 'Introduction to Programming',
   },
   {
     id: '6',
@@ -218,8 +179,9 @@ const mockQuizzes: Quiz[] = [
     participants: 245,
     category: 'Computer Science',
     difficulty: 'Hard',
-    year: 3,
-    semester: 2,
+    year: 2,
+    semester: 1,
+    course: 'Software Engineering',
   },
   {
     id: '7',
@@ -243,8 +205,9 @@ const mockQuizzes: Quiz[] = [
     participants: 189,
     category: 'Computer Science',
     difficulty: 'Hard',
-    year: 4,
+    year: 3,
     semester: 1,
+    course: 'Machine Learning',
   },
   {
     id: '8',
@@ -270,6 +233,7 @@ const mockQuizzes: Quiz[] = [
     difficulty: 'Hard',
     year: 4,
     semester: 2,
+    course: 'Cloud Computing',
   },
 ]
 
@@ -280,8 +244,9 @@ export default function QuizPage() {
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
 
-  const downloadCsv = (fileName: string, rows: string[][]) => {
+  const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
     const escapeCsv = (value: string | number) => {
       const normalized = String(value).replace(/\"/g, '""')
       return `"${normalized}"`
@@ -449,6 +414,7 @@ export default function QuizPage() {
                 setActiveTab('create')
                 setSelectedYear(null)
                 setSelectedSemester(null)
+                setSelectedCourse(null)
               }}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 activeTab === 'create'
@@ -466,6 +432,7 @@ export default function QuizPage() {
                 setActiveTab('results')
                 setSelectedYear(null)
                 setSelectedSemester(null)
+                setSelectedCourse(null)
               }}
               className={`px-6 py-3 font-medium transition-colors relative ${
                 activeTab === 'results'
@@ -521,7 +488,10 @@ export default function QuizPage() {
                   {[1, 2].map((semester) => (
                     <button
                       key={semester}
-                      onClick={() => setSelectedSemester(semester)}
+                      onClick={() => {
+                        setSelectedSemester(semester)
+                        setSelectedCourse(null)
+                      }}
                       className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-lg p-8 hover:bg-gradient-to-br hover:from-secondary/20 hover:to-secondary/10 hover:border-secondary/40 transition-all duration-200 cursor-pointer group"
                     >
                       <div className="text-4xl font-bold text-secondary mb-2 group-hover:scale-110 transition-transform duration-200">
@@ -534,24 +504,87 @@ export default function QuizPage() {
                   ))}
                 </div>
               </div>
+            ) : selectedCourse === null ? (
+              /* Course Selection */
+              <div>
+                <button
+                  onClick={() => setSelectedSemester(null)}
+                  className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-primary hover:text-primary/80 transition-colors font-medium"
+                >
+                  ← Back to Semesters
+                </button>
+                <h2 className="text-2xl font-bold text-foreground mb-6">
+                  Year {selectedYear} - Semester {selectedSemester} - Select Course
+                </h2>
+                {(() => {
+                  const courses = Array.from(
+                    new Set(
+                      quizzes
+                        .filter((q) => q.year === selectedYear && q.semester === selectedSemester)
+                        .map((q) => q.course)
+                    )
+                  )
+
+                  return courses.length === 0 ? (
+                    <div className="text-center py-12">
+                      <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-foreground mb-2">
+                        No courses available
+                      </h3>
+                      <p className="text-muted-foreground mb-6">
+                        No courses found for Year {selectedYear}, Semester {selectedSemester}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {courses.map((course) => {
+                        const courseQuizCount = quizzes.filter(
+                          (q) =>
+                            q.year === selectedYear &&
+                            q.semester === selectedSemester &&
+                            q.course === course
+                        ).length
+
+                        return (
+                          <button
+                            key={course}
+                            onClick={() => setSelectedCourse(course)}
+                            className="bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-lg p-6 hover:bg-gradient-to-br hover:from-accent/20 hover:to-accent/10 hover:border-accent/40 transition-all duration-200 cursor-pointer group text-left"
+                          >
+                            <div className="text-lg font-semibold text-foreground mb-2 group-hover:text-accent transition-colors">
+                              {course}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {courseQuizCount} quiz{courseQuizCount !== 1 ? 'zes' : ''}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
             ) : (
               /* Quiz List */
               <div>
                 <button
                   onClick={() => {
-                    setSelectedYear(null)
-                    setSelectedSemester(null)
+                    setSelectedCourse(null)
                   }}
                   className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-primary hover:text-primary/80 transition-colors font-medium"
                 >
-                  ← Back to Years
+                  ← Back to Courses
                 </button>
-                <h2 className="text-2xl font-bold text-foreground mb-6">
+                <h2 className="text-2xl font-bold text-foreground mb-2">{selectedCourse}</h2>
+                <p className="text-muted-foreground mb-6">
                   Year {selectedYear} - Semester {selectedSemester}
-                </h2>
+                </p>
                 {(() => {
                   const filteredQuizzes = quizzes.filter(
-                    (q) => q.year === selectedYear && q.semester === selectedSemester
+                    (q) =>
+                      q.year === selectedYear &&
+                      q.semester === selectedSemester &&
+                      q.course === selectedCourse
                   )
                   return filteredQuizzes.length === 0 ? (
                     <div className="text-center py-12">

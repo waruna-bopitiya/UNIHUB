@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Video, BookOpen, Users, Settings } from 'lucide-react'
+import { Home, Video, BookOpen, Users, Settings, MessageCircle } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Home Feed', icon: Home },
@@ -15,9 +15,10 @@ const navItems = [
 
 interface SidebarProps {
   onClose?: () => void
+  onChatClick?: () => void
 }
 
-export function Sidebar({ onClose }: SidebarProps) {
+export function Sidebar({ onClose, onChatClick }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -53,8 +54,16 @@ export function Sidebar({ onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Settings Footer */}
-      <div className="p-4 border-t border-sidebar-border">
+      {/* Bottom Actions */}
+      <div className="p-4 border-t border-sidebar-border space-y-2">
+        <button 
+          onClick={onChatClick}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors group"
+          title="Open Chat"
+        >
+          <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="font-medium">Messages</span>
+        </button>
         <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
