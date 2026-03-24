@@ -37,7 +37,7 @@ async function sendOTPEmail(email: string, otp: string) {
             <div style="background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
               <p style="font-size: 12px; color: #999; margin: 0 0 10px 0;">Your One-Time Password (OTP)</p>
               <p style="font-size: 48px; font-weight: bold; color: #667eea; letter-spacing: 5px; margin: 0;">${otp}</p>
-              <p style="font-size: 12px; color: #999; margin: 10px 0 0 0;">This OTP will expire in 10 minutes</p>
+              <p style="font-size: 12px; color: #999; margin: 10px 0 0 0;">This OTP will expire in 2 minutes</p>
             </div>
             
             <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
       // Generate new OTP
       const newOTP = generateOTP()
-      const expiryTime = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+      const expiryTime = new Date(Date.now() + 2 * 60 * 1000) // 2 minutes
 
       // Store OTP in database
       try {

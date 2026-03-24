@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
 
       setSuccess(data.message || 'OTP sent successfully')
       setStep('otp')
-      setOtpTimer(600) // 10 minutes
+      setOtpTimer(120) // 2 minutes
     } catch (err) {
       setError('An error occurred. Please try again.')
       console.error(err)
