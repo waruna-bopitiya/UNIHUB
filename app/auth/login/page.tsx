@@ -145,8 +145,9 @@ export default function LoginPage() {
         lastLogin: data.lastLogin
       })
       
-      // Store student ID (always, to keep user logged in)
+      // Store student ID and first name (always, to keep user logged in)
       localStorage.setItem('studentId', data.studentId)
+      localStorage.setItem('firstName', data.firstName)
       
       // Also store in remember me if checked
       if (rememberMe) {
