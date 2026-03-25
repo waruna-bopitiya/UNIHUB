@@ -20,6 +20,23 @@ interface CreateQuizFormProps {
   }[]
 }
 
+interface QuestionErrors {
+  question?: string
+  options?: string[]
+  correctAnswer?: string
+}
+
+interface FormErrors {
+  title?: string
+  description?: string
+  year?: string
+  semester?: string
+  course?: string
+  duration?: string
+  questions?: string
+  questionErrors: Record<string, QuestionErrors>
+}
+
 export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -28,6 +45,8 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
   const [course, setCourse] = useState('')
   const [difficulty, setDifficulty] = useState('Medium')
   const [duration, setDuration] = useState(30)
+  const [formError, setFormError] = useState('')
+  const [errors, setErrors] = useState<FormErrors>({ questionErrors: {} })
   const [questions, setQuestions] = useState<Question[]>([
     {
       id: '1',
@@ -75,6 +94,96 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    const nextErrors: FormErrors = { questionErrors: {} }
+
+    if (!title.trim()) {
+      nextErrors.title = 'Quiz title is required.'
+    } else if (title.trim().length < 5) {
+      nextErrors.title = 'Quiz title should be at least 5 characters.'
+    }
+
+    if (!description.trim()) {
+      nextErrors.description = 'Description is required.'
+    } else if (description.trim().length < 10) {
+      nextErrors.description = 'Description should be at least 10 characters.'
+    }
+
+    if (year === '') {
+      nextErrors.year = 'Please select a year.'
+    }
+
+    if (semester === '') {
+      nextErrors.semester = 'Please select a semester.'
+    }
+
+    if (!course) {
+      nextErrors.course = 'Please select a course.'
+    }
+
+    if (!Number.isInteger(duration) || duration < 5 || duration > 180) {
+      nextErrors.duration = 'Duration must be a whole number between 5 and 180.'
+    }
+
+    if (questions.length === 0) {
+      nextErrors.questions = 'At least one question is required.'
+    }
+
+    questions.forEach((question) => {
+      const questionError: QuestionErrors = {}
+
+      if (!question.question.trim()) {
+        questionError.question = 'Question text is required.'
+      }
+
+      const optionErrors = question.options.map((option) =>
+        option.trim() ? '' : 'Option is required.',
+      )
+
+      const normalizedOptions = question.options.map((option) => option.trim().toLowerCase())
+      const duplicateExists = normalizedOptions.some(
+        (option, index) => option && normalizedOptions.indexOf(option) !== index,
+      )
+
+      if (duplicateExists) {
+        questionError.options = optionErrors.map((msg, idx) =>
+          msg || (normalizedOptions[idx] ? 'Duplicate options are not allowed.' : ''),
+        )
+      } else if (optionErrors.some(Boolean)) {
+        questionError.options = optionErrors
+      }
+
+      if (
+        question.correctAnswer < 0 ||
+        question.correctAnswer >= question.options.length ||
+        !question.options[question.correctAnswer]?.trim()
+      ) {
+        questionError.correctAnswer = 'Select a valid correct answer option.'
+      }
+
+      if (questionError.question || questionError.options || questionError.correctAnswer) {
+        nextErrors.questionErrors[question.id] = questionError
+      }
+    })
+
+    const hasErrors =
+      !!nextErrors.title ||
+      !!nextErrors.description ||
+      !!nextErrors.year ||
+      !!nextErrors.semester ||
+      !!nextErrors.course ||
+      !!nextErrors.duration ||
+      !!nextErrors.questions ||
+      Object.keys(nextErrors.questionErrors).length > 0
+
+    if (hasErrors) {
+      setErrors(nextErrors)
+      setFormError('Please fix the highlighted fields before creating the quiz.')
+      return
+    }
+
+    setErrors({ questionErrors: {} })
+    setFormError('')
+
     const selectedCourse = availableCourses.find(
       (item) => item.year === year && item.semester === semester && item.course === course,
     )
@@ -92,6 +201,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
       creator: 'Current User', // Replace with actual user
       participants: 0,
     }
+
     onSubmit(quizData)
     // Reset form
     setTitle('')
@@ -101,6 +211,8 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
     setCourse('')
     setDifficulty('Medium')
     setDuration(30)
+    setErrors({ questionErrors: {} })
+    setFormError('')
     setQuestions([
       {
         id: '1',
@@ -137,6 +249,12 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {formError && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+          {formError}
+        </div>
+      )}
+
       {/* Basic Info */}
       <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
@@ -155,6 +273,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
               className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
+            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
           </div>
 
           <div>
@@ -169,6 +288,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
               rows={3}
               required
             />
+            {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -194,6 +314,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
                   </option>
                 ))}
               </select>
+              {errors.year && <p className="mt-1 text-xs text-red-500">{errors.year}</p>}
             </div>
 
             <div>
@@ -218,6 +339,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
                   </option>
                 ))}
               </select>
+              {errors.semester && <p className="mt-1 text-xs text-red-500">{errors.semester}</p>}
             </div>
 
             <div>
@@ -238,6 +360,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
                   </option>
                 ))}
               </select>
+              {errors.course && <p className="mt-1 text-xs text-red-500">{errors.course}</p>}
             </div>
 
             <div>
@@ -263,12 +386,13 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
               <input
                 type="number"
                 value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
+                onChange={(e) => setDuration(Number(e.target.value))}
                 min="5"
                 max="180"
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
+              {errors.duration && <p className="mt-1 text-xs text-red-500">{errors.duration}</p>}
             </div>
           </div>
         </div>
@@ -289,6 +413,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
         </div>
 
         <div className="space-y-6">
+          {errors.questions && <p className="text-sm text-red-500">{errors.questions}</p>}
           {questions.map((question, qIndex) => (
             <div key={question.id} className="border border-border rounded-lg p-4">
               <div className="flex items-start justify-between mb-4">
@@ -321,6 +446,11 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
                     className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
+                  {errors.questionErrors[question.id]?.question && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.questionErrors[question.id]?.question}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -349,8 +479,18 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
                           className="flex-1 px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                           required
                         />
+                        {errors.questionErrors[question.id]?.options?.[optionIndex] && (
+                          <p className="text-xs text-red-500 min-w-[160px]">
+                            {errors.questionErrors[question.id]?.options?.[optionIndex]}
+                          </p>
+                        )}
                       </div>
                     ))}
+                    {errors.questionErrors[question.id]?.correctAnswer && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.questionErrors[question.id]?.correctAnswer}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
