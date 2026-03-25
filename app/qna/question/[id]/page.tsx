@@ -10,8 +10,8 @@ import AnswerCard from "@/components/qna/AnswerCard"
 // Mock data (replace with real API call later)
 const mockQuestion = {
   id: "1",
-  title: "How to create API routes in Next.js?",
-  content: "I'm new to Next.js. Can someone explain how to create API routes? I tried creating route.ts files in the app directory, but it's not working. Can someone give an example?",
+  title: "Best practices for building scalable web applications?",
+  content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
   author: {
     id: "user1",
     name: "Kamal Perera",
@@ -19,8 +19,8 @@ const mockQuestion = {
   },
   upvotes: 15,
   downvotes: 2,
-  category: "programming",
-  categoryName: "Programming",
+  category: "it3030",
+  categoryName: "IT3030 - Programming Applications and Frameworks",
   createdAt: new Date("2026-03-01T10:00:00"),
   answers: [
     {

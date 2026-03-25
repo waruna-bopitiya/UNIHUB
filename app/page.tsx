@@ -27,8 +27,8 @@ interface Post {
 const mockQuestions = [
   {
     id: "q1",
-    title: "How to create API routes in Next.js? (Need peer help)",
-    content: "I'm new to Next.js. Can someone explain how to create API routes? How do I work with route.ts files in the app directory?",
+    title: "Best practices for building scalable web applications?",
+    content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
     author: {
       name: "Kamal Perera",
       avatar: "https://avatar.vercel.sh/kamal",
@@ -36,14 +36,14 @@ const mockQuestions = [
     upvotes: 15,
     downvotes: 2,
     answers: 3,
-    category: "programming",
-    categoryName: "Programming",
+    category: "it3030",
+    categoryName: "IT3030 - Programming Applications and Frameworks",
     createdAt: new Date("2026-03-03T10:00:00")
   },
   {
     id: "q2",
-    title: "Calculus is hard! Exam tomorrow 🤯 - Need urgent help",
-    content: "I don't understand calculus problems. Can someone explain limits and continuity? Any peer available to help?",
+    title: "Database design for large-scale systems?",
+    content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
     author: {
       name: "Nimal Silva",
       avatar: "https://avatar.vercel.sh/nimal",
@@ -51,14 +51,14 @@ const mockQuestions = [
     upvotes: 8,
     downvotes: 1,
     answers: 5,
-    category: "mathematics",
-    categoryName: "Mathematics",
+    category: "it3020",
+    categoryName: "IT3020 - Database Systems",
     createdAt: new Date("2026-03-03T14:30:00")
   },
   {
     id: "q3",
-    title: "Quantum Physics basics - Anyone want to form a study group?",
-    content: "Looking for peers interested in learning Quantum Physics together. Let's form a study group and help each other.",
+    title: "Network architecture for distributed systems?",
+    content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
     author: {
       name: "Sachini Jayawardena",
       avatar: "https://avatar.vercel.sh/sachini",
@@ -66,14 +66,14 @@ const mockQuestions = [
     upvotes: 22,
     downvotes: 0,
     answers: 7,
-    category: "physics",
-    categoryName: "Physics",
+    category: "it3010",
+    categoryName: "IT3010 - Network Design and Management",
     createdAt: new Date("2026-03-03T09:15:00")
   },
   {
     id: "q4",
-    title: "How to debug async/await in JavaScript efficiently?",
-    content: "I'm having trouble debugging promises and async functions. Any tips on using Chrome DevTools or VS Code debugger?",
+    title: "How to manage IT project timelines effectively?",
+    content: "Any tips on managing project timelines and scope in IT projects? How to handle scope creep?",
     author: {
       name: "Janaka Wijesinghe",
       avatar: "https://avatar.vercel.sh/janaka",
@@ -81,14 +81,14 @@ const mockQuestions = [
     upvotes: 32,
     downvotes: 1,
     answers: 8,
-    category: "programming",
-    categoryName: "Programming",
+    category: "it3040",
+    categoryName: "IT3040 - IT Project Management",
     createdAt: new Date("2026-03-02T16:45:00")
   },
   {
     id: "q5",
-    title: "Organic Chemistry - Help with reaction mechanisms",
-    content: "Can anyone explain SN1 and SN2 reactions? I'm struggling with understanding nucleophilicity and leaving groups.",
+    title: "Key employability skills for IT professionals?",
+    content: "What are the most important employability skills I should focus on developing for my IT career?",
     author: {
       name: "Ravindra Karunarathne",
       avatar: "https://avatar.vercel.sh/ravindra",
@@ -96,8 +96,8 @@ const mockQuestions = [
     upvotes: 11,
     downvotes: 0,
     answers: 4,
-    category: "chemistry",
-    categoryName: "Chemistry",
+    category: "it3050",
+    categoryName: "IT3050 - Employability Skills Development - Seminar",
     createdAt: new Date("2026-03-02T11:20:00")
   }
 ]
@@ -115,19 +115,19 @@ const mockOnlinePeers = [
 
 // Mock Categories with counts
 const mockCategories = [
-  { name: "Programming", emoji: "💻", count: 24 },
-  { name: "Mathematics", emoji: "📐", count: 18 },
-  { name: "Physics", emoji: "⚛️", count: 12 },
-  { name: "Chemistry", emoji: "🧪", count: 9 },
-  { name: "Biology", emoji: "🧬", count: 7 },
+  { name: "IT3050 - Employability Skills", emoji: "💼", count: 18 },
+  { name: "IT3040 - IT Project Management", emoji: "📊", count: 15 },
+  { name: "IT3030 - Programming & Frameworks", emoji: "💻", count: 24 },
+  { name: "IT3020 - Database Systems", emoji: "🗄️", count: 21 },
+  { name: "IT3010 - Network Design & Management", emoji: "🌐", count: 19 },
 ]
 
 // Mock Trending Questions
 const mockTrendings = [
-  { title: "React vs Next.js? Which one to learn first?", answers: 12, time: "2h ago" },
-  { title: "Calculus exam tips please!", answers: 8, time: "30m ago" },
-  { title: "Quantum physics study group", answers: 5, time: "1h ago" },
-  { title: "How to prepare for programming interviews?", answers: 15, time: "3h ago" },
+  { title: "Best frameworks for web applications?", answers: 12, time: "2h ago" },
+  { title: "Database design best practices?", answers: 8, time: "30m ago" },
+  { title: "Network security fundamentals?", answers: 5, time: "1h ago" },
+  { title: "How to manage IT project timelines?", answers: 15, time: "3h ago" },
 ]
 
 // Mock Top Helpers/Contributors

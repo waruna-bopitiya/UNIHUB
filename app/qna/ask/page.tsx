@@ -7,11 +7,11 @@ import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"  // <-- Add this import
 
 const categories = [
-  { id: "programming", name: "Programming" },
-  { id: "mathematics", name: "Mathematics" },
-  { id: "physics", name: "Physics" },
-  { id: "chemistry", name: "Chemistry" },
-  { id: "biology", name: "Biology" }
+  { id: "it3050", name: "IT3050 - Employability Skills Development - Seminar" },
+  { id: "it3040", name: "IT3040 - IT Project Management" },
+  { id: "it3030", name: "IT3030 - Programming Applications and Frameworks" },
+  { id: "it3020", name: "IT3020 - Database Systems" },
+  { id: "it3010", name: "IT3010 - Network Design and Management" }
 ]
 
 interface FormErrors {
