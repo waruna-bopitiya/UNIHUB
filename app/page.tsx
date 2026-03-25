@@ -115,11 +115,11 @@ const mockOnlinePeers = [
 
 // Mock Categories with counts
 const mockCategories = [
-  { name: "IT3050 - Employability Skills", emoji: "💼", count: 18 },
-  { name: "IT3040 - IT Project Management", emoji: "📊", count: 15 },
-  { name: "IT3030 - Programming & Frameworks", emoji: "💻", count: 24 },
-  { name: "IT3020 - Database Systems", emoji: "🗄️", count: 21 },
-  { name: "IT3010 - Network Design & Management", emoji: "🌐", count: 19 },
+  { id: "it3050", name: "IT3050 - Employability Skills", emoji: "💼", count: 18 },
+  { id: "it3040", name: "IT3040 - IT Project Management", emoji: "📊", count: 15 },
+  { id: "it3030", name: "IT3030 - Programming & Frameworks", emoji: "💻", count: 24 },
+  { id: "it3020", name: "IT3020 - Database Systems", emoji: "🗄️", count: 21 },
+  { id: "it3010", name: "IT3010 - Network Design & Management", emoji: "🌐", count: 19 },
 ]
 
 // Mock Trending Questions
@@ -448,7 +448,7 @@ export default function Home() {
               </h3>
               <div className="space-y-2">
                 {mockCategories.map((cat, i) => (
-                  <Link key={i} href={`/qna/category/${cat.name.toLowerCase()}`} className="flex justify-between items-center hover:text-primary">
+                  <Link key={i} href={`/qna/category/${cat.id}`} className="flex justify-between items-center hover:text-primary">
                     <span>{cat.emoji} {cat.name}</span>
                     <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">{cat.count}</span>
                   </Link>
