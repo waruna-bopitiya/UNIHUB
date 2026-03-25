@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { AppLayout } from '@/components/layout/app-layout'
 import { CreatePost } from '@/components/feed/create-post'
 import { PostCard } from '@/components/feed/post-card'
@@ -152,7 +151,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
   const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
-  const searchParams = useSearchParams()
 
   const fetchPosts = async () => {
     try {
@@ -164,12 +162,7 @@ export default function Home() {
 
   useEffect(() => { 
     fetchPosts()
-    // Auto-select Q&A tab if section=qna in query params
-    const section = searchParams.get('section')
-    if (section === 'qna') {
-      setActiveTab('qna')
-    }
-  }, [searchParams])
+  }, [])
 
   // Filter questions based on selected filter
   useEffect(() => {
@@ -374,7 +367,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* Filter Tabs */}
+                {/* Filter Tabs - Working */}
                 <div className="flex gap-4 border-b border-border mb-4">
                   <button
                     onClick={() => setFilterType("recent")}
@@ -408,7 +401,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Questions List */}
+                {/* Questions List - Filtered */}
                 <div className="space-y-4">
                   {filteredQuestions.length === 0 ? (
                     <div className="text-center py-12 bg-card border border-border rounded-lg">
@@ -445,7 +438,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* Right Sidebar - Categories & Trending (Shown in both tabs) */}
+          {/* Right Sidebar - Categories & Trending */}
           <div className="lg:col-span-3 space-y-4">
             {/* Popular Categories */}
             <div className="bg-card border border-border rounded-lg p-4">

@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { TopBar } from './top-bar'
+import { Toaster } from '@/components/ui/toaster'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -49,6 +50,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           {isMounted ? children : null}
         </main>
       </div>
+      <Toaster />
     </div>
   )
 }

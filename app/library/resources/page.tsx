@@ -310,7 +310,9 @@ export default function ResourcesPage() {
                 )}
               </div>
               <div className="flex gap-2">
-                <Button type="submit" className="w-50% md:w-auto">Add Resource</Button>
+                <Button type="submit" className="w-50% md:w-auto" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Adding...' : 'Add Resource'}
+                </Button>
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
               </div>
             </form>
