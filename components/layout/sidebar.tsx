@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Video, BookOpen, Users, Settings , GraduationCap } from 'lucide-react'
+import { Home, Video, BookOpen, Users, Settings, MessageCircle } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Home Feed', icon: Home },
   { href: '/live', label: 'Kuppi Live', icon: Video },
   { href: '/library', label: 'Library', icon: BookOpen },
+  { href: '/quiz', label: 'quiz', icon: BookOpen },
   { href: '/library/resources', label: 'Resources', icon: BookOpen },
   { href: '/community', label: 'Community', icon: Users },
    { href: '/TutorForm1', label: 'Be a Tutor', icon: GraduationCap },
@@ -15,9 +16,10 @@ const navItems = [
 
 interface SidebarProps {
   onClose?: () => void
+  onChatClick?: () => void
 }
 
-export function Sidebar({ onClose }: SidebarProps) {
+export function Sidebar({ onClose, onChatClick }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -53,8 +55,16 @@ export function Sidebar({ onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Settings Footer */}
-      <div className="p-4 border-t border-sidebar-border">
+      {/* Bottom Actions */}
+      <div className="p-4 border-t border-sidebar-border space-y-2">
+        <button 
+          onClick={onChatClick}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors group"
+          title="Open Chat"
+        >
+          <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="font-medium">Messages</span>
+        </button>
         <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
