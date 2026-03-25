@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useEffect, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -7,6 +7,7 @@ import { PostCard } from '@/components/feed/post-card'
 import QuestionCard from '@/components/qna/QuestionCard'
 import Link from "next/link"
 import { MessageCircle, Users, TrendingUp, Award } from "lucide-react"
+import { toast } from "sonner"  // <-- Add this import
 
 interface Post {
   id: number
@@ -166,6 +167,36 @@ export default function Home() {
     setPosts(prev => [newPost, ...prev])
   }
 
+  // Handle posting question with toast notifications
+  const handlePostQuestion = async () => {
+    if (!questionText.trim()) {
+      toast.warning("Please enter your question")
+      return
+    }
+    
+    if (!selectedCategory) {
+      toast.warning("Please select a category")
+      return
+    }
+    
+    const loadingToast = toast.loading("Posting your question...")
+    
+    try {
+      // TODO: API call - replace with actual API
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      toast.dismiss(loadingToast)
+      toast.success("Question posted successfully! 🎉")
+      
+      // Clear form
+      setQuestionText("")
+      setSelectedCategory("")
+    } catch (error) {
+      toast.dismiss(loadingToast)
+      toast.error("Failed to post question. Please try again.")
+    }
+  }
+
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto p-6">
@@ -262,7 +293,7 @@ export default function Home() {
               <div className="space-y-2 text-sm">
                 {mockTopHelpers.map((helper, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className={helper.medal}></span>
+                    <span>{helper.medal}</span>
                     <span>{helper.name}</span>
                     <span className="ml-auto text-muted-foreground">{helper.points} pts</span>
                   </div>
@@ -326,7 +357,7 @@ export default function Home() {
                 </div>
               </>
             ) : (
-              /* Q&A TAB - Peer2Peer Q&A with Mock Data */
+              /* Q&A TAB - Peer2Peer Q&A with Toast Notifications */
               <>
                 {/* Ask Question Box */}
                 <div className="bg-card border border-border rounded-lg p-4 mb-4">
@@ -357,7 +388,10 @@ export default function Home() {
                           <option value="chemistry">🧪 Chemistry</option>
                           <option value="biology">🧬 Biology</option>
                         </select>
-                        <button className="px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90">
+                        <button 
+                          onClick={handlePostQuestion}
+                          className="px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
+                        >
                           Post Question
                         </button>
                       </div>
@@ -446,4 +480,3 @@ export default function Home() {
     </AppLayout>
   )
 }
-
