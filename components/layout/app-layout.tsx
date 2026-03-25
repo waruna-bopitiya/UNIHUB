@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { TopBar } from './top-bar'
+import { ChatModal } from '@/components/chat/chat-modal'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -11,6 +12,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
@@ -33,7 +35,13 @@ export function AppLayout({ children }: AppLayoutProps) {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <Sidebar onClose={() => setSidebarOpen(false)} />
+          <Sidebar 
+            onClose={() => setSidebarOpen(false)} 
+            onChatClick={() => {
+              setChatOpen(true)
+              setSidebarOpen(false)
+            }}
+          />
         </div>
       )}
 
@@ -49,6 +57,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           {isMounted ? children : null}
         </main>
       </div>
+
+      {/* Chat Modal */}
+      {isMounted && (
+        <ChatModal 
+          isOpen={chatOpen} 
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   )
 }
