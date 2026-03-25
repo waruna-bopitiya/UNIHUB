@@ -34,7 +34,7 @@ const mockConversations: ChatConversation[] = [
     name: 'Alex Kumar',
     avatar: 'A',
     lastMessage: 'That sounds great! 👍',
-    unread: 2,
+    unread: 0,
     messages: [
       {
         id: '1',
@@ -135,6 +135,8 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const [newMessage, setNewMessage] = useState('')
   const [conversations, setConversations] = useState<ChatConversation[]>(mockConversations)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showNewChatForm, setShowNewChatForm] = useState(false)
+  const [newMemberName, setNewMemberName] = useState('')
   
   // Resizable state
   const [width, setWidth] = useState(800) // increased default width
@@ -248,6 +250,37 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
     setNewMessage('')
   }
 
+  const handleCreateNewChat = () => {
+    if (!newMemberName.trim()) return
+
+    const newConversation: ChatConversation = {
+      id: Date.now().toString(),
+      name: newMemberName,
+      avatar: newMemberName.charAt(0).toUpperCase(),
+      lastMessage: 'Chat started',
+      unread: 0,
+      messages: [
+        {
+          id: '1',
+          sender: newMemberName,
+          senderAvatar: newMemberName.charAt(0).toUpperCase(),
+          content: `Hi! I'm ${newMemberName}. Let's chat!`,
+          timestamp: new Date().toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          }),
+          isOwn: false,
+        }
+      ]
+    }
+
+    const updatedConversations = [newConversation, ...conversations]
+    setConversations(updatedConversations)
+    setSelectedConversation(newConversation)
+    setNewMemberName('')
+    setShowNewChatForm(false)
+  }
+
   if (!isOpen) return null
 
   return (
@@ -308,10 +341,49 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
 
           {/* New Chat Button */}
           <div className="p-3 border-b border-border">
-            <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-xs sm:text-sm font-medium">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Chat</span>
-            </button>
+            {!showNewChatForm ? (
+              <button 
+                onClick={() => setShowNewChatForm(true)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity text-xs sm:text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Chat</span>
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Enter member name..."
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateNewChat()
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-xs sm:text-sm"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCreateNewChat}
+                    disabled={!newMemberName.trim()}
+                    className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity text-xs font-medium"
+                  >
+                    Create
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowNewChatForm(false)
+                      setNewMemberName('')
+                    }}
+                    className="flex-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:opacity-90 transition-opacity text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Conversations */}

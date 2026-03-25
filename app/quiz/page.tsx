@@ -12,7 +12,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { useState } from 'react'
-import { BookOpen, Download, Star, Trophy } from 'lucide-react'
+import { BookOpen, Download, Search, Star, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 
 interface Quiz {
@@ -812,6 +812,10 @@ export default function QuizPage() {
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
+  const [browseCourseSearch, setBrowseCourseSearch] = useState('')
+  const [browseQuizSearch, setBrowseQuizSearch] = useState('')
+  const [resultsSearch, setResultsSearch] = useState('')
+  const [scoreSearch, setScoreSearch] = useState('')
   const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
 
   const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
@@ -1196,6 +1200,40 @@ export default function QuizPage() {
     }, new Map<string, { year: number; semester: number; course: string; category: string }>()),
   ).map(([, value]) => value)
 
+  const normalizedScoreSearch = scoreSearch.trim().toLowerCase()
+  const searchedCategorizedScoreData = filteredCategorizedScoreData
+    .map((group) => ({
+      ...group,
+      chartData: group.chartData.filter((row) =>
+        normalizedScoreSearch === ''
+          ? true
+          : row.course.toLowerCase().includes(normalizedScoreSearch),
+      ),
+    }))
+    .filter((group) => group.chartData.length > 0)
+
+  const searchedCourseTakerScoreByYearSemester = courseTakerScoreByYearSemester
+    .map((group) => ({
+      ...group,
+      rows: group.rows.filter((row) =>
+        normalizedScoreSearch === ''
+          ? true
+          : row.course.toLowerCase().includes(normalizedScoreSearch),
+      ),
+    }))
+    .filter((group) => group.rows.length > 0)
+
+  const filteredResults = quizResults.filter((result) => {
+    if (!resultsSearch.trim()) {
+      return true
+    }
+    const keyword = resultsSearch.trim().toLowerCase()
+    return (
+      result.quizTitle.toLowerCase().includes(keyword) ||
+      result.dateTaken.toLowerCase().includes(keyword)
+    )
+  })
+
   if (selectedQuiz) {
     const participantScores: ParticipantScoreSummary[] = [
       ...(mockParticipantScoresByQuiz[selectedQuiz.id] || []),
@@ -1438,6 +1476,10 @@ export default function QuizPage() {
                         .filter((q) => q.year === selectedYear && q.semester === selectedSemester)
                         .map((q) => q.course)
                     )
+                  ).filter((course) =>
+                    browseCourseSearch.trim() === ''
+                      ? true
+                      : course.toLowerCase().includes(browseCourseSearch.trim().toLowerCase()),
                   )
 
                   return courses.length === 0 ? (
@@ -1451,7 +1493,20 @@ export default function QuizPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <div className="mb-4">
+                        <div className="relative w-full md:max-w-md">
+                          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={browseCourseSearch}
+                            onChange={(e) => setBrowseCourseSearch(e.target.value)}
+                            placeholder="Search course"
+                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {courses.map((course) => {
                         const courseQuizCount = quizzes.filter(
                           (q) =>
@@ -1475,6 +1530,7 @@ export default function QuizPage() {
                           </button>
                         )
                       })}
+                      </div>
                     </div>
                   )
                 })()}
@@ -1494,12 +1550,29 @@ export default function QuizPage() {
                 <p className="text-muted-foreground mb-6">
                   Year {selectedYear} - Semester {selectedSemester}
                 </p>
+                <div className="mb-4">
+                  <div className="relative w-full md:max-w-xl">
+                    <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={browseQuizSearch}
+                      onChange={(e) => setBrowseQuizSearch(e.target.value)}
+                      placeholder="Search quizzes by title, description, creator"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
                 {(() => {
                   const filteredQuizzes = quizzes.filter(
                     (q) =>
                       q.year === selectedYear &&
                       q.semester === selectedSemester &&
-                      q.course === selectedCourse
+                      q.course === selectedCourse &&
+                      (browseQuizSearch.trim() === ''
+                        ? true
+                        : `${q.title} ${q.description} ${q.creator}`
+                            .toLowerCase()
+                            .includes(browseQuizSearch.trim().toLowerCase()))
                   )
                   return filteredQuizzes.length === 0 ? (
                     <div className="text-center py-12">
@@ -1574,7 +1647,19 @@ export default function QuizPage() {
                     Download All Results
                   </button>
                 </div>
-                {quizResults.map((result, index) => (
+                <div>
+                  <div className="relative w-full md:max-w-md">
+                    <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={resultsSearch}
+                      onChange={(e) => setResultsSearch(e.target.value)}
+                      placeholder="Search results by quiz title or date"
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+                {filteredResults.map((result, index) => (
                   <div
                     key={index}
                     className="bg-card border border-border rounded-lg p-6"
@@ -1633,6 +1718,20 @@ export default function QuizPage() {
                 </select>
               </div>
 
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">Search</label>
+                <div className="relative w-full">
+                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={scoreSearch}
+                    onChange={(e) => setScoreSearch(e.target.value)}
+                    placeholder="Search by course name"
+                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-border bg-background text-foreground"
+                  />
+                </div>
+              </div>
+
               {scoreView === 'courseByYear' && (
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 block">Year</label>
@@ -1663,8 +1762,8 @@ export default function QuizPage() {
                 <p className="text-sm text-muted-foreground mb-1">Year/Semester Groups</p>
                 <p className="text-2xl font-bold text-foreground">
                   {scoreView === 'courseByYear'
-                    ? filteredCategorizedScoreData.length
-                    : courseTakerScoreByYearSemester.length}
+                    ? searchedCategorizedScoreData.length
+                    : searchedCourseTakerScoreByYearSemester.length}
                 </p>
               </div>
               <div className="bg-card border border-border rounded-lg p-5">
@@ -1676,12 +1775,12 @@ export default function QuizPage() {
             </div>
 
             {scoreView === 'courseByYear' ? (
-              filteredCategorizedScoreData.length === 0 ? (
+              searchedCategorizedScoreData.length === 0 ? (
                 <div className="bg-card border border-border rounded-lg p-8 text-center">
                   <p className="text-muted-foreground">No course score data for the selected year.</p>
                 </div>
               ) : (
-                filteredCategorizedScoreData.map((group) => (
+                searchedCategorizedScoreData.map((group) => (
                   <div key={`${group.year}-${group.semester}`} className="bg-card border border-border rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-foreground mb-1">
                       Year {group.year} - Semester {group.semester}
@@ -1733,7 +1832,7 @@ export default function QuizPage() {
                 </p>
 
                 <div className="space-y-4">
-                  {courseTakerScoreByYearSemester.map((yearGroup) => (
+                  {searchedCourseTakerScoreByYearSemester.map((yearGroup) => (
                     <div
                       key={`${yearGroup.year}-${yearGroup.semester}`}
                       className="border border-border rounded-lg p-4"
