@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Video, BookOpen, Users, Settings, MessageCircle } from 'lucide-react'
+import { Home, Video, BookOpen, Users, Settings, MessageCircle  , GraduationCap } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Home Feed', icon: Home },
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/quiz', label: 'quiz', icon: BookOpen },
   { href: '/library/resources', label: 'Resources', icon: BookOpen },
   { href: '/community', label: 'Community', icon: Users },
+   { href: '/TutorForm1', label: 'Be a Tutor', icon: GraduationCap },
 ]
 
 interface SidebarProps {

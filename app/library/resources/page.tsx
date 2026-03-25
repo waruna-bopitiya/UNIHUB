@@ -1,18 +1,17 @@
 'use client'
 
-
-import React, { useState } from 'react';
-import { Star } from 'lucide-react';
-import { AppLayout } from '@/components/layout/app-layout';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { yearOptions, semesterOptions, modulesByYearSemester } from '@/components/shared/academic-selector';
+import React, { useState, useEffect } from 'react'
+import { Star } from 'lucide-react'
+import { AppLayout } from '@/components/layout/app-layout'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { useAcademicData, type SelectOption } from '@/hooks/use-academic-data'
 
 
 type CmpYesSemMod = {
@@ -35,22 +34,49 @@ const resourceSchema = z.object({
   path: ['file'],
 });
 
-type Resource = z.infer<typeof resourceSchema> & { ratings: number[]; review?: string };
-
-// Dummy data for cmp_yes_sem_mod (replace with real data or fetch from backend)
-const cmpYesSemMod: CmpYesSemMod[] = [
-  
-];
-
-const initialResources: Resource[] = [];
-
+type Resource = z.infer<typeof resourceSchema> & { ratings: number[]; review?: string; id?: number };
 
 export default function ResourcesPage() {
+  const { years, semesters, subjects, fetchSemesters, fetchSubjects } = useAcademicData()
+  
+  const [resources, setResources] = useState<Resource[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string }>({ year: '', semester: '', module_name: '' })
+  const [showForm, setShowForm] = useState(false)
+  const [resourceType, setResourceType] = useState<'file' | 'link'>('file')
+  const [filterSemesters, setFilterSemesters] = useState<SelectOption[]>([])
+  const [filterSubjects, setFilterSubjects] = useState<SelectOption[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
-  const [resources, setResources] = useState<Resource[]>(initialResources);
-  const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string }>({ year: '', semester: '', module_name: '' });
-  const [showForm, setShowForm] = useState(false);
-  const [resourceType, setResourceType] = useState<'file' | 'link'>('file');
+  // Fetch resources on mount
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/resources')
+        const data = await response.json()
+        
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setResources(data.map((res: any) => ({
+            ...res,
+            ratings: [],
+            resourceType: res.resource_type,
+          })))
+        } else {
+          console.error('Invalid data format:', data)
+          setResources([])
+        }
+      } catch (error) {
+        console.error('Error fetching resources:', error)
+        setResources([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchResources()
+  }, [])
 
   const form = useForm<z.infer<typeof resourceSchema>>({
     resolver: zodResolver(resourceSchema),
@@ -63,16 +89,85 @@ export default function ResourcesPage() {
       file: undefined,
       link: '',
     },
-  });
+  })
+
+  // Handle year change in form
+  const handleFormYearChange = (val: string) => {
+    form.setValue('year', val)
+    form.setValue('semester', '')
+    form.setValue('module_name', '')
+    fetchSemesters(val)
+  }
+
+  // Handle semester change in form
+  const handleFormSemesterChange = (val: string) => {
+    form.setValue('semester', val)
+    form.setValue('module_name', '')
+    const year = form.watch('year')
+    fetchSubjects(year, val)
+  }
+
+  // Handle year change in filter
+  const handleFilterYearChange = async (year: string) => {
+    setFilter({ year, semester: '', module_name: '' })
+    if (year) {
+      const response = await fetch(`/api/subjects?year=${year}`)
+      const data = await response.json()
+      setFilterSemesters(data)
+    } else {
+      setFilterSemesters([])
+    }
+    setFilterSubjects([])
+  }
+
+  // Handle semester change in filter
+  const handleFilterSemesterChange = async (semester: string) => {
+    setFilter((f) => ({ ...f, semester, module_name: '' }))
+    if (filter.year && semester) {
+      const response = await fetch(`/api/subjects?year=${filter.year}&semester=${semester}`)
+      const data = await response.json()
+      setFilterSubjects(data)
+    } else {
+      setFilterSubjects([])
+    }
+  }
 
   function onSubmit(values: z.infer<typeof resourceSchema>) {
-    setResources((prev) => [
-      ...prev,
-      { ...values, ratings: [] },
-    ]);
-    form.reset();
-    setResourceType('file');
-    setShowForm(false);
+    setSubmitting(true)
+    
+    // For file uploads, we'll just save the link for now
+    // In production, you'd upload files to cloud storage
+    fetch('/api/resources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: values.year,
+        semester: values.semester,
+        module_name: values.module_name,
+        name: values.name,
+        resourceType: values.resourceType,
+        link: values.link || null,
+      }),
+    })
+      .then((res) => res.json())
+      .then((newResource) => {
+        setResources((prev) => [
+          {
+            ...newResource,
+            ratings: [],
+            resourceType: newResource.resource_type,
+          },
+          ...prev,
+        ])
+        form.reset()
+        setResourceType('file')
+        setShowForm(false)
+      })
+      .catch((err) => {
+        console.error('Error saving resource:', err)
+        alert('Failed to save resource')
+      })
+      .finally(() => setSubmitting(false))
   }
 
   // Handle rating
@@ -155,11 +250,7 @@ export default function ResourcesPage() {
                     <FormItem>
                       <FormLabel>Year</FormLabel>
                       <Select
-                        onValueChange={(val) => {
-                          field.onChange(val);
-                          form.setValue('semester', '');
-                          form.setValue('module_name', '');
-                        }}
+                        onValueChange={handleFormYearChange}
                         value={field.value}
                         defaultValue=""
                       >
@@ -167,7 +258,7 @@ export default function ResourcesPage() {
                           <SelectValue placeholder="Select Year" />
                         </SelectTrigger>
                         <SelectContent>
-                          {yearOptions.map((y) => (
+                          {years.map((y) => (
                             <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -184,10 +275,7 @@ export default function ResourcesPage() {
                     <FormItem>
                       <FormLabel>Semester</FormLabel>
                       <Select
-                        onValueChange={(val) => {
-                          field.onChange(val);
-                          form.setValue('module_name', '');
-                        }}
+                        onValueChange={handleFormSemesterChange}
                         value={field.value}
                         defaultValue=""
                         disabled={!form.watch('year')}
@@ -196,7 +284,7 @@ export default function ResourcesPage() {
                           <SelectValue placeholder="Select Semester" />
                         </SelectTrigger>
                         <SelectContent>
-                          {semesterOptions.map((s) => (
+                          {semesters.map((s) => (
                             <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -210,9 +298,6 @@ export default function ResourcesPage() {
                   control={form.control}
                   name="module_name"
                   render={({ field }) => {
-                    const year = form.watch('year');
-                    const semester = form.watch('semester');
-                    const moduleOptions = year && semester ? modulesByYearSemester[year]?.[semester] || [] : [];
                     return (
                       <FormItem>
                         <FormLabel>Module</FormLabel>
@@ -220,13 +305,13 @@ export default function ResourcesPage() {
                           onValueChange={field.onChange}
                           value={field.value}
                           defaultValue=""
-                          disabled={!year || !semester}
+                          disabled={!form.watch('year') || !form.watch('semester')}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select Module" />
                           </SelectTrigger>
                           <SelectContent>
-                            {moduleOptions.map((m) => (
+                            {subjects.map((m) => (
                               <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                             ))}
                           </SelectContent>
@@ -310,8 +395,10 @@ export default function ResourcesPage() {
                 )}
               </div>
               <div className="flex gap-2">
-                <Button type="submit" className="w-50% md:w-auto">Add Resource</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                <Button type="submit" disabled={submitting} className="w-50% md:w-auto">
+                  {submitting ? 'Saving...' : 'Add Resource'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)} disabled={submitting}>Cancel</Button>
               </div>
             </form>
           </Form>
@@ -323,27 +410,41 @@ export default function ResourcesPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <Label className="mb-1 block">Year</Label>
-              <select className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" value={filter.year} onChange={(e) => setFilter({ year: e.target.value, semester: '', module_name: '' })}>
+              <select 
+                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                value={filter.year} 
+                onChange={(e) => handleFilterYearChange(e.target.value)}
+              >
                 <option value="">Select Year</option>
-                {yearOptions.map((y) => (
+                {years.map((y) => (
                   <option key={y.value} value={y.value}>{y.label}</option>
                 ))}
               </select>
             </div>
             <div>
               <Label className="mb-1 block">Semester</Label>
-                <select className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" value={filter.semester} onChange={(e) => setFilter((f) => ({ ...f, semester: e.target.value, module_name: '' }))} disabled={!filter.year}>
+                <select 
+                  className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                  value={filter.semester} 
+                  onChange={(e) => handleFilterSemesterChange(e.target.value)}
+                  disabled={!filter.year}
+                >
                   <option value="">Select Semester</option>
-                  {semesterOptions.map((s) => (
+                  {filterSemesters.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
             </div>
             <div>
               <Label className="mb-1 block">Module</Label>
-                <select className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" value={filter.module_name} onChange={(e) => setFilter((f) => ({ ...f, module_name: e.target.value }))} disabled={!filter.year || !filter.semester}>
+                <select 
+                  className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                  value={filter.module_name} 
+                  onChange={(e) => setFilter((f) => ({ ...f, module_name: e.target.value }))}
+                  disabled={!filter.year || !filter.semester}
+                >
                   <option value="">Select Module</option>
-                  {(filter.year && filter.semester ? (modulesByYearSemester[filter.year]?.[filter.semester] || []) : []).map((m) => (
+                  {filterSubjects.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
@@ -352,7 +453,7 @@ export default function ResourcesPage() {
         </div>
 
         {/* Top Resource */}
-        {topResource && (
+        {!loading && topResource && (
           <div className="border-2 border-primary rounded-xl p-6 mb-10 bg-card shadow-lg">
             <div className="font-bold text-xl mb-2 text-primary">Top Resource: {topResource.name}</div>
             <div className="text-sm mb-2 text-muted-foreground">Year: {topResource.year}, Semester: {topResource.semester}, Module: {topResource.module_name}</div>
@@ -360,35 +461,40 @@ export default function ResourcesPage() {
               topResource.ratings.length ? topResource.ratings.reduce((a: number, b: number) => a + b, 0) / topResource.ratings.length : 0
             )}</div>
             {topResource.review && <div className="italic text-base mb-2 text-gray-700">Review: {topResource.review}</div>}
-            {topResource.file && <div><a className="text-primary underline font-medium" href={URL.createObjectURL(topResource.file)} download={topResource.name}>Download</a></div>}
+            {topResource.link && <div><a className="text-primary underline font-medium" href={topResource.link} target="_blank" rel="noopener noreferrer">Visit Resource</a></div>}
           </div>
         )}
 
         {/* All Resources in a Single Grid */}
         <div>
           <h2 className="text-2xl font-semibold mb-6">Resources List</h2>
-          {filtered.length === 0 && <p className="text-muted-foreground">No resources found.</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((res, idx) => {
-              const avg = res.ratings.length ? res.ratings.reduce((a: number, b: number) => a + b, 0) / res.ratings.length : 0;
-              return (
-                <div key={res.name + idx} className="border rounded-xl p-6 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow">
-                  <div>
-                    <div className="font-semibold text-lg mb-2 text-primary truncate" title={res.name}>{res.name}</div>
-                    <div className="text-sm mb-2 text-muted-foreground">Year: {res.year}, Semester: {res.semester}, Module: {res.module_name}</div>
-                    <div className="mb-3">{renderStars(avg, (rating) => handleRate(resources.indexOf(res), rating))}</div>
-                    {res.review && <div className="italic text-base mb-2 text-gray-700">Review: {res.review}</div>}
+          {loading ? (
+            <p className="text-muted-foreground text-center py-8">Loading resources...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-muted-foreground">No resources found.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filtered.map((res, idx) => {
+                const avg = res.ratings.length ? res.ratings.reduce((a: number, b: number) => a + b, 0) / res.ratings.length : 0;
+                return (
+                  <div key={res.id || res.name + idx} className="border rounded-xl p-6 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow">
+                    <div>
+                      <div className="font-semibold text-lg mb-2 text-primary truncate" title={res.name}>{res.name}</div>
+                      <div className="text-sm mb-2 text-muted-foreground">Year: {res.year}, Semester: {res.semester}, Module: {res.module_name}</div>
+                      <div className="mb-3">{renderStars(avg, (rating) => handleRate(resources.indexOf(res), rating))}</div>
+                      {res.review && <div className="italic text-base mb-2 text-gray-700">Review: {res.review}</div>}
+                    </div>
+                    {res.resourceType === 'file' && res.file && (
+                      <div><a className="text-primary underline font-medium" href={URL.createObjectURL(res.file)} download={res.name}>Download</a></div>
+                    )}
+                    {res.resourceType === 'link' && res.link && (
+                      <div><a className="text-primary underline font-medium" href={res.link} target="_blank" rel="noopener noreferrer">Visit Link</a></div>
+                    )}
                   </div>
-                  {res.resourceType === 'file' && res.file && (
-                    <div><a className="text-primary underline font-medium" href={URL.createObjectURL(res.file)} download={res.name}>Download</a></div>
-                  )}
-                  {res.resourceType === 'link' && res.link && (
-                    <div><a className="text-primary underline font-medium" href={res.link} target="_blank" rel="noopener noreferrer">Visit Link</a></div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>
