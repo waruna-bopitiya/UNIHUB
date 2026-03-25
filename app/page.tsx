@@ -7,7 +7,6 @@ import { PostCard } from '@/components/feed/post-card'
 import QuestionCard from '@/components/qna/QuestionCard'
 import Link from "next/link"
 import { MessageCircle, Users, TrendingUp, Award } from "lucide-react"
-import { toast } from "sonner"  // <-- Add this import
 
 interface Post {
   id: number
@@ -150,8 +149,8 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
-  const [questionText, setQuestionText] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("")
+  const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
+  const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
 
   const fetchPosts = async () => {
     try {
@@ -163,38 +162,26 @@ export default function Home() {
 
   useEffect(() => { fetchPosts() }, [])
 
+  // Filter questions based on selected filter
+  useEffect(() => {
+    let filtered = [...mockQuestions]
+    
+    if (filterType === "unanswered") {
+      // Show questions with 0 answers
+      filtered = filtered.filter(q => q.answers === 0)
+    } else if (filterType === "trending") {
+      // Sort by most upvotes (trending)
+      filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+    } else {
+      // Recent - sort by newest first
+      filtered = [...filtered].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    }
+    
+    setFilteredQuestions(filtered)
+  }, [filterType])
+
   const handlePostCreated = (newPost: Post) => {
     setPosts(prev => [newPost, ...prev])
-  }
-
-  // Handle posting question with toast notifications
-  const handlePostQuestion = async () => {
-    if (!questionText.trim()) {
-      toast.warning("Please enter your question")
-      return
-    }
-    
-    if (!selectedCategory) {
-      toast.warning("Please select a category")
-      return
-    }
-    
-    const loadingToast = toast.loading("Posting your question...")
-    
-    try {
-      // TODO: API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      toast.dismiss(loadingToast)
-      toast.success("Question posted successfully! 🎉")
-      
-      // Clear form
-      setQuestionText("")
-      setSelectedCategory("")
-    } catch (error) {
-      toast.dismiss(loadingToast)
-      toast.error("Failed to post question. Please try again.")
-    }
   }
 
   return (
@@ -357,66 +344,82 @@ export default function Home() {
                 </div>
               </>
             ) : (
-              /* Q&A TAB - Peer2Peer Q&A with Toast Notifications */
+              /* Q&A TAB - Peer2Peer Q&A with Simplified Ask Button */
               <>
-                {/* Ask Question Box */}
-                <div className="bg-card border border-border rounded-lg p-4 mb-4">
-                  <div className="flex gap-3">
-                    <img 
-                      src="https://avatar.vercel.sh/me" 
-                      className="w-10 h-10 rounded-full"
-                      alt="Your avatar"
-                    />
-                    <div className="flex-1">
-                      <textarea
-                        placeholder="Ask your question here... Get help from peers"
-                        value={questionText}
-                        onChange={(e) => setQuestionText(e.target.value)}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary mb-2"
-                      />
-                      <div className="flex gap-2 items-center">
-                        <select
-                          value={selectedCategory}
-                          onChange={(e) => setSelectedCategory(e.target.value)}
-                          className="px-3 py-1.5 border border-border rounded-md bg-background text-sm"
-                        >
-                          <option value="">Select subject</option>
-                          <option value="programming">💻 Programming</option>
-                          <option value="mathematics">📐 Mathematics</option>
-                          <option value="physics">⚛️ Physics</option>
-                          <option value="chemistry">🧪 Chemistry</option>
-                          <option value="biology">🧬 Biology</option>
-                        </select>
-                        <button 
-                          onClick={handlePostQuestion}
-                          className="px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
-                        >
-                          Post Question
-                        </button>
-                      </div>
+                {/* Ask Question Button - Link to full page */}
+                <Link 
+                  href="/qna/ask"
+                  className="block bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4 mb-4 hover:bg-primary/10 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                      <span className="text-xl">✏️</span>
                     </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-foreground">Ask a Question</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Get help from peers, share knowledge, and learn together
+                      </p>
+                    </div>
+                    <span className="text-primary text-sm group-hover:translate-x-1 transition-transform">→</span>
                   </div>
-                </div>
+                </Link>
 
-                {/* Q&A Feed Tabs */}
+                {/* Filter Tabs */}
                 <div className="flex gap-4 border-b border-border mb-4">
-                  <button className="pb-2 px-1 border-b-2 border-primary text-primary font-medium">
+                  <button
+                    onClick={() => setFilterType("recent")}
+                    className={`pb-2 px-1 transition-colors ${
+                      filterType === "recent" 
+                        ? "border-b-2 border-primary text-primary font-medium" 
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
                     Recent
                   </button>
-                  <button className="pb-2 px-1 text-muted-foreground hover:text-foreground">
+                  <button
+                    onClick={() => setFilterType("unanswered")}
+                    className={`pb-2 px-1 transition-colors ${
+                      filterType === "unanswered" 
+                        ? "border-b-2 border-primary text-primary font-medium" 
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
                     Unanswered
                   </button>
-                  <button className="pb-2 px-1 text-muted-foreground hover:text-foreground">
+                  <button
+                    onClick={() => setFilterType("trending")}
+                    className={`pb-2 px-1 transition-colors ${
+                      filterType === "trending" 
+                        ? "border-b-2 border-primary text-primary font-medium" 
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
                     Trending
                   </button>
                 </div>
 
                 {/* Questions List */}
                 <div className="space-y-4">
-                  {mockQuestions.map((question) => (
-                    <QuestionCard key={question.id} question={question} />
-                  ))}
+                  {filteredQuestions.length === 0 ? (
+                    <div className="text-center py-12 bg-card border border-border rounded-lg">
+                      <p className="text-muted-foreground">
+                        {filterType === "unanswered" 
+                          ? "🎉 No unanswered questions! All questions have answers!" 
+                          : "No questions found"}
+                      </p>
+                      <Link 
+                        href="/qna/ask"
+                        className="inline-block mt-3 text-primary hover:underline text-sm"
+                      >
+                        Be the first to ask a question →
+                      </Link>
+                    </div>
+                  ) : (
+                    filteredQuestions.map((question) => (
+                      <QuestionCard key={question.id} question={question} />
+                    ))
+                  )}
                 </div>
 
                 {/* View All Link */}
