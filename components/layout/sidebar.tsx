@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Video, BookOpen, Users, Settings, MessageCircle } from 'lucide-react'
+import { Home, Video, BookOpen, Users, Settings, MessageCircle  , GraduationCap } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Home Feed', icon: Home },
