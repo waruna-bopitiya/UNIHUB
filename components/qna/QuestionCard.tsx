@@ -53,7 +53,7 @@ export default function QuestionCard({ question }: QuestionCardProps) {
           </p>
           
           {/* Meta info */}
-          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
               <img 
                 src={question.author.avatar} 
@@ -71,10 +71,15 @@ export default function QuestionCard({ question }: QuestionCardProps) {
             >
               {question.categoryName}
             </Link>
-            <div className="flex items-center gap-1 ml-auto">
+            
+            {/* Answers count - Now clickable! */}
+            <Link 
+              href={`/qna/question/${question.id}`}
+              className="flex items-center gap-1 ml-auto hover:text-primary transition-colors"
+            >
               <MessageCircle className="w-4 h-4" />
-              <span>{question.answers} answers</span>
-            </div>
+              <span>{question.answers} {question.answers === 1 ? "answer" : "answers"}</span>
+            </Link>
           </div>
         </div>
       </div>
