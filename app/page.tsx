@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { AppLayout } from '@/components/layout/app-layout'
 import { CreatePost } from '@/components/feed/create-post'
 import { PostCard } from '@/components/feed/post-card'
@@ -151,6 +152,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
   const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
+  const searchParams = useSearchParams()
 
   const fetchPosts = async () => {
     try {
@@ -160,7 +162,14 @@ export default function Home() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchPosts() }, [])
+  useEffect(() => { 
+    fetchPosts()
+    // Auto-select Q&A tab if section=qna in query params
+    const section = searchParams.get('section')
+    if (section === 'qna') {
+      setActiveTab('qna')
+    }
+  }, [searchParams])
 
   // Filter questions based on selected filter
   useEffect(() => {

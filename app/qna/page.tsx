@@ -60,7 +60,7 @@ export default function QnaPage() {
     <div className="container max-w-4xl mx-auto py-6 px-4">
       {/* Back button */}
       <Link 
-        href="/"
+        href="/?section=qna"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
