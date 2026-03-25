@@ -1181,6 +1181,21 @@ export default function QuizPage() {
     return acc
   }, {} as Record<string, Array<{ name: string; attempts: number; totalPercentage: number; averageScore: number }>>)
 
+  const createQuizCourseOptions = Array.from(
+    quizzes.reduce((map, quiz) => {
+      const key = `${quiz.year}-${quiz.semester}-${quiz.course}`
+      if (!map.has(key)) {
+        map.set(key, {
+          year: quiz.year,
+          semester: quiz.semester,
+          course: quiz.course,
+          category: quiz.category,
+        })
+      }
+      return map
+    }, new Map<string, { year: number; semester: number; course: string; category: string }>()),
+  ).map(([, value]) => value)
+
   if (selectedQuiz) {
     const participantScores: ParticipantScoreSummary[] = [
       ...(mockParticipantScoresByQuiz[selectedQuiz.id] || []),
@@ -1523,7 +1538,10 @@ export default function QuizPage() {
 
         {activeTab === 'create' && (
           <div className="max-w-4xl mx-auto">
-            <CreateQuizForm onSubmit={handleCreateQuiz} />
+            <CreateQuizForm
+              onSubmit={handleCreateQuiz}
+              availableCourses={createQuizCourseOptions}
+            />
           </div>
         )}
 

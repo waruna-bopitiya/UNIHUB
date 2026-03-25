@@ -12,12 +12,20 @@ interface Question {
 
 interface CreateQuizFormProps {
   onSubmit: (quizData: any) => void
+  availableCourses: {
+    year: number
+    semester: number
+    course: string
+    category: string
+  }[]
 }
 
-export function CreateQuizForm({ onSubmit }: CreateQuizFormProps) {
+export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('')
+  const [year, setYear] = useState<number | ''>('')
+  const [semester, setSemester] = useState<number | ''>('')
+  const [course, setCourse] = useState('')
   const [difficulty, setDifficulty] = useState('Medium')
   const [duration, setDuration] = useState(30)
   const [questions, setQuestions] = useState<Question[]>([
@@ -66,10 +74,18 @@ export function CreateQuizForm({ onSubmit }: CreateQuizFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const selectedCourse = availableCourses.find(
+      (item) => item.year === year && item.semester === semester && item.course === course,
+    )
+
     const quizData = {
       title,
       description,
-      category,
+      year,
+      semester,
+      course,
+      category: selectedCourse?.category || 'Computer Science',
       difficulty,
       duration,
       questions,
@@ -80,7 +96,9 @@ export function CreateQuizForm({ onSubmit }: CreateQuizFormProps) {
     // Reset form
     setTitle('')
     setDescription('')
-    setCategory('')
+    setYear('')
+    setSemester('')
+    setCourse('')
     setDifficulty('Medium')
     setDuration(30)
     setQuestions([
@@ -92,6 +110,30 @@ export function CreateQuizForm({ onSubmit }: CreateQuizFormProps) {
       },
     ])
   }
+
+  const yearOptions = Array.from(new Set(availableCourses.map((item) => item.year))).sort((a, b) => a - b)
+
+  const semesterOptions =
+    year === ''
+      ? []
+      : Array.from(
+          new Set(
+            availableCourses
+              .filter((item) => item.year === year)
+              .map((item) => item.semester),
+          ),
+        ).sort((a, b) => a - b)
+
+  const courseOptions =
+    year === '' || semester === ''
+      ? []
+      : Array.from(
+          new Set(
+            availableCourses
+              .filter((item) => item.year === year && item.semester === semester)
+              .map((item) => item.course),
+          ),
+        ).sort((a, b) => a.localeCompare(b))
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -129,25 +171,72 @@ export function CreateQuizForm({ onSubmit }: CreateQuizFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Category *
+                Year *
               </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={year}
+                onChange={(e) => {
+                  const nextValue = e.target.value
+                  setYear(nextValue === '' ? '' : Number(nextValue))
+                  setSemester('')
+                  setCourse('')
+                }}
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               >
-                <option value="">Select category</option>
-                <option value="Computer Science">Computer Science</option>
-                <option value="Mathematics">Mathematics</option>
-                <option value="Physics">Physics</option>
-                <option value="Chemistry">Chemistry</option>
-                <option value="Biology">Biology</option>
-                <option value="Economics">Economics</option>
-                <option value="General Knowledge">General Knowledge</option>
+                <option value="">Select year</option>
+                {yearOptions.map((optionYear) => (
+                  <option key={optionYear} value={optionYear}>
+                    Year {optionYear}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Semester *
+              </label>
+              <select
+                value={semester}
+                onChange={(e) => {
+                  const nextValue = e.target.value
+                  setSemester(nextValue === '' ? '' : Number(nextValue))
+                  setCourse('')
+                }}
+                className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+                disabled={year === ''}
+              >
+                <option value="">Select semester</option>
+                {semesterOptions.map((optionSemester) => (
+                  <option key={optionSemester} value={optionSemester}>
+                    Semester {optionSemester}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Course *
+              </label>
+              <select
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+                disabled={year === '' || semester === ''}
+              >
+                <option value="">Select course</option>
+                {courseOptions.map((optionCourse) => (
+                  <option key={optionCourse} value={optionCourse}>
+                    {optionCourse}
+                  </option>
+                ))}
               </select>
             </div>
 
