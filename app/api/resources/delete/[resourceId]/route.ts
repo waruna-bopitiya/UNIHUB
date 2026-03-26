@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import { ensureTablesExist } from '@/lib/db-init'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
@@ -9,10 +10,25 @@ export async function DELETE(
   { params }: { params: Promise<{ resourceId: string }> }
 ) {
   try {
+    // Ensure tables exist
+    await ensureTablesExist()
+    
     // IMPORTANT: In Next.js 16.1.6+, params is a Promise and must be awaited!
     const { resourceId } = await params
     
-    console.log(`🗑️ Deleting resource ${resourceId}`)
+    // Get user ID from query params
+    const url = new URL(request.url)
+    const userId = url.searchParams.get('userId')
+    
+    console.log(`🗑️ Deleting resource ${resourceId} by user ${userId}`)
+
+    if (!userId) {
+      console.error(`❌ User ID is required to delete`)
+      return NextResponse.json(
+        { error: 'User must be logged in to delete resources' },
+        { status: 401 }
+      )
+    }
 
     // Parse as integer
     const parsedId = parseInt(resourceId)
@@ -35,6 +51,22 @@ export async function DELETE(
     }
 
     const resource = resources[0]
+
+    // Check if user is the uploader (normalize strings for comparison)
+    const normalizedUserId = String(userId).trim().toLowerCase()
+    const normalizedUploaderId = String(resource.uploader_id).trim().toLowerCase()
+    
+    console.log(`🔍 Comparing: userId="${normalizedUserId}" vs uploader_id="${normalizedUploaderId}"`)
+    
+    if (normalizedUserId !== normalizedUploaderId) {
+      console.error(`❌ User ${normalizedUserId} is not the uploader of resource ${parsedId} (uploader: ${normalizedUploaderId})`)
+      return NextResponse.json(
+        { error: 'Only the uploader can delete this resource' },
+        { status: 403 }
+      )
+    }
+
+    console.log(`✅ User ${normalizedUserId} is authorized to delete resource ${parsedId}`)
 
     // Delete file if it exists
     if (resource.resource_type === 'file' && resource.file_path) {

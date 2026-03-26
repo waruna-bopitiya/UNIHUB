@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import { ensureTablesExist } from '@/lib/db-init'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
 export async function GET(request: Request) {
   try {
+    await ensureTablesExist()
     const { searchParams } = new URL(request.url)
     const year = searchParams.get('year')
     const semester = searchParams.get('semester')
@@ -58,6 +60,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await ensureTablesExist()
     const formData = await request.formData()
     const year = formData.get('year') as string
     const semester = formData.get('semester') as string
@@ -65,6 +68,7 @@ export async function POST(request: Request) {
     const name = formData.get('name') as string
     const resourceType = formData.get('resourceType') as string
     const link = formData.get('link') as string
+    const uploaderId = formData.get('uploaderId') as string
     const file = formData.get('file') as File | null
 
     console.log('Received form data:', {
@@ -73,11 +77,12 @@ export async function POST(request: Request) {
       module_name,
       name,
       resourceType,
+      uploaderId,
       link,
       fileInfo: file ? { name: file.name, size: file.size, type: file.type } : null,
     })
 
-    if (!year || !semester || !module_name || !name || !resourceType) {
+    if (!year || !semester || !module_name || !name || !resourceType || !uploaderId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -144,13 +149,14 @@ export async function POST(request: Request) {
         module_name,
         name,
         resourceType,
+        uploaderId,
         link,
         filePath,
       })
 
       const result = await sql`
-        INSERT INTO resources (year, semester, module_name, name, resource_type, link, file_path, download_count)
-        VALUES (${year}, ${semester}, ${module_name}, ${name}, ${resourceType}, ${link || null}, ${filePath}, 0)
+        INSERT INTO resources (uploader_id, year, semester, module_name, name, resource_type, link, file_path, download_count)
+        VALUES (${uploaderId}, ${year}, ${semester}, ${module_name}, ${name}, ${resourceType}, ${link || null}, ${filePath}, 0)
         RETURNING *
       `
 

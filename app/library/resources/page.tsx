@@ -34,6 +34,7 @@ const resourceSchema = z.object({
 
 type Resource = z.infer<typeof resourceSchema> & { 
   id: number;
+  uploader_id: string;
   ratings: number[]; 
   review?: string; 
   download_count?: number;
@@ -56,6 +57,7 @@ export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [feedbackStats, setFeedbackStats] = useState<FeedbackStats>({})
   const [loading, setLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string }>({ year: '', semester: '', module_name: '' })
   const [showForm, setShowForm] = useState(true)
   const [resourceType, setResourceType] = useState<'file' | 'link'>('file')
@@ -65,6 +67,12 @@ export default function ResourcesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
+
+  // Get current user ID from localStorage
+  useEffect(() => {
+    const userId = localStorage.getItem('studentId')
+    setCurrentUserId(userId)
+  }, [])
 
   // Fetch feedback stats
   const fetchFeedbackStats = async () => {
@@ -105,6 +113,7 @@ export default function ResourcesPage() {
             }
             return {
               id: res.id,
+              uploader_id: res.uploader_id,
               year: res.year,
               semester: res.semester,
               module_name: res.module_name,
@@ -197,6 +206,14 @@ export default function ResourcesPage() {
     console.log('Link:', values.link)
     console.log('All values:', values)
     
+    // Check if user is logged in
+    if (!currentUserId) {
+      console.error('❌ USER NOT LOGGED IN')
+      toast.error('Please log in to upload resources')
+      setSubmitting(false)
+      return
+    }
+    
     setSubmitting(true)
     
     // Final validation before submit
@@ -230,6 +247,7 @@ export default function ResourcesPage() {
     formData.append('module_name', values.module_name)
     formData.append('name', values.name)
     formData.append('resourceType', values.resourceType)
+    formData.append('uploaderId', currentUserId)
     
     if (values.resourceType === 'file' && values.file instanceof File) {
       console.log('📁 Adding file to FormData:', values.file.name, `(${values.file.size} bytes)`)
@@ -265,6 +283,7 @@ export default function ResourcesPage() {
         // Ensure id is properly set and all fields are mapped
         const resourceWithId: Resource = {
           id: newResource.id as number,
+          uploader_id: newResource.uploader_id || currentUserId,
           year: newResource.year,
           semester: newResource.semester,
           module_name: newResource.module_name,
@@ -278,7 +297,7 @@ export default function ResourcesPage() {
           file_path: newResource.file_path,
         }
         
-        console.log('📝 Resource with ID:', { id: resourceWithId.id, name: resourceWithId.name })
+        console.log('📝 Resource with ID:', { id: resourceWithId.id, name: resourceWithId.name, uploader_id: resourceWithId.uploader_id })
         
         setResources((prev) => [resourceWithId, ...prev])
         
@@ -381,6 +400,13 @@ export default function ResourcesPage() {
   // Handle delete
   const handleDelete = async (resourceId: number) => {
     console.log(`🗑️ Starting delete for resource ID: ${resourceId}`)
+    console.log(`👤 Current User ID: "${currentUserId}"`)
+    
+    if (!currentUserId) {
+      console.error(`❌ User not logged in`)
+      toast.error('Please log in to delete resources')
+      return
+    }
     
     if (!resourceId || isNaN(resourceId)) {
       console.error(`❌ Invalid resource ID for delete: ${resourceId}`)
@@ -394,8 +420,9 @@ export default function ResourcesPage() {
 
     setDeleting(resourceId)
     try {
-      console.log(`📤 Sending DELETE request to /api/resources/delete/${resourceId}`)
-      const response = await fetch(`/api/resources/delete/${resourceId}`, {
+      const deleteUrl = `/api/resources/delete/${resourceId}?userId=${encodeURIComponent(currentUserId)}`
+      console.log(`📤 Sending DELETE request to ${deleteUrl}`)
+      const response = await fetch(deleteUrl, {
         method: 'DELETE',
       })
 
@@ -408,6 +435,7 @@ export default function ResourcesPage() {
       } else {
         const errorMsg = data.error || 'Failed to delete resource'
         console.error(`❌ Delete failed: ${errorMsg}`)
+        console.error(`📊 Response status: ${response.status}`)
         toast.error(errorMsg)
       }
     } catch (error) {
@@ -457,6 +485,7 @@ export default function ResourcesPage() {
                       console.log(`📋 Resource: id=${res.id}, name=${res.name}`)
                       return {
                         id: res.id,
+                        uploader_id: res.uploader_id,
                         year: res.year,
                         semester: res.semester,
                         module_name: res.module_name,
@@ -943,16 +972,25 @@ export default function ResourcesPage() {
                       >
                         View Details & Feedback
                       </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(res.id)}
-                        disabled={deleting === res.id}
-                        className="w-full flex items-center justify-center gap-2"
-                      >
-                        <Trash2 size={18} />
-                        {deleting === res.id ? 'Deleting...' : 'Delete'}
-                      </Button>
+                      {/* Delete button only for uploader */}
+                      {currentUserId && currentUserId === res.uploader_id && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(res.id)}
+                          disabled={deleting === res.id}
+                          className="w-full flex items-center justify-center gap-2"
+                        >
+                          <Trash2 size={18} />
+                          {deleting === res.id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      )}
+                      {/* Message for non-uploaders */}
+                      {currentUserId && currentUserId !== res.uploader_id && (
+                        <div className="w-full px-4 py-2 bg-secondary/50 rounded-lg text-center text-xs text-muted-foreground">
+                          Only uploader can delete
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -109,6 +109,7 @@ export async function ensureTablesExist() {
   await sql`
     CREATE TABLE IF NOT EXISTS resources (
       id              SERIAL PRIMARY KEY,
+      uploader_id     VARCHAR(50)   NOT NULL,
       year            VARCHAR(50)   NOT NULL,
       semester        VARCHAR(50)   NOT NULL,
       module_name     VARCHAR(500)  NOT NULL,
@@ -117,9 +118,12 @@ export async function ensureTablesExist() {
       link            TEXT,
       file_path       VARCHAR(500),
       download_count  INTEGER       NOT NULL DEFAULT 0,
-      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_resources_uploader_id ON resources(uploader_id)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS resource_downloads (
