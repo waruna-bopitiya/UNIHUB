@@ -7,73 +7,186 @@ import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import AnswerCard from "@/components/qna/AnswerCard"
 
-// Mock data (replace with real API call later)
-const mockQuestion = {
-  id: "1",
-  title: "Best practices for building scalable web applications?",
-  content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
-  author: {
-    id: "user1",
-    name: "Kamal Perera",
-    avatar: "https://avatar.vercel.sh/kamal"
-  },
-  upvotes: 15,
-  downvotes: 2,
-  category: "it3030",
-  categoryName: "IT3030 - Programming Applications and Frameworks",
-  createdAt: new Date("2026-03-01T10:00:00"),
-  answers: [
-    {
-      id: "a1",
-      content: "You can create app/api/hello/route.ts file. Then export a GET function. Here's an example:\n\n```ts\nexport async function GET() {\n  return Response.json({ message: 'Hello World' })\n}\n```",
-      author: {
-        id: "user4",
-        name: "Chamara Wickramasinghe",
-        avatar: "https://avatar.vercel.sh/chamara"
-      },
-      upvotes: 8,
-      downvotes: 0,
-      createdAt: new Date("2026-03-01T14:30:00"),
-      comments: [
-        {
-          id: "c1",
-          content: "Thank you! It worked for me.",
-          author: {
-            id: "user1",
-            name: "Kamal Perera",
-            avatar: "https://avatar.vercel.sh/kamal"
-          },
-          createdAt: new Date("2026-03-01T15:00:00")
-        }
-      ]
+// All mock questions data
+const allMockQuestions = [
+  {
+    id: "1",
+    title: "Best practices for building scalable web applications?",
+    content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
+    author: {
+      id: "user1",
+      name: "Kamal Perera",
+      avatar: "https://avatar.vercel.sh/kamal"
     },
-    {
-      id: "a2",
-      content: "Another approach is using middleware. You can create a middleware.ts file at the root level and handle requests there.",
-      author: {
-        id: "user5",
-        name: "Dinesh Gunawardhana",
-        avatar: "https://avatar.vercel.sh/dinesh"
-      },
-      upvotes: 4,
-      downvotes: 1,
-      createdAt: new Date("2026-03-02T09:20:00"),
-      comments: []
-    }
-  ]
-}
+    upvotes: 15,
+    downvotes: 2,
+    category: "it3030",
+    categoryName: "IT3030 - Programming Applications and Frameworks",
+    createdAt: new Date("2026-03-01T10:00:00"),
+    answers: [
+      {
+        id: "a1",
+        content: "Use modular architecture with separation of concerns. Consider using design patterns like MVC, clean architecture, or microservices for large-scale applications.",
+        author: {
+          id: "user4",
+          name: "Chamara Wickramasinghe",
+          avatar: "https://avatar.vercel.sh/chamara"
+        },
+        upvotes: 8,
+        downvotes: 0,
+        createdAt: new Date("2026-03-01T14:30:00"),
+        comments: []
+      }
+    ]
+  },
+  {
+    id: "2",
+    title: "Database design for large-scale systems?",
+    content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
+    author: {
+      id: "user2",
+      name: "Nimal Silva",
+      avatar: "https://avatar.vercel.sh/nimal"
+    },
+    upvotes: 8,
+    downvotes: 1,
+    category: "it3020",
+    categoryName: "IT3020 - Database Systems",
+    createdAt: new Date("2026-03-02T14:30:00"),
+    answers: [
+      {
+        id: "a1",
+        content: "Choose SQL for structured data with ACID requirements. NoSQL is better for unstructured, rapidly evolving data. Consider data consistency, scalability, and query patterns.",
+        author: {
+          id: "user6",
+          name: "Priya Sharma",
+          avatar: "https://avatar.vercel.sh/priya"
+        },
+        upvotes: 12,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T15:00:00"),
+        comments: []
+      }
+    ]
+  },
+  {
+    id: "3",
+    title: "Network architecture for distributed systems?",
+    content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
+    author: {
+      id: "user3",
+      name: "Sachini Jayawardena",
+      avatar: "https://avatar.vercel.sh/sachini"
+    },
+    upvotes: 22,
+    downvotes: 0,
+    category: "it3010",
+    categoryName: "IT3010 - Network Design and Management",
+    createdAt: new Date("2026-03-03T09:15:00"),
+    answers: [
+      {
+        id: "a1",
+        content: "Implement load balancing, use CDNs for geographic distribution, ensure redundancy, and monitor network health. Consider latency, bandwidth, and fault tolerance.",
+        author: {
+          id: "user7",
+          name: "Kasun Perera",
+          avatar: "https://avatar.vercel.sh/kasun"
+        },
+        upvotes: 15,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T11:00:00"),
+        comments: []
+      }
+    ]
+  },
+  {
+    id: "4",
+    title: "How to manage IT project timelines effectively?",
+    content: "Any tips on managing project timelines and scope in IT projects? How to handle scope creep?",
+    author: {
+      id: "user4",
+      name: "Janaka Wijesinghe",
+      avatar: "https://avatar.vercel.sh/janaka"
+    },
+    upvotes: 32,
+    downvotes: 1,
+    category: "it3040",
+    categoryName: "IT3040 - IT Project Management",
+    createdAt: new Date("2026-03-02T16:45:00"),
+    answers: [
+      {
+        id: "a1",
+        content: "Use Agile or Scrum methodologies. Define clear requirements upfront, use time-boxing for sprints, maintain a prioritized backlog, and communicate scope changes early.",
+        author: {
+          id: "user8",
+          name: "Nadee Silva",
+          avatar: "https://avatar.vercel.sh/nadee"
+        },
+        upvotes: 18,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T17:30:00"),
+        comments: []
+      }
+    ]
+  },
+  {
+    id: "5",
+    title: "Key employability skills for IT professionals?",
+    content: "What are the most important employability skills I should focus on developing for my IT career?",
+    author: {
+      id: "user5",
+      name: "Ravindra Karunarathne",
+      avatar: "https://avatar.vercel.sh/ravindra"
+    },
+    upvotes: 11,
+    downvotes: 0,
+    category: "it3050",
+    categoryName: "IT3050 - Employability Skills Development - Seminar",
+    createdAt: new Date("2026-03-02T11:20:00"),
+    answers: [
+      {
+        id: "a1",
+        content: "Communication, teamwork, time management, continuous learning, problem-solving, and adaptability. Also develop soft skills like leadership and emotional intelligence.",
+        author: {
+          id: "user9",
+          name: "Anura Gunawardena",
+          avatar: "https://avatar.vercel.sh/anura"
+        },
+        upvotes: 20,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T12:00:00"),
+        comments: []
+      }
+    ]
+  }
+]
 
 export default function QuestionDetailPage() {
   const params = useParams()
-  const [question, setQuestion] = useState(mockQuestion)
+  const [question, setQuestion] = useState<typeof allMockQuestions[0] | null>(null)
   const [answerContent, setAnswerContent] = useState("")
   const [isPosting, setIsPosting] = useState(false)
 
-  // TODO: API call to fetch question
+  // Fetch the correct question based on ID parameter
   useEffect(() => {
-    // fetch(`/api/qna/question/${params.id}`)
-    //   .then(res => res.json())
-    //   .then(data => setQuestion(data))
+    if (params.id) {
+      // Load saved questions from localStorage
+      const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
+      const allQuestions = [...allMockQuestions, ...savedQuestions]
+      
+      // Find the question matching the ID
+      let foundQuestion = allQuestions.find((q: any) => q.id === params.id)
+      
+      // Ensure the question has answers array
+      if (foundQuestion) {
+        if (!foundQuestion.answers) {
+          foundQuestion.answers = []
+        }
+        setQuestion(foundQuestion)
+      } else {
+        setQuestion(null)
+      }
+    }
   }, [params.id])
 
   const handleVote = (type: "up" | "down") => {
@@ -82,7 +195,7 @@ export default function QuestionDetailPage() {
   }
 
   const handlePostAnswer = async () => {
-    if (!answerContent.trim()) return
+    if (!answerContent.trim() || !question) return
     
     setIsPosting(true)
     try {
@@ -125,6 +238,8 @@ export default function QuestionDetailPage() {
   }
 
   const handleAnswerVote = (answerId: string, value: number) => {
+    if (!question) return
+    
     // TODO: API call to vote on answer
     console.log("Vote on answer:", answerId, value)
     
@@ -142,7 +257,24 @@ export default function QuestionDetailPage() {
     })
   }
 
-  const netQuestionVotes = question.upvotes - question.downvotes
+  const netQuestionVotes = question ? question.upvotes - question.downvotes : 0
+
+  if (!question) {
+    return (
+      <div className="container max-w-3xl mx-auto py-6 px-4">
+        <Link 
+          href="/qna"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to questions
+        </Link>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Question not found</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container max-w-3xl mx-auto py-6 px-4">

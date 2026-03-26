@@ -1,6 +1,9 @@
+"use client"
+
 import QuestionCard from "@/components/qna/QuestionCard"
 import Link from "next/link"
 import { PlusCircle, ArrowLeft } from "lucide-react"
+import { useState, useEffect } from "react"
 
 // Step 1: Mock data array එක (මේකත් මෙතනම)
 const mockQuestions = [
@@ -88,6 +91,20 @@ const mockQuestions = [
 
 // Step 3: Main page component එක
 export default function QnaPage() {
+  const [allQuestions, setAllQuestions] = useState(mockQuestions)
+
+  useEffect(() => {
+    // Load saved questions from localStorage
+    try {
+      const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
+      // Combine mock questions with saved questions
+      setAllQuestions([...mockQuestions, ...savedQuestions])
+    } catch (error) {
+      console.error("Error loading questions:", error)
+      setAllQuestions(mockQuestions)
+    }
+  }, [])
+
   return (
     <div className="container max-w-4xl mx-auto py-6 px-4">
       {/* Back button */}
@@ -153,7 +170,7 @@ export default function QnaPage() {
 
       {/* Questions list */}
       <div className="space-y-4">
-        {mockQuestions.map((question) => (
+        {allQuestions.map((question) => (
           <QuestionCard key={question.id} question={question} />
         ))}
       </div>

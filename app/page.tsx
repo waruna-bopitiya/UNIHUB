@@ -26,7 +26,7 @@ interface Post {
 // Mock Q&A Data (Peer2Peer) - English only
 const mockQuestions = [
   {
-    id: "q1",
+    id: "1",
     title: "Best practices for building scalable web applications?",
     content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
     author: {
@@ -41,7 +41,7 @@ const mockQuestions = [
     createdAt: new Date("2026-03-03T10:00:00")
   },
   {
-    id: "q2",
+    id: "2",
     title: "Database design for large-scale systems?",
     content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
     author: {
@@ -56,7 +56,7 @@ const mockQuestions = [
     createdAt: new Date("2026-03-03T14:30:00")
   },
   {
-    id: "q3",
+    id: "3",
     title: "Network architecture for distributed systems?",
     content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
     author: {
@@ -71,7 +71,7 @@ const mockQuestions = [
     createdAt: new Date("2026-03-03T09:15:00")
   },
   {
-    id: "q4",
+    id: "4",
     title: "How to manage IT project timelines effectively?",
     content: "Any tips on managing project timelines and scope in IT projects? How to handle scope creep?",
     author: {
@@ -86,7 +86,7 @@ const mockQuestions = [
     createdAt: new Date("2026-03-02T16:45:00")
   },
   {
-    id: "q5",
+    id: "5",
     title: "Key employability skills for IT professionals?",
     content: "What are the most important employability skills I should focus on developing for my IT career?",
     author: {

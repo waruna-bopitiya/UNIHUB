@@ -96,10 +96,30 @@ export default function AskQuestionPage() {
     const loadingToast = toast.loading("Posting your question...")
     
     try {
-      // TODO: API call එක මෙතනදි කරන්න
-      console.log("Question data:", formData)
-      
-      // Mock submit - පස්සේ API call එකක් වෙයි
+      // Get current user info (mock)
+      const newQuestion = {
+        id: Date.now().toString(),
+        title: formData.title,
+        content: formData.content,
+        category: formData.category,
+        categoryName: categories.find(c => c.id === formData.category)?.name || "Unknown",
+        author: {
+          id: "current-user",
+          name: "You",
+          avatar: "https://avatar.vercel.sh/user"
+        },
+        upvotes: 0,
+        downvotes: 0,
+        answers: [],
+        createdAt: new Date()
+      }
+
+      // Save to localStorage
+      const existingQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
+      existingQuestions.push(newQuestion)
+      localStorage.setItem("qna_questions", JSON.stringify(existingQuestions))
+
+      // Mock submit delay
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Dismiss loading and show success
