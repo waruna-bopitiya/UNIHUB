@@ -130,9 +130,23 @@ export async function ensureTablesExist() {
     )
   `
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS resource_feedback (
+      id              SERIAL PRIMARY KEY,
+      resource_id     INTEGER       NOT NULL,
+      rating          INTEGER       NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      comment         TEXT,
+      user_name       VARCHAR(255)  DEFAULT 'Anonymous',
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+    )
+  `
+
   await sql`CREATE INDEX IF NOT EXISTS idx_resource_downloads_resource_id ON resource_downloads(resource_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_resource_downloads_downloaded_at ON resource_downloads(downloaded_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_resources_created_at ON resources(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_resource_id ON resource_feedback(resource_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_created_at ON resource_feedback(created_at DESC)`
 
   initialized = true
 }

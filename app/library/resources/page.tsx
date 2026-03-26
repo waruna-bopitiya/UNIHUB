@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResourceFeedback } from '@/components/resources/resource-feedback'
 import { useAcademicData, type SelectOption } from '@/hooks/use-academic-data'
 
 type CmpYesSemMod = {
@@ -39,12 +41,20 @@ type Resource = z.infer<typeof resourceSchema> & {
   file_path?: string;
 };
 
+interface FeedbackStats {
+  [resourceId: number]: {
+    feedback_count: number;
+    average_rating: number;
+  };
+}
+
 export default function ResourcesPage() {
   const { years, semesters, subjects, fetchSemesters, fetchSubjects } = useAcademicData()
   
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   
   const [resources, setResources] = useState<Resource[]>([])
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStats>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string }>({ year: '', semester: '', module_name: '' })
   const [showForm, setShowForm] = useState(true)
@@ -54,6 +64,28 @@ export default function ResourcesPage() {
   const [filterSubjects, setFilterSubjects] = useState<SelectOption[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
+
+  // Fetch feedback stats
+  const fetchFeedbackStats = async () => {
+    try {
+      const response = await fetch('/api/resources/feedback-stats')
+      const data = await response.json()
+      
+      if (Array.isArray(data)) {
+        const statsMap: FeedbackStats = {}
+        data.forEach((stat: any) => {
+          statsMap[stat.resource_id] = {
+            feedback_count: stat.feedback_count,
+            average_rating: parseFloat(stat.average_rating) || 0,
+          }
+        })
+        setFeedbackStats(statsMap)
+      }
+    } catch (error) {
+      console.error('Error fetching feedback stats:', error)
+    }
+  }
 
   // Fetch resources on mount
   useEffect(() => {
@@ -86,6 +118,9 @@ export default function ResourcesPage() {
               file_path: res.file_path,
             }
           }))
+          
+          // Fetch feedback stats after resources are loaded
+          await fetchFeedbackStats()
         } else {
           console.error('Invalid data format:', data)
           setResources([])
@@ -383,15 +418,6 @@ export default function ResourcesPage() {
     }
   }
 
-  // Handle rating
-  const handleRate = (idx: number, rating: number) => {
-    setResources((prev) =>
-      prev.map((res, i) =>
-        i === idx ? { ...res, ratings: [...res.ratings, rating] } : res
-      )
-    );
-  };
-
   // Filtered resources
   const filtered = resources.filter(
     (r) =>
@@ -403,33 +429,13 @@ export default function ResourcesPage() {
   // Top resource (highest avg rating)
   const topResource = filtered.length
     ? [...filtered].sort((a, b) => {
-        const avgA = a.ratings.length ? a.ratings.reduce((x, y) => x + y, 0) / a.ratings.length : 0;
-        const avgB = b.ratings.length ? b.ratings.reduce((x, y) => x + y, 0) / b.ratings.length : 0;
+        const statA = feedbackStats[a.id];
+        const statB = feedbackStats[b.id];
+        const avgA = statA ? statA.average_rating : 0;
+        const avgB = statB ? statB.average_rating : 0;
         return avgB - avgA;
       })[0]
     : null;
-
-  // Helper to render stars
-  function renderStars(avg: number, onRate?: (rating: number) => void) {
-    return (
-      <span className="flex items-center gap-1">
-        {[1,2,3,4,5].map((star) => (
-          <Star
-            key={star}
-            size={20}
-            className={
-              (avg >= star ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300') +
-              (onRate ? ' cursor-pointer hover:scale-110 transition-transform' : '')
-            }
-            fill={avg >= star ? '#facc15' : 'none'}
-            strokeWidth={1.5}
-            onClick={onRate ? () => onRate(star) : undefined}
-          />
-        ))}
-        <span className="ml-2 text-sm text-muted-foreground">{avg ? avg.toFixed(2) : 'N/A'}</span>
-      </span>
-    );
-  }
 
   return (
     <AppLayout>
@@ -466,6 +472,25 @@ export default function ResourcesPage() {
                     })
                     console.log(`✅ Loaded ${mappedResources.length} resources`)
                     setResources(mappedResources)
+                    
+                    // Also fetch feedback stats
+                    return fetch('/api/resources/feedback-stats')
+                  } else {
+                    throw new Error('Invalid response data')
+                  }
+                })
+                .then(r => r.json())
+                .then(statsData => {
+                  if (Array.isArray(statsData)) {
+                    const statsMap: FeedbackStats = {}
+                    statsData.forEach((stat: any) => {
+                      statsMap[stat.resource_id] = {
+                        feedback_count: stat.feedback_count,
+                        average_rating: parseFloat(stat.average_rating) || 0,
+                      }
+                    })
+                    setFeedbackStats(statsMap)
+                    console.log('✅ Loaded feedback stats')
                   }
                   setLoading(false)
                 })
@@ -776,9 +801,45 @@ export default function ResourcesPage() {
           <div className="border-2 border-primary rounded-xl p-6 mb-10 bg-card shadow-lg">
             <div className="font-bold text-xl mb-2 text-primary">Top Resource: {topResource.name}</div>
             <div className="text-sm mb-2 text-muted-foreground">Year: {topResource.year}, Semester: {topResource.semester}, Module: {topResource.module_name}</div>
-            <div className="mb-3">{renderStars(
-              topResource.ratings.length ? topResource.ratings.reduce((a: number, b: number) => a + b, 0) / topResource.ratings.length : 0
-            )}</div>
+            
+            {/* Top Resource Rating */}
+            <div className="mb-3 bg-secondary/30 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const topStat = feedbackStats[topResource.id];
+                    const avg = topStat ? topStat.average_rating : 0;
+                    return (
+                      <Star
+                        key={star}
+                        size={20}
+                        className={
+                          avg >= star
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
+                        }
+                      />
+                    );
+                  })}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {(() => {
+                    const topStat = feedbackStats[topResource.id];
+                    if (topStat && topStat.feedback_count > 0) {
+                      return (
+                        <>
+                          <span className="font-semibold text-foreground">{topStat.average_rating.toFixed(1)}</span>
+                          <span> ({topStat.feedback_count} reviews)</span>
+                        </>
+                      );
+                    } else {
+                      return <span>No ratings yet</span>;
+                    }
+                  })()}
+                </div>
+              </div>
+            </div>
+            
             {topResource.review && <div className="italic text-base mb-2 text-gray-700">Review: {topResource.review}</div>}
             <div className="flex gap-3">
               {topResource.resource_type === 'file' && topResource.file_path && (
@@ -814,13 +875,43 @@ export default function ResourcesPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {filtered.map((res, idx) => {
-                const avg = res.ratings.length ? res.ratings.reduce((a: number, b: number) => a + b, 0) / res.ratings.length : 0;
+                const stat = feedbackStats[res.id] || { feedback_count: 0, average_rating: 0 };
+                const avg = stat.average_rating || 0;
                 return (
                   <div key={res.id || res.name + idx} className="border rounded-xl p-6 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow">
                     <div>
                       <div className="font-semibold text-lg mb-2 text-primary truncate" title={res.name}>{res.name}</div>
                       <div className="text-sm mb-2 text-muted-foreground">Year: {res.year}, Semester: {res.semester}, Module: {res.module_name}</div>
-                      <div className="mb-3">{renderStars(avg, (rating) => handleRate(filtered.indexOf(res), rating))}</div>
+                      
+                      {/* Rating Summary */}
+                      <div className="mb-3 bg-secondary/30 rounded-lg p-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={16}
+                                className={
+                                  avg >= star
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300'
+                                }
+                              />
+                            ))}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {stat.feedback_count > 0 ? (
+                              <>
+                                <span className="font-semibold text-foreground">{avg.toFixed(1)}</span>
+                                <span> ({stat.feedback_count})</span>
+                              </>
+                            ) : (
+                              <span>No ratings</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
                       {res.review && <div className="italic text-base mb-2 text-gray-700">Review: {res.review}</div>}
                     </div>
                     <div className="flex flex-col gap-2">
@@ -845,6 +936,14 @@ export default function ResourcesPage() {
                         </a>
                       )}
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedResource(res)}
+                        className="w-full"
+                      >
+                        View Details & Feedback
+                      </Button>
+                      <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(res.id)}
@@ -861,6 +960,54 @@ export default function ResourcesPage() {
             </div>
           )}
         </div>
+
+        {/* Resource Detail Modal */}
+        {selectedResource && (
+          <Dialog open={!!selectedResource} onOpenChange={(open) => !open && setSelectedResource(null)}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{selectedResource.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Year: {selectedResource.year}</p>
+                  <p className="text-sm text-muted-foreground">Semester: {selectedResource.semester}</p>
+                  <p className="text-sm text-muted-foreground">Module: {selectedResource.module_name}</p>
+                  <p className="text-sm text-muted-foreground">Type: {selectedResource.resource_type}</p>
+                  <p className="text-sm text-muted-foreground">Downloads: {selectedResource.download_count || 0}</p>
+                </div>
+                
+                <div className="bg-secondary/30 rounded-lg p-4">
+                  {selectedResource.resource_type === 'file' && selectedResource.file_path && (
+                    <Button
+                      onClick={() => handleDownload(selectedResource.id, selectedResource.name)}
+                      className="w-full flex items-center justify-center gap-2"
+                    >
+                      <Download size={18} />
+                      Download
+                    </Button>
+                  )}
+                  {selectedResource.resource_type === 'link' && selectedResource.link && (
+                    <a
+                      href={selectedResource.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-center bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
+                    >
+                      Visit Resource Link
+                    </a>
+                  )}
+                </div>
+
+                {/* Feedback Component */}
+                <ResourceFeedback 
+                  resourceId={selectedResource.id} 
+                  resourceName={selectedResource.name}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </AppLayout>
   );
