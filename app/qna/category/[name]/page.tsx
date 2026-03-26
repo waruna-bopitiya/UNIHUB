@@ -10,25 +10,25 @@ const categoryMeta: Record<
   string,
   { label: string; description: string }
 > = {
-  programming: {
-    label: "Programming",
-    description: "Code help, debugging, and programming concepts.",
+  it3050: {
+    label: "IT3050 - Employability Skills Development - Seminar",
+    description: "Questions about employability skills, career development, and professional seminars.",
   },
-  mathematics: {
-    label: "Mathematics",
-    description: "Calculus, algebra, and problem-solving questions.",
+  it3040: {
+    label: "IT3040 - IT Project Management",
+    description: "Discussions on IT project management, planning, and execution.",
   },
-  physics: {
-    label: "Physics",
-    description: "Mechanics, quantum, and all things physics.",
+  it3030: {
+    label: "IT3030 - Programming Applications and Frameworks",
+    description: "Help with programming applications, frameworks, and application development.",
   },
-  chemistry: {
-    label: "Chemistry",
-    description: "Organic, inorganic, and lab-related questions.",
+  it3020: {
+    label: "IT3020 - Database Systems",
+    description: "Questions about database design, management, and database systems.",
   },
-  biology: {
-    label: "Biology",
-    description: "Molecular biology, anatomy, and life sciences.",
+  it3010: {
+    label: "IT3010 - Network Design and Management",
+    description: "Topics related to network design, configuration, and management.",
   },
 }
 
@@ -36,39 +36,63 @@ const categoryMeta: Record<
 const mockQuestions = [
   {
     id: "q1",
-    title: "How to create API routes in Next.js? (Need peer help)",
-    content: "I'm new to Next.js. Can someone explain how to create API routes?",
+    title: "Best practices for building scalable web applications?",
+    content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
     author: { name: "Kamal Perera", avatar: "https://avatar.vercel.sh/kamal" },
     upvotes: 15,
     downvotes: 2,
     answers: 3,
-    category: "programming",
-    categoryName: "Programming",
+    category: "it3030",
+    categoryName: "IT3030 - Programming Applications and Frameworks",
     createdAt: new Date("2026-03-03T10:00:00"),
   },
   {
     id: "q2",
-    title: "Calculus is hard! Exam tomorrow 🤯 - Need urgent help",
-    content: "I don't understand calculus problems. Can someone explain limits?",
+    title: "Database design for large-scale systems?",
+    content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
     author: { name: "Nimal Silva", avatar: "https://avatar.vercel.sh/nimal" },
     upvotes: 8,
     downvotes: 1,
     answers: 5,
-    category: "mathematics",
-    categoryName: "Mathematics",
+    category: "it3020",
+    categoryName: "IT3020 - Database Systems",
     createdAt: new Date("2026-03-03T14:30:00"),
   },
   {
     id: "q3",
-    title: "Quantum Physics basics - Anyone want to form a study group?",
-    content: "Looking for peers interested in learning Quantum Physics together.",
+    title: "Network architecture for distributed systems?",
+    content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
     author: { name: "Sachini Jayawardena", avatar: "https://avatar.vercel.sh/sachini" },
     upvotes: 22,
     downvotes: 0,
     answers: 7,
-    category: "physics",
-    categoryName: "Physics",
+    category: "it3010",
+    categoryName: "IT3010 - Network Design and Management",
     createdAt: new Date("2026-03-03T09:15:00"),
+  },
+  {
+    id: "q4",
+    title: "Best programming frameworks for our IT project?",
+    content: "Which frameworks should we use for building scalable applications?",
+    author: { name: "Dinesh Kumar", avatar: "https://avatar.vercel.sh/dinesh" },
+    upvotes: 18,
+    downvotes: 1,
+    answers: 6,
+    category: "it3030",
+    categoryName: "IT3030 - Programming Applications and Frameworks",
+    createdAt: new Date("2026-03-02T15:20:00"),
+  },
+  {
+    id: "q5",
+    title: "Managing timeline and scope in IT projects?",
+    content: "Any tips on managing project timelines effectively? How to handle scope creep?",
+    author: { name: "Anura Silva", avatar: "https://avatar.vercel.sh/anura" },
+    upvotes: 12,
+    downvotes: 0,
+    answers: 4,
+    category: "it3040",
+    categoryName: "IT3040 - IT Project Management",
+    createdAt: new Date("2026-03-01T12:45:00"),
   },
 ]
 

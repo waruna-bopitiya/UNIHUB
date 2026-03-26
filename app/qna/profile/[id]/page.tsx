@@ -36,8 +36,8 @@ const mockUser = {
 const userQuestions = [
   {
     id: "q1",
-    title: "How to create API routes in Next.js?",
-    content: "I'm new to Next.js. Can someone explain how to create API routes?",
+    title: "Best practices for building scalable web applications?",
+    content: "What are the best practices for building scalable applications using modern frameworks?",
     author: {
       name: "Kamal Perera",
       avatar: "https://avatar.vercel.sh/kamal"
@@ -45,14 +45,14 @@ const userQuestions = [
     upvotes: 15,
     downvotes: 2,
     answers: 3,
-    category: "programming",
-    categoryName: "Programming",
+    category: "it3030",
+    categoryName: "IT3030 - Programming Applications and Frameworks",
     createdAt: new Date("2026-03-01T10:00:00")
   },
   {
     id: "q2",
-    title: "Best resources to learn React?",
-    content: "I want to learn React from scratch. Any recommendations for courses or books?",
+    title: "Database design considerations?",
+    content: "What should I consider when designing a database for a large-scale application?",
     author: {
       name: "Kamal Perera",
       avatar: "https://avatar.vercel.sh/kamal"
@@ -60,8 +60,8 @@ const userQuestions = [
     upvotes: 8,
     downvotes: 0,
     answers: 5,
-    category: "programming",
-    categoryName: "Programming",
+    category: "it3020",
+    categoryName: "IT3020 - Database Systems",
     createdAt: new Date("2026-03-05T14:30:00")
   }
 ]
