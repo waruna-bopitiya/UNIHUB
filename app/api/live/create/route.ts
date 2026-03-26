@@ -11,6 +11,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Stream title is required' }, { status: 400 })
     }
 
+    // Validate that scheduled start time is in the future
+    if (scheduledStartTime) {
+      const scheduledDate = new Date(scheduledStartTime);
+      const now = new Date();
+      if (scheduledDate <= now) {
+        return NextResponse.json({ error: 'Scheduled start time must be in the future' }, { status: 400 })
+      }
+    }
+
     const youtube = getYouTubeClient()
 
     // ── Step 1: Create the Live Broadcast (the YouTube "event") ──────────────
