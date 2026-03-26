@@ -61,6 +61,7 @@ export function TakeQuiz({
   const [commentMessage, setCommentMessage] = useState('')
   const [ratingName, setRatingName] = useState('')
   const [selectedRating, setSelectedRating] = useState<number>(0)
+  const [submitError, setSubmitError] = useState('')
 
   const previousParticipantScores = [...participantScores]
     .filter((entry) => entry.name !== 'You')
@@ -81,6 +82,10 @@ export function TakeQuiz({
     const newAnswers = [...answers]
     newAnswers[currentQuestion] = answerIndex
     setAnswers(newAnswers)
+    // Clear error when user answers a question
+    if (submitError) {
+      setSubmitError('')
+    }
   }
 
   const handleNext = () => {
@@ -96,6 +101,13 @@ export function TakeQuiz({
   }
 
   const handleSubmit = () => {
+    // Check if all questions are answered
+    const unansweredQuestions = answers.filter((a) => a === null).length
+    if (unansweredQuestions > 0) {
+      setSubmitError(`Please answer all questions. You have ${unansweredQuestions} unanswered question${unansweredQuestions > 1 ? 's' : ''}.`)
+      return
+    }
+
     let correctCount = 0
     quiz.questions.forEach((question, index) => {
       if (answers[index] === question.correctAnswer) {
@@ -428,6 +440,28 @@ export function TakeQuiz({
             />
           </div>
         </div>
+
+        {/* Question Navigator Circles */}
+        <div className="mt-6 pt-6 border-t border-border">
+          <p className="text-sm text-muted-foreground mb-3">Questions</p>
+          <div className="flex flex-wrap gap-3">
+            {quiz.questions.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentQuestion(index)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+                  answers[index] !== null
+                    ? 'bg-green-500/20 border-2 border-green-500 text-green-600'
+                    : currentQuestion === index
+                    ? 'bg-primary border-2 border-primary text-primary-foreground'
+                    : 'bg-secondary border-2 border-border text-muted-foreground hover:border-primary'
+                }`}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">
@@ -502,6 +536,13 @@ export function TakeQuiz({
           )}
         </div>
       </div>
+
+      {/* Submit Error Message */}
+      {submitError && (
+        <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-sm font-medium">
+          {submitError}
+        </div>
+      )}
       </div>
 
       <div className="bg-card border border-border rounded-lg p-4">
