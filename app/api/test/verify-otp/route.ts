@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@neondatabase/serverless'
-import { db } from '@/lib/db'
+import { sql } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,11 +15,9 @@ export async function POST(request: NextRequest) {
     console.log(`🔍 Verifying OTP for ${email}...`)
 
     // Check if OTP exists in database
-    const otpRecord = await db.query(
-      sql`SELECT * FROM password_reset_otp WHERE email = ${email} AND otp = ${otp}`
-    )
+    const otpRecord = await sql`SELECT * FROM password_reset_otp WHERE email = ${email} AND otp = ${otp}`
 
-    if (otpRecord.rows.length === 0) {
+    if (otpRecord.length === 0) {
       return NextResponse.json(
         {
           status: 'error',
@@ -31,7 +28,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const record = otpRecord.rows[0]
+    const record = otpRecord[0]
     const now = new Date()
     const expiresAt = new Date(record.expires_at)
 
