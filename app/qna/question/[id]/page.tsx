@@ -36,6 +36,32 @@ const allMockQuestions = [
         downvotes: 0,
         createdAt: new Date("2026-03-01T14:30:00"),
         comments: []
+      },
+      {
+        id: "a2",
+        content: "Implement caching strategies and use load balancing. Also consider using containerization with Docker and orchestration with Kubernetes.",
+        author: {
+          id: "user10",
+          name: "Alex Kumar",
+          avatar: "https://avatar.vercel.sh/alex"
+        },
+        upvotes: 6,
+        downvotes: 0,
+        createdAt: new Date("2026-03-01T15:00:00"),
+        comments: []
+      },
+      {
+        id: "a3",
+        content: "Don't forget about monitoring and logging. Use tools like Prometheus, ELK stack, or similar for observability.",
+        author: {
+          id: "user11",
+          name: "Sarah Chen",
+          avatar: "https://avatar.vercel.sh/sarah"
+        },
+        upvotes: 4,
+        downvotes: 0,
+        createdAt: new Date("2026-03-01T16:00:00"),
+        comments: []
       }
     ]
   },
@@ -65,6 +91,58 @@ const allMockQuestions = [
         upvotes: 12,
         downvotes: 0,
         createdAt: new Date("2026-03-02T15:00:00"),
+        comments: []
+      },
+      {
+        id: "a2",
+        content: "Think about sharding and partitioning strategies for scaling horizontally. Indexing is also crucial for query performance.",
+        author: {
+          id: "user12",
+          name: "James Wilson",
+          avatar: "https://avatar.vercel.sh/james"
+        },
+        upvotes: 9,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T16:00:00"),
+        comments: []
+      },
+      {
+        id: "a3",
+        content: "Consider using a combination - SQL for transactional data and NoSQL for caching and analytics.",
+        author: {
+          id: "user13",
+          name: "Monica Perera",
+          avatar: "https://avatar.vercel.sh/monica"
+        },
+        upvotes: 7,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T16:30:00"),
+        comments: []
+      },
+      {
+        id: "a4",
+        content: "Always backup your data and test your disaster recovery plan before going live.",
+        author: {
+          id: "user14",
+          name: "David Lee",
+          avatar: "https://avatar.vercel.sh/david"
+        },
+        upvotes: 5,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T17:00:00"),
+        comments: []
+      },
+      {
+        id: "a5",
+        content: "Use connection pooling to manage database connections efficiently and reduce overhead.",
+        author: {
+          id: "user15",
+          name: "Emma Brown",
+          avatar: "https://avatar.vercel.sh/emma"
+        },
+        upvotes: 3,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T17:30:00"),
         comments: []
       }
     ]
@@ -96,6 +174,84 @@ const allMockQuestions = [
         downvotes: 0,
         createdAt: new Date("2026-03-03T11:00:00"),
         comments: []
+      },
+      {
+        id: "a2",
+        content: "Use service mesh architecture like Istio for better traffic management and observability.",
+        author: {
+          id: "user16",
+          name: "Ravi Nair",
+          avatar: "https://avatar.vercel.sh/ravi"
+        },
+        upvotes: 11,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T11:30:00"),
+        comments: []
+      },
+      {
+        id: "a3",
+        content: "Implement circuit breakers and retry logic to handle failures gracefully.",
+        author: {
+          id: "user17",
+          name: "Sophie Martin",
+          avatar: "https://avatar.vercel.sh/sophie"
+        },
+        upvotes: 9,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T12:00:00"),
+        comments: []
+      },
+      {
+        id: "a4",
+        content: "Consider API gateways for centralized request routing and authentication.",
+        author: {
+          id: "user18",
+          name: "Marcus Johnson",
+          avatar: "https://avatar.vercel.sh/marcus"
+        },
+        upvotes: 8,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T12:30:00"),
+        comments: []
+      },
+      {
+        id: "a5",
+        content: "Use message queues like RabbitMQ or Kafka for asynchronous communication between services.",
+        author: {
+          id: "user19",
+          name: "Lisa Anderson",
+          avatar: "https://avatar.vercel.sh/lisa"
+        },
+        upvotes: 6,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T13:00:00"),
+        comments: []
+      },
+      {
+        id: "a6",
+        content: "Implement proper logging and trace IDs to track requests across services.",
+        author: {
+          id: "user20",
+          name: "Chris Taylor",
+          avatar: "https://avatar.vercel.sh/chris"
+        },
+        upvotes: 5,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T13:30:00"),
+        comments: []
+      },
+      {
+        id: "a7",
+        content: "Don't forget about security - implement TLS/SSL, VPNs, and network isolation.",
+        author: {
+          id: "user21",
+          name: "Nina White",
+          avatar: "https://avatar.vercel.sh/nina"
+        },
+        upvotes: 4,
+        downvotes: 0,
+        createdAt: new Date("2026-03-03T14:00:00"),
+        comments: []
       }
     ]
   },
@@ -126,6 +282,97 @@ const allMockQuestions = [
         downvotes: 0,
         createdAt: new Date("2026-03-02T17:30:00"),
         comments: []
+      },
+      {
+        id: "a2",
+        content: "Implement risk management - identify potential risks early and create mitigation strategies.",
+        author: {
+          id: "user22",
+          name: "Robert Garcia",
+          avatar: "https://avatar.vercel.sh/robert"
+        },
+        upvotes: 14,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T18:00:00"),
+        comments: []
+      },
+      {
+        id: "a3",
+        content: "Use project management tools like Jira, Asana, or Monday.com for better tracking and visibility.",
+        author: {
+          id: "user23",
+          name: "Catherine Zhou",
+          avatar: "https://avatar.vercel.sh/catherine"
+        },
+        upvotes: 12,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T18:30:00"),
+        comments: []
+      },
+      {
+        id: "a4",
+        content: "Regular status meetings and stakeholder communication are essential. Keep everyone aligned.",
+        author: {
+          id: "user24",
+          name: "Michael Brown",
+          avatar: "https://avatar.vercel.sh/michael"
+        },
+        upvotes: 10,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T19:00:00"),
+        comments: []
+      },
+      {
+        id: "a5",
+        content: "Buffer for unknown delays - add contingency time to estimates. Most projects slip timelines.",
+        author: {
+          id: "user25",
+          name: "Jessica Peters",
+          avatar: "https://avatar.vercel.sh/jessica"
+        },
+        upvotes: 9,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T19:30:00"),
+        comments: []
+      },
+      {
+        id: "a6",
+        content: "Document everything - requirements, decisions, changes, and their impact on timeline.",
+        author: {
+          id: "user26",
+          name: "Kevin Park",
+          avatar: "https://avatar.vercel.sh/kevin"
+        },
+        upvotes: 7,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T20:00:00"),
+        comments: []
+      },
+      {
+        id: "a7",
+        content: "Use velocity tracking to measure team productivity and improve estimates.",
+        author: {
+          id: "user27",
+          name: "Laura Martinez",
+          avatar: "https://avatar.vercel.sh/laura"
+        },
+        upvotes: 5,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T20:30:00"),
+        comments: []
+      },
+      {
+        id: "a8",
+        content: "Escalate issues immediately when you see timeline risks. Don't wait until it's critical.",
+        author: {
+          id: "user28",
+          name: "Thomas Fischer",
+          avatar: "https://avatar.vercel.sh/thomas"
+        },
+        upvotes: 3,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T21:00:00"),
+        comments: []
       }
     ]
   },
@@ -155,6 +402,45 @@ const allMockQuestions = [
         upvotes: 20,
         downvotes: 0,
         createdAt: new Date("2026-03-02T12:00:00"),
+        comments: []
+      },
+      {
+        id: "a2",
+        content: "Build a strong portfolio showcasing your projects and contributions. GitHub is your best friend.",
+        author: {
+          id: "user29",
+          name: "Victoria Hall",
+          avatar: "https://avatar.vercel.sh/victoria"
+        },
+        upvotes: 15,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T12:30:00"),
+        comments: []
+      },
+      {
+        id: "a3",
+        content: "Networking is key - attend conferences, meetups, and connect with other professionals in your field.",
+        author: {
+          id: "user30",
+          name: "Oliver Schmidt",
+          avatar: "https://avatar.vercel.sh/oliver"
+        },
+        upvotes: 11,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T13:00:00"),
+        comments: []
+      },
+      {
+        id: "a4",
+        content: "Don't just focus on technical skills - develop presentation, writing, and business acumen too.",
+        author: {
+          id: "user31",
+          name: "Rachel Thompson",
+          avatar: "https://avatar.vercel.sh/rachel"
+        },
+        upvotes: 8,
+        downvotes: 0,
+        createdAt: new Date("2026-03-02T13:30:00"),
         comments: []
       }
     ]
