@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { TopBar } from './top-bar'
-import { ChatModal } from '@/components/chat-modal'
+import { ChatModal } from '@/components/chat/chat-modal'
 import { Toaster } from '@/components/ui/toaster'
 
 interface AppLayoutProps {
