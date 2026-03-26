@@ -20,7 +20,14 @@ export function useAcademicData() {
         setLoading(true)
         const response = await fetch('/api/subjects')
         const data = await response.json()
-        setYears(data)
+        
+        // Ensure data is an array before setting
+        if (Array.isArray(data)) {
+          setYears(data)
+        } else {
+          console.warn('Unexpected response format for years:', data)
+          setYears([])
+        }
       } catch (error) {
         console.error('Error fetching years:', error)
         setYears([])
@@ -44,7 +51,14 @@ export function useAcademicData() {
       setLoading(true)
       const response = await fetch(`/api/subjects?year=${year}`)
       const data = await response.json()
-      setSemesters(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setSemesters(data)
+      } else {
+        console.warn('Unexpected response format for semesters:', data)
+        setSemesters([])
+      }
       setSubjects([])
     } catch (error) {
       console.error('Error fetching semesters:', error)
@@ -65,7 +79,14 @@ export function useAcademicData() {
       setLoading(true)
       const response = await fetch(`/api/subjects?year=${year}&semester=${semester}`)
       const data = await response.json()
-      setSubjects(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setSubjects(data)
+      } else {
+        console.warn('Unexpected response format for subjects:', data)
+        setSubjects([])
+      }
     } catch (error) {
       console.error('Error fetching subjects:', error)
       setSubjects([])

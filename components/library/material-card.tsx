@@ -13,6 +13,10 @@ interface MaterialCardProps {
   likes: number
   fileType: string
   uploadDate: string
+  resourceId?: number
+  filePath?: string
+  link?: string
+  resourceType?: 'file' | 'link'
 }
 
 export function MaterialCard({
@@ -25,13 +29,54 @@ export function MaterialCard({
   likes: initialLikes,
   fileType,
   uploadDate,
+  resourceId,
+  filePath,
+  link,
+  resourceType,
 }: MaterialCardProps) {
   const [liked, setLiked] = useState(false)
   const [likes, setLikes] = useState(initialLikes)
+  const [downloads, setDownloads] = useState(initialDownloads)
+  const [downloading, setDownloading] = useState(false)
 
   const handleLike = () => {
     setLiked(!liked)
     setLikes(liked ? likes - 1 : likes + 1)
+  }
+
+  const handleDownload = async () => {
+    // If no resourceId, just use mock download increment
+    if (!resourceId) {
+      setDownloads(downloads + 1)
+      return
+    }
+
+    setDownloading(true)
+    try {
+      const response = await fetch(`/api/resources/download/${resourceId}`)
+      const data = await response.json()
+
+      // Increment download count
+      setDownloads(downloads + 1)
+
+      if (data.url) {
+        // For links, open in new tab
+        window.open(data.url, '_blank')
+      } else if (filePath) {
+        // For files, trigger download
+        const downloadLink = document.createElement('a')
+        downloadLink.href = filePath
+        downloadLink.download = title
+        document.body.appendChild(downloadLink)
+        downloadLink.click()
+        document.body.removeChild(downloadLink)
+      }
+    } catch (error) {
+      console.error('Error downloading resource:', error)
+      alert('Failed to download resource')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const getFileIcon = () => {
@@ -78,6 +123,50 @@ export function MaterialCard({
           <p className="text-xs text-muted-foreground mb-1">Views</p>
           <p className="font-bold text-foreground flex items-center justify-center gap-1">
             <Eye className="w-4 h-4" />
+            {initialViews.toLocaleString()}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground mb-1">Downloads</p>
+          <p className="font-bold text-foreground flex items-center justify-center gap-1">
+            <Download className="w-4 h-4" />
+            {downloads.toLocaleString()}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground mb-1">Likes</p>
+          <p className="font-bold text-foreground flex items-center justify-center gap-1">
+            <Heart className="w-4 h-4" />
+            {likes.toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <button 
+          onClick={handleDownload}
+          disabled={downloading}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          {downloading ? 'Downloading...' : 'Download'}
+        </button>
+        <button
+          onClick={handleLike}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            liked
+              ? 'bg-destructive/20 text-destructive'
+              : 'bg-secondary text-secondary-foreground hover:opacity-90'
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
+          Like
+        </button>
+      </div>
+    </div>
+  )
+}
             {initialViews.toLocaleString()}
           </p>
         </div>

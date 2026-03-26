@@ -115,9 +115,24 @@ export async function ensureTablesExist() {
       name            VARCHAR(500)  NOT NULL,
       resource_type   VARCHAR(50)   NOT NULL,
       link            TEXT,
+      file_path       VARCHAR(500),
+      download_count  INTEGER       NOT NULL DEFAULT 0,
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
     )
   `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS resource_downloads (
+      id              SERIAL PRIMARY KEY,
+      resource_id     INTEGER       NOT NULL,
+      downloaded_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_downloads_resource_id ON resource_downloads(resource_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_downloads_downloaded_at ON resource_downloads(downloaded_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resources_created_at ON resources(created_at DESC)`
 
   initialized = true
 }
