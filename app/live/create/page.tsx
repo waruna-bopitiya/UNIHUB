@@ -445,21 +445,23 @@ export default function CreateLiveStreamPage() {
                       Title <span className="text-red-500">*</span>
                     </label>
                     <input
-                      name="title" type="text" required
+                      name="title" type="text" required maxLength={100}
                       placeholder="e.g., Advanced Database Design – Week 5"
                       className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       value={formData.title} onChange={handleChange}
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5">{formData.title.length}/100</p>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Description</label>
                     <textarea
-                      name="description" rows={4}
+                      name="description" rows={4} maxLength={5000}
                       placeholder="What will you cover? Share topics, prerequisites, resources…"
                       className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                       value={formData.description} onChange={handleChange}
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5">{formData.description.length}/5000</p>
                   </div>
 
                   <div>
