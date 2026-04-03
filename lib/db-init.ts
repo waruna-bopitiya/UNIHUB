@@ -20,7 +20,8 @@ export async function ensureTablesExist() {
       password             TEXT         NOT NULL,
       created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
       updated_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-      last_login           TIMESTAMPTZ
+      last_login           TIMESTAMPTZ,
+      logouttime           TIMESTAMPTZ
     )
   `
 
@@ -151,6 +152,27 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_resources_created_at ON resources(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_resource_id ON resource_feedback(resource_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_created_at ON resource_feedback(created_at DESC)`
+
+  // Table for Q&A Questions
+  await sql`
+    CREATE TABLE IF NOT EXISTS questions (
+      id              SERIAL PRIMARY KEY,
+      user_id         VARCHAR(50)   NOT NULL,
+      title           VARCHAR(500)  NOT NULL,
+      content         TEXT          NOT NULL,
+      subject_code    VARCHAR(50)   NOT NULL,
+      year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
+      semester        INTEGER       NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_questions_subject_code ON questions(subject_code)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_questions_created_at ON questions(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_questions_year_semester ON questions(year, semester)`
 
   initialized = true
 }

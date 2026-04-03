@@ -18,6 +18,9 @@ export default function AskQuestionPage() {
   const [selectedSemester, setSelectedSemester] = useState("1")
   const [subjects, setSubjects] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     title: "",
@@ -30,6 +33,18 @@ export default function AskQuestionPage() {
     content: ""
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Check if user is logged in
+  useEffect(() => {
+    const studentId = localStorage.getItem('studentId')
+    const firstName = localStorage.getItem('firstName')
+    
+    if (studentId) {
+      setIsLoggedIn(true)
+      setUserId(studentId)
+      setUserName(firstName)
+    }
+  }, [])
 
   // Fetch subjects when year or semester changes
   useEffect(() => {
@@ -120,41 +135,38 @@ export default function AskQuestionPage() {
       // Get the selected subject details
       const selectedSubject = subjects.find(s => s.subject_code === formData.category)
       
-      // Get current user info (mock)
-      const newQuestion = {
-        id: Date.now().toString(),
-        title: formData.title,
-        content: formData.content,
-        category: formData.category,
-        categoryName: selectedSubject ? `${selectedSubject.subject_code} - ${selectedSubject.subject_name}` : "Unknown",
-        author: {
-          id: "current-user",
-          name: "You",
-          avatar: "https://avatar.vercel.sh/user"
+      // Save to database
+      const response = await fetch('/api/qna/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        upvotes: 0,
-        downvotes: 0,
-        answers: [],
-        createdAt: new Date()
+        body: JSON.stringify({
+          userId: userId,
+          title: formData.title,
+          content: formData.content,
+          subjectCode: formData.category,
+          year: parseInt(selectedYear),
+          semester: parseInt(selectedSemester)
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save question')
       }
 
-      // Save to localStorage
-      const existingQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
-      existingQuestions.push(newQuestion)
-      localStorage.setItem("qna_questions", JSON.stringify(existingQuestions))
-
-      // Mock submit delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
       // Dismiss loading and show success
       toast.dismiss(loadingToast)
       toast.success("Question posted successfully! 🎉")
       
       router.push("/qna")
     } catch (error) {
-      console.error("Error posting question:", error)
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      console.error("Error posting question:", errorMessage)
       toast.dismiss(loadingToast)
-      toast.error("Failed to post question. Please try again.")
+      toast.error(errorMessage || "Failed to post question. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -172,6 +184,42 @@ export default function AskQuestionPage() {
     }
   }
 
+  // Show login required message
+  if (!isLoggedIn) {
+    return (
+      <div className="container max-w-3xl mx-auto py-6 px-4">
+        <Link 
+          href="/qna"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to questions
+        </Link>
+
+        <div className="bg-secondary/30 rounded-lg p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Sign In Required</h1>
+          <p className="text-muted-foreground mb-8">
+            You must be logged in to ask questions. Sign in with your student account to continue.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/auth/login"
+              className="px-8 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/qna"
+              className="px-8 py-3 border border-border rounded-md hover:bg-secondary transition-colors font-medium"
+            >
+              Back to Q&A
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container max-w-3xl mx-auto py-6 px-4">
       {/* Back button */}
@@ -183,7 +231,12 @@ export default function AskQuestionPage() {
         Back to questions
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">Ask a Question</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Ask a Question</h1>
+        <p className="text-muted-foreground">
+          Signed in as <span className="font-medium text-foreground">{userName}</span>
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Title */}
