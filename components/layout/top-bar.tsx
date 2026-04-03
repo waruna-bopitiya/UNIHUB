@@ -181,15 +181,41 @@ export function TopBar({ onMenuClick }: TopBarProps) {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('studentId')
-    localStorage.removeItem('firstName')
-    localStorage.removeItem('rememberMe')
-    setIsLoggedIn(false)
-    setFirstName('')
-    setUserProfile(null)
-    setShowProfileModal(false)
-    window.location.href = '/'
+  const handleLogout = async () => {
+    try {
+      // Get the user ID from localStorage
+      const userId = localStorage.getItem('studentId')
+      
+      if (userId) {
+        // Call logout endpoint to record logout time
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ Logout time recorded:', data.logoutTime)
+        } else {
+          console.error('Failed to record logout time')
+        }
+      }
+    } catch (error) {
+      console.error('Error recording logout time:', error)
+    } finally {
+      // Clear localStorage regardless of API success
+      localStorage.removeItem('studentId')
+      localStorage.removeItem('firstName')
+      localStorage.removeItem('rememberMe')
+      setIsLoggedIn(false)
+      setFirstName('')
+      setUserProfile(null)
+      setShowProfileModal(false)
+      window.location.href = '/'
+    }
   }
 
   const formatDate = (dateString: string) => {
