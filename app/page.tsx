@@ -148,12 +148,32 @@ function timeAgo(dateStr: string) {
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [subjects, setSubjects] = useState([])
+  const [onlineUsers, setOnlineUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
   const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
   const [selectedYear, setSelectedYear] = useState(1)
   const [selectedSemester, setSelectedSemester] = useState(1)
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Get real-time status based on current time
+  const getOnlineStatus = (lastLogin: string | null) => {
+    if (!lastLogin) return 'offline'
+    const lastLoginTime = new Date(lastLogin).getTime()
+    const timeDifference = currentTime.getTime() - lastLoginTime
+    const fiveMinutesInMs = 5 * 60 * 1000
+    return timeDifference < fiveMinutesInMs ? 'online' : 'away'
+  }
+
+  // Sort users: online first, then away/offline
+  const sortedOnlineUsers = [...onlineUsers].sort((a, b) => {
+    const statusA = getOnlineStatus(a.lastLogin)
+    const statusB = getOnlineStatus(b.lastLogin)
+    if (statusA === 'online' && statusB !== 'online') return -1
+    if (statusA !== 'online' && statusB === 'online') return 1
+    return 0
+  })
 
   const fetchPosts = async () => {
     try {
@@ -161,6 +181,22 @@ export default function Home() {
       if (res.ok) setPosts(await res.json())
     } catch {}
     setLoading(false)
+  }
+
+  const fetchOnlineUsers = async () => {
+    try {
+      const res = await fetch('/api/online-users')
+      if (res.ok) {
+        const data = await res.json()
+        console.log('Fetched online users:', data)
+        setOnlineUsers(data)
+      } else {
+        const error = await res.json()
+        console.error('API Error:', error.details || error.error)
+      }
+    } catch (error) {
+      console.error('Error fetching online users:', error)
+    }
   }
 
   const fetchSubjects = async () => {
@@ -185,11 +221,21 @@ export default function Home() {
 
   useEffect(() => { 
     fetchPosts()
+    fetchOnlineUsers()
+    // Refresh user list every 2 minutes to get newly logged-in users
+    const interval = setInterval(fetchOnlineUsers, 2 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
     fetchSubjects()
   }, [selectedYear, selectedSemester])
+
+  // Update current time every second for real-time status
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Filter questions based on selected filter
   useEffect(() => {
@@ -264,17 +310,47 @@ export default function Home() {
                 Online Now
               </h3>
               <div className="space-y-3">
-                {mockOnlinePeers.map((peer, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="relative">
-                      <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
-                      <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${
-                        peer.status === 'online' ? 'bg-emerald-500' : 'bg-gray-400'
-                      } ring-2 ring-background`} />
-                    </div>
-                    <span className="text-sm">{peer.name}</span>
-                  </div>
-                ))}
+                {sortedOnlineUsers.length > 0 ? (
+                  <>
+                    {/* Online Users Section */}
+                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin) === 'online') && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">ONLINE</p>
+                        {sortedOnlineUsers
+                          .filter(u => getOnlineStatus(u.lastLogin) === 'online')
+                          .map((peer: any, i: number) => (
+                            <div key={`online-${i}`} className="flex items-center gap-2 mb-2">
+                              <div className="relative">
+                                <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
+                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                              </div>
+                              <span className="text-sm">{peer.name}</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Away/Offline Users Section */}
+                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin) !== 'online') && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 pt-2 border-t border-border">AWAY</p>
+                        {sortedOnlineUsers
+                          .filter(u => getOnlineStatus(u.lastLogin) !== 'online')
+                          .map((peer: any, i: number) => (
+                            <div key={`away-${i}`} className="flex items-center gap-2 mb-2 opacity-60">
+                              <div className="relative">
+                                <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
+                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+                              </div>
+                              <span className="text-sm">{peer.name}</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No users found</p>
+                )}
               </div>
             </div>
 
@@ -295,7 +371,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Online Peers</span>
-                  <span className="font-medium text-emerald-500">12</span>
+                  <span className="font-medium text-emerald-500">{sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin) === 'online').length}</span>
                 </div>
               </div>
             </div>
