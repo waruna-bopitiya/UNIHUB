@@ -155,21 +155,29 @@ export default function Home() {
   const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
   const [selectedYear, setSelectedYear] = useState(1)
   const [selectedSemester, setSelectedSemester] = useState(1)
-  const [currentTime, setCurrentTime] = useState(new Date())
 
-  // Get real-time status based on current time
-  const getOnlineStatus = (lastLogin: string | null) => {
-    if (!lastLogin) return 'offline'
+  // Get real-time status based on last_login and logouttime
+  const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
+    if (!lastLogin) return 'away'
+    
+    // If no logout time, user is still online
+    if (!logoutTime) return 'online'
+    
+    // Compare timestamps - whichever is more recent determines status
     const lastLoginTime = new Date(lastLogin).getTime()
-    const timeDifference = currentTime.getTime() - lastLoginTime
-    const fiveMinutesInMs = 5 * 60 * 1000
-    return timeDifference < fiveMinutesInMs ? 'online' : 'away'
+    const logoutTimeStamp = new Date(logoutTime).getTime()
+    
+    // If last_login is after logouttime, user is online
+    if (lastLoginTime > logoutTimeStamp) return 'online'
+    
+    // If logouttime is after or equal to last_login, user is away
+    return 'away'
   }
 
   // Sort users: online first, then away/offline
   const sortedOnlineUsers = [...onlineUsers].sort((a, b) => {
-    const statusA = getOnlineStatus(a.lastLogin)
-    const statusB = getOnlineStatus(b.lastLogin)
+    const statusA = getOnlineStatus(a.lastLogin, a.logoutTime)
+    const statusB = getOnlineStatus(b.lastLogin, b.logoutTime)
     if (statusA === 'online' && statusB !== 'online') return -1
     if (statusA !== 'online' && statusB === 'online') return 1
     return 0
@@ -230,12 +238,6 @@ export default function Home() {
   useEffect(() => {
     fetchSubjects()
   }, [selectedYear, selectedSemester])
-
-  // Update current time every second for real-time status
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   // Filter questions based on selected filter
   useEffect(() => {
@@ -313,11 +315,11 @@ export default function Home() {
                 {sortedOnlineUsers.length > 0 ? (
                   <>
                     {/* Online Users Section */}
-                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin) === 'online') && (
+                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online') && (
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground mb-2">ONLINE</p>
                         {sortedOnlineUsers
-                          .filter(u => getOnlineStatus(u.lastLogin) === 'online')
+                          .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online')
                           .map((peer: any, i: number) => (
                             <div key={`online-${i}`} className="flex items-center gap-2 mb-2">
                               <div className="relative">
@@ -331,11 +333,11 @@ export default function Home() {
                     )}
 
                     {/* Away/Offline Users Section */}
-                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin) !== 'online') && (
+                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online') && (
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground mb-2 pt-2 border-t border-border">AWAY</p>
                         {sortedOnlineUsers
-                          .filter(u => getOnlineStatus(u.lastLogin) !== 'online')
+                          .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online')
                           .map((peer: any, i: number) => (
                             <div key={`away-${i}`} className="flex items-center gap-2 mb-2 opacity-60">
                               <div className="relative">
@@ -371,7 +373,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Online Peers</span>
-                  <span className="font-medium text-emerald-500">{sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin) === 'online').length}</span>
+                  <span className="font-medium text-emerald-500">{sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online').length}</span>
                 </div>
               </div>
             </div>
