@@ -6,7 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, Calendar, Award, MessageCircle, TrendingUp } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import QuestionCard from "@/components/qna/QuestionCard"
-import AnswerCard from "@/components/qna/AnswerCard"  
+import AnswerCard from "@/components/qna/AnswerCard"
 
 // Mock user data
 const mockUser = {

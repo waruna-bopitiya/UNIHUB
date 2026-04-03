@@ -98,7 +98,7 @@ export default function LibraryPage() {
         {/* Filters */}
         <LibraryFilters />
 
-        {/* Materials Grid */}
+        {/* Materials Grid - Using real resources + mock data */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {mockMaterials.map((material) => (
             <MaterialCard key={material.id} {...material} />

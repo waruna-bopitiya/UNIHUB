@@ -51,6 +51,7 @@ export default function CreateLiveStreamPage() {
   const [phase, setPhase] = useState<Phase>('form');
   const [loading, setLoading] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [dateError, setDateError] = useState('');
   const [streamInfo, setStreamInfo] = useState<StreamInfo>({
     videoId: '', streamKey: '', streamUrl: 'rtmp://a.rtmp.youtube.com/live2', thumbnailUrl: null,
   });
@@ -89,9 +90,33 @@ export default function CreateLiveStreamPage() {
     };
   }, [cameraStream]);
 
-  // ── Form handlers ────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────────────
+  const getMinDateTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 1); // Minimum 1 minute from now
+    return now.toISOString().slice(0, 16);
+  };
+
+  const validateScheduledTime = (dateString: string): boolean => {
+    const selectedDate = new Date(dateString);
+    const now = new Date();
+    return selectedDate > now;
+  };
+
+  // ── Form handlers ────────────────────────────────────────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    
+    // Validate scheduled time
+    if (name === 'scheduledStartTime') {
+      if (value && !validateScheduledTime(value)) {
+        setDateError('Scheduled start time must be in the future');
+      } else {
+        setDateError('');
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAcademicChange = (field: keyof AcademicData, value: string) => {
@@ -120,6 +145,13 @@ export default function CreateLiveStreamPage() {
     e.preventDefault();
     setLoading(true);
     setCreateError('');
+
+    // Validate scheduled time before submission
+    if (!validateScheduledTime(formData.scheduledStartTime)) {
+      setCreateError('Scheduled start time must be in the future');
+      setLoading(false);
+      return;
+    }
 
     try {
       let thumbnailBase64: string | null = null;
@@ -413,30 +445,38 @@ export default function CreateLiveStreamPage() {
                       Title <span className="text-red-500">*</span>
                     </label>
                     <input
-                      name="title" type="text" required
+                      name="title" type="text" required maxLength={100}
                       placeholder="e.g., Advanced Database Design – Week 5"
                       className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       value={formData.title} onChange={handleChange}
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5">{formData.title.length}/100</p>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Description</label>
                     <textarea
-                      name="description" rows={4}
+                      name="description" rows={4} maxLength={5000}
                       placeholder="What will you cover? Share topics, prerequisites, resources…"
                       className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                       value={formData.description} onChange={handleChange}
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5">{formData.description.length}/5000</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">Scheduled Start</label>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">
+                      Scheduled Start <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      name="scheduledStartTime" type="datetime-local"
-                      className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      name="scheduledStartTime" type="datetime-local" required
+                      min={getMinDateTime()}
+                      className={`w-full bg-background border rounded-lg p-3 text-sm text-foreground focus:outline-none focus:ring-2 ${
+                        dateError ? 'border-red-500 focus:ring-red-500' : 'border-input focus:ring-primary'
+                      }`}
                       value={formData.scheduledStartTime} onChange={handleChange}
                     />
+                    {dateError && <p className="text-xs text-red-500 mt-2">{dateError}</p>}
                   </div>
                 </div>
 
@@ -448,7 +488,7 @@ export default function CreateLiveStreamPage() {
 
                 <button
                   type="submit"
-                  disabled={loading || !formData.title.trim() || !academicData.year}
+                  disabled={loading || !formData.title.trim() || !academicData.year || !!dateError}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold rounded-xl transition"
                 >
                   {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <UploadCloud className="w-5 h-5" />}

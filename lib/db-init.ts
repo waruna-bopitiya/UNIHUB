@@ -6,6 +6,59 @@ export async function ensureTablesExist() {
   if (initialized) return
 
   await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id                   VARCHAR(50)  PRIMARY KEY,
+      first_name           VARCHAR(255) NOT NULL,
+      second_name          VARCHAR(255),
+      email                VARCHAR(255) NOT NULL UNIQUE,
+      phone_number         VARCHAR(20)  NOT NULL,
+      country_code         VARCHAR(10),
+      address              TEXT,
+      gender               VARCHAR(50),
+      year_of_university   INTEGER      NOT NULL CHECK (year_of_university BETWEEN 1 AND 4),
+      semester             INTEGER      NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      password             TEXT         NOT NULL,
+      created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      updated_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      last_login           TIMESTAMPTZ
+    )
+  `
+
+  // Create indexes for performance
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_year_semester ON users(year_of_university, semester)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC NULLS LAST)`
+
+  // Table for storing OTP for password reset
+  await sql`
+    CREATE TABLE IF NOT EXISTS password_reset_otp (
+      id          SERIAL PRIMARY KEY,
+      email       VARCHAR(255) NOT NULL,
+      otp         VARCHAR(6)   NOT NULL,
+      expires_at  TIMESTAMPTZ  NOT NULL,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_password_reset_otp_email ON password_reset_otp(email)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_password_reset_otp_expires_at ON password_reset_otp(expires_at)`
+
+  // Table for storing OTP for signup email verification
+  await sql`
+    CREATE TABLE IF NOT EXISTS signup_otp (
+      id          SERIAL PRIMARY KEY,
+      email       VARCHAR(255) NOT NULL,
+      otp         VARCHAR(6)   NOT NULL,
+      expires_at  TIMESTAMPTZ  NOT NULL,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_signup_otp_email ON signup_otp(email)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_signup_otp_expires_at ON signup_otp(expires_at)`
+
+  await sql`
     CREATE TABLE IF NOT EXISTS posts (
       id            SERIAL PRIMARY KEY,
       author_name   VARCHAR(255)  NOT NULL DEFAULT 'Student',
@@ -40,6 +93,64 @@ export async function ensureTablesExist() {
       created_at           TIMESTAMPTZ   NOT NULL DEFAULT NOW()
     )
   `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS subject4years (
+      id              SERIAL PRIMARY KEY,
+      year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
+      semester        INTEGER       NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      subject_code    VARCHAR(50)   NOT NULL,
+      subject_name    VARCHAR(500)  NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      UNIQUE(year, semester, subject_code)
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS resources (
+      id              SERIAL PRIMARY KEY,
+      uploader_id     VARCHAR(50)   NOT NULL,
+      year            VARCHAR(50)   NOT NULL,
+      semester        VARCHAR(50)   NOT NULL,
+      module_name     VARCHAR(500)  NOT NULL,
+      name            VARCHAR(500)  NOT NULL,
+      resource_type   VARCHAR(50)   NOT NULL,
+      link            TEXT,
+      file_path       VARCHAR(500),
+      download_count  INTEGER       NOT NULL DEFAULT 0,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_resources_uploader_id ON resources(uploader_id)`
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS resource_downloads (
+      id              SERIAL PRIMARY KEY,
+      resource_id     INTEGER       NOT NULL,
+      downloaded_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS resource_feedback (
+      id              SERIAL PRIMARY KEY,
+      resource_id     INTEGER       NOT NULL,
+      rating          INTEGER       NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      comment         TEXT,
+      user_name       VARCHAR(255)  DEFAULT 'Anonymous',
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_downloads_resource_id ON resource_downloads(resource_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_downloads_downloaded_at ON resource_downloads(downloaded_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resources_created_at ON resources(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_resource_id ON resource_feedback(resource_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_created_at ON resource_feedback(created_at DESC)`
 
   initialized = true
 }
