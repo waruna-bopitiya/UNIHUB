@@ -222,8 +222,8 @@ export default function Home() {
   useEffect(() => { 
     fetchPosts()
     fetchOnlineUsers()
-    // Refresh user list every 2 minutes to get newly logged-in users
-    const interval = setInterval(fetchOnlineUsers, 2 * 60 * 1000)
+    // Refresh user list every 10 seconds to catch logouts and new logins immediately
+    const interval = setInterval(fetchOnlineUsers, 10 * 1000)
     return () => clearInterval(interval)
   }, [])
 
