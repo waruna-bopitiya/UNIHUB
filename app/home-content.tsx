@@ -24,85 +24,6 @@ interface Post {
   created_at: string
 }
 
-// Mock Q&A Data (Peer2Peer) - English only
-const mockQuestions = [
-  {
-    id: "q1",
-    title: "How to create API routes in Next.js? (Need peer help)",
-    content: "I'm new to Next.js. Can someone explain how to create API routes? How do I work with route.ts files in the app directory?",
-    author: {
-      name: "Kamal Perera",
-      avatar: "https://avatar.vercel.sh/kamal",
-    },
-    upvotes: 15,
-    downvotes: 2,
-    answers: 3,
-    category: "programming",
-    categoryName: "Programming",
-    createdAt: new Date("2026-03-03T10:00:00")
-  },
-  {
-    id: "q2",
-    title: "Calculus is hard! Exam tomorrow 🤯 - Need urgent help",
-    content: "I don't understand calculus problems. Can someone explain limits and continuity? Any peer available to help?",
-    author: {
-      name: "Nimal Silva",
-      avatar: "https://avatar.vercel.sh/nimal",
-    },
-    upvotes: 8,
-    downvotes: 1,
-    answers: 5,
-    category: "mathematics",
-    categoryName: "Mathematics",
-    createdAt: new Date("2026-03-03T14:30:00")
-  },
-  {
-    id: "q3",
-    title: "Quantum Physics basics - Anyone want to form a study group?",
-    content: "Looking for peers interested in learning Quantum Physics together. Let's form a study group and help each other.",
-    author: {
-      name: "Sachini Jayawardena",
-      avatar: "https://avatar.vercel.sh/sachini",
-    },
-    upvotes: 22,
-    downvotes: 0,
-    answers: 7,
-    category: "physics",
-    categoryName: "Physics",
-    createdAt: new Date("2026-03-03T09:15:00")
-  },
-  {
-    id: "q4",
-    title: "How to debug async/await in JavaScript efficiently?",
-    content: "I'm having trouble debugging promises and async functions. Any tips on using Chrome DevTools or VS Code debugger?",
-    author: {
-      name: "Janaka Wijesinghe",
-      avatar: "https://avatar.vercel.sh/janaka",
-    },
-    upvotes: 32,
-    downvotes: 1,
-    answers: 8,
-    category: "programming",
-    categoryName: "Programming",
-    createdAt: new Date("2026-03-02T16:45:00")
-  },
-  {
-    id: "q5",
-    title: "Organic Chemistry - Help with reaction mechanisms",
-    content: "Can anyone explain SN1 and SN2 reactions? I'm struggling with understanding nucleophilicity and leaving groups.",
-    author: {
-      name: "Ravindra Karunarathne",
-      avatar: "https://avatar.vercel.sh/ravindra",
-    },
-    upvotes: 11,
-    downvotes: 0,
-    answers: 4,
-    category: "chemistry",
-    categoryName: "Chemistry",
-    createdAt: new Date("2026-03-02T11:20:00")
-  }
-]
-
 // Mock Online Peers
 const mockOnlinePeers = [
   { name: "Chamara", avatar: "https://avatar.vercel.sh/chamara", status: "online" },
@@ -148,10 +69,12 @@ function timeAgo(dateStr: string) {
 
 export default function HomePageContent() {
   const [posts, setPosts] = useState<Post[]>([])
+  const [questions, setQuestions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
-  const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
+  const [filteredQuestions, setFilteredQuestions] = useState<any[]>([])
   const searchParams = useSearchParams()
 
   const fetchPosts = async () => {
@@ -162,8 +85,27 @@ export default function HomePageContent() {
     setLoading(false)
   }
 
+  const fetchQuestions = async () => {
+    try {
+      setQuestionsLoading(true)
+      const res = await fetch('/api/qna/questions')
+      if (res.ok) {
+        const data = await res.json()
+        setQuestions(data)
+      } else {
+        setQuestions([])
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error)
+      setQuestions([])
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }
+
   useEffect(() => { 
     fetchPosts()
+    fetchQuestions()
     // Auto-select Q&A tab if section=qna in query params
     const section = searchParams.get('section')
     if (section === 'qna') {
@@ -173,21 +115,23 @@ export default function HomePageContent() {
 
   // Filter questions based on selected filter
   useEffect(() => {
-    let filtered = [...mockQuestions]
+    let filtered = [...questions]
     
     if (filterType === "unanswered") {
-      // Show questions with 0 answers
       filtered = filtered.filter(q => q.answers === 0)
     } else if (filterType === "trending") {
-      // Sort by most upvotes (trending)
       filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
     } else {
       // Recent - sort by newest first
-      filtered = [...filtered].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
+        return dateB - dateA
+      })
     }
     
     setFilteredQuestions(filtered)
-  }, [filterType])
+  }, [filterType, questions])
 
   const handlePostCreated = (newPost: Post) => {
     setPosts(prev => [newPost, ...prev])
@@ -410,7 +354,11 @@ export default function HomePageContent() {
 
                 {/* Questions List */}
                 <div className="space-y-4">
-                  {filteredQuestions.length === 0 ? (
+                  {questionsLoading ? (
+                    <div className="text-center py-12 bg-card border border-border rounded-lg">
+                      <p className="text-muted-foreground">Loading questions...</p>
+                    </div>
+                  ) : filteredQuestions.length === 0 ? (
                     <div className="text-center py-12 bg-card border border-border rounded-lg">
                       <p className="text-muted-foreground">
                         {filterType === "unanswered" 

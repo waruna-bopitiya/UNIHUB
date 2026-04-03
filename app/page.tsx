@@ -32,84 +32,6 @@ interface OnlineUser {
 }
 
 // Mock Q&A Data (Peer2Peer) - English only
-const mockQuestions = [
-  {
-    id: "1",
-    title: "Best practices for building scalable web applications?",
-    content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
-    author: {
-      name: "Kamal Perera",
-      avatar: "https://avatar.vercel.sh/kamal",
-    },
-    upvotes: 15,
-    downvotes: 2,
-    answers: 3,
-    category: "it3030",
-    categoryName: "IT3030 - Programming Applications and Frameworks",
-    createdAt: new Date("2026-03-03T10:00:00")
-  },
-  {
-    id: "2",
-    title: "Database design for large-scale systems?",
-    content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
-    author: {
-      name: "Nimal Silva",
-      avatar: "https://avatar.vercel.sh/nimal",
-    },
-    upvotes: 8,
-    downvotes: 1,
-    answers: 5,
-    category: "it3020",
-    categoryName: "IT3020 - Database Systems",
-    createdAt: new Date("2026-03-03T14:30:00")
-  },
-  {
-    id: "3",
-    title: "Network architecture for distributed systems?",
-    content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
-    author: {
-      name: "Sachini Jayawardena",
-      avatar: "https://avatar.vercel.sh/sachini",
-    },
-    upvotes: 22,
-    downvotes: 0,
-    answers: 7,
-    category: "it3010",
-    categoryName: "IT3010 - Network Design and Management",
-    createdAt: new Date("2026-03-03T09:15:00")
-  },
-  {
-    id: "4",
-    title: "How to manage IT project timelines effectively?",
-    content: "Any tips on managing project timelines and scope in IT projects? How to handle scope creep?",
-    author: {
-      name: "Janaka Wijesinghe",
-      avatar: "https://avatar.vercel.sh/janaka",
-    },
-    upvotes: 32,
-    downvotes: 1,
-    answers: 8,
-    category: "it3040",
-    categoryName: "IT3040 - IT Project Management",
-    createdAt: new Date("2026-03-02T16:45:00")
-  },
-  {
-    id: "5",
-    title: "Key employability skills for IT professionals?",
-    content: "What are the most important employability skills I should focus on developing for my IT career?",
-    author: {
-      name: "Ravindra Karunarathne",
-      avatar: "https://avatar.vercel.sh/ravindra",
-    },
-    upvotes: 11,
-    downvotes: 0,
-    answers: 4,
-    category: "it3050",
-    categoryName: "IT3050 - Employability Skills Development - Seminar",
-    createdAt: new Date("2026-03-02T11:20:00")
-  }
-]
-
 // Mock Online Peers
 const mockOnlinePeers = [
   { name: "Chamara", avatar: "https://avatar.vercel.sh/chamara", status: "online" },
@@ -160,9 +82,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
-  const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
+  const [filteredQuestions, setFilteredQuestions] = useState<any[]>([])
   const [selectedYear, setSelectedYear] = useState(1)
   const [selectedSemester, setSelectedSemester] = useState(1)
+  const [questionsLoading, setQuestionsLoading] = useState(false)
 
   // Get real-time status based on last_login and logouttime
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
@@ -235,9 +158,30 @@ export default function Home() {
     }
   }
 
+  const fetchQuestions = async () => {
+    try {
+      setQuestionsLoading(true)
+      const res = await fetch('/api/qna/questions')
+      if (res.ok) {
+        const data = await res.json()
+        console.log('Fetched questions:', data)
+        setFilteredQuestions(data)
+      } else {
+        console.error('Failed to fetch questions')
+        setFilteredQuestions([])
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error)
+      setFilteredQuestions([])
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }
+
   useEffect(() => { 
     fetchPosts()
     fetchOnlineUsers()
+    fetchQuestions()
     // Refresh user list every 10 seconds to catch logouts and new logins immediately
     const interval = setInterval(fetchOnlineUsers, 10 * 1000)
     return () => clearInterval(interval)
@@ -249,17 +193,21 @@ export default function Home() {
 
   // Filter questions based on selected filter
   useEffect(() => {
-    let filtered = [...mockQuestions]
+    // Note: Real questions don't have these calculated fields yet
+    // In the future, we can add upvotes/downvotes to the questions table
+    let filtered = [...filteredQuestions]
     
     if (filterType === "unanswered") {
-      // Show questions with 0 answers
       filtered = filtered.filter(q => q.answers === 0)
     } else if (filterType === "trending") {
-      // Sort by most upvotes (trending)
       filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
     } else {
       // Recent - sort by newest first
-      filtered = [...filtered].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      filtered = [...filtered].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
+        return dateB - dateA
+      })
     }
     
     setFilteredQuestions(filtered)
