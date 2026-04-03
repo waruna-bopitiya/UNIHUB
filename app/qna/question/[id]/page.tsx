@@ -511,10 +511,31 @@ export default function QuestionDetailPage() {
         comments: []
       }
       
-      setQuestion({
+      const updatedQuestion = {
         ...question,
         answers: [newAnswer, ...question.answers]
-      })
+      }
+      
+      setQuestion(updatedQuestion)
+      
+      // Save to localStorage
+      try {
+        const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
+        const questionIndex = savedQuestions.findIndex((q: any) => q.id === question.id)
+        
+        if (questionIndex !== -1) {
+          // Update existing question
+          savedQuestions[questionIndex] = updatedQuestion
+        } else {
+          // Add new question if not found
+          savedQuestions.push(updatedQuestion)
+        }
+        
+        localStorage.setItem("qna_questions", JSON.stringify(savedQuestions))
+      } catch (storageError) {
+        console.error("Error saving to localStorage:", storageError)
+      }
+      
       setAnswerContent("")
     } catch (error) {
       console.error("Error posting answer:", error)

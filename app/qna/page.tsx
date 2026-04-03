@@ -98,7 +98,15 @@ export default function QnaPage() {
     try {
       const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
       // Combine mock questions with saved questions
-      setAllQuestions([...mockQuestions, ...savedQuestions])
+      const combined = [...mockQuestions, ...savedQuestions]
+      
+      // Normalize answers count - handle both array and number formats
+      const normalized = combined.map((q: any) => ({
+        ...q,
+        answers: Array.isArray(q.answers) ? q.answers.length : q.answers
+      }))
+      
+      setAllQuestions(normalized)
     } catch (error) {
       console.error("Error loading questions:", error)
       setAllQuestions(mockQuestions)
