@@ -560,6 +560,7 @@ export default function ResourcesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Year Dropdown */}
                 <FormField
+                  key="year"
                   control={form.control}
                   name="year"
                   render={({ field }) => (
@@ -585,6 +586,7 @@ export default function ResourcesPage() {
                 />
                 {/* Semester Dropdown */}
                 <FormField
+                  key="semester"
                   control={form.control}
                   name="semester"
                   render={({ field }) => (
@@ -611,6 +613,7 @@ export default function ResourcesPage() {
                 />
                 {/* Module Dropdown */}
                 <FormField
+                  key="module_name"
                   control={form.control}
                   name="module_name"
                   render={({ field }) => (
@@ -636,6 +639,7 @@ export default function ResourcesPage() {
                   )}
                 />
                 <FormField
+                  key="name"
                   control={form.control}
                   name="name"
                   render={({ field }) => (
@@ -872,23 +876,27 @@ export default function ResourcesPage() {
             {topResource.review && <div className="italic text-base mb-2 text-gray-700">Review: {topResource.review}</div>}
             <div className="flex gap-3">
               {topResource.resource_type === 'file' && topResource.file_path && (
-                <Button
-                  onClick={() => handleDownload(topResource.id!, topResource.name)}
-                  className="flex items-center gap-2"
-                >
-                  <Download size={18} />
-                  Download ({topResource.download_count || 0})
-                </Button>
+                <React.Fragment key="top-download-btn">
+                  <Button
+                    onClick={() => handleDownload(topResource.id!, topResource.name)}
+                    className="flex items-center gap-2"
+                  >
+                    <Download size={18} />
+                    Download ({topResource.download_count || 0})
+                  </Button>
+                </React.Fragment>
               )}
               {topResource.resource_type === 'link' && topResource.link && (
-                <a
-                  href={topResource.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline font-medium"
-                >
-                  Visit Resource
-                </a>
+                <React.Fragment key="top-link-btn">
+                  <a
+                    href={topResource.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline font-medium"
+                  >
+                    Visit Resource
+                  </a>
+                </React.Fragment>
               )}
             </div>
           </div>
@@ -945,26 +953,31 @@ export default function ResourcesPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       {res.resource_type === 'file' && res.file_path && res.id && (
-                        <Button
-                          onClick={() => handleDownload(res.id, res.name)}
-                          className="w-full flex items-center justify-center gap-2"
-                          disabled={deleting === res.id}
-                        >
-                          <Download size={18} />
-                          Download ({res.download_count || 0})
-                        </Button>
+                        <React.Fragment key="download-btn">
+                          <Button
+                            onClick={() => handleDownload(res.id, res.name)}
+                            className="w-full flex items-center justify-center gap-2"
+                            disabled={deleting === res.id}
+                          >
+                            <Download size={18} />
+                            Download ({res.download_count || 0})
+                          </Button>
+                        </React.Fragment>
                       )}
                       {res.resource_type === 'link' && res.link && res.id && (
-                        <a
-                          href={res.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary underline font-medium text-center p-2"
-                        >
-                          Visit Link (Downloads: {res.download_count || 0})
-                        </a>
+                        <React.Fragment key="link-btn">
+                          <a
+                            href={res.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary underline font-medium text-center p-2"
+                          >
+                            Visit Link (Downloads: {res.download_count || 0})
+                          </a>
+                        </React.Fragment>
                       )}
                       <Button
+                        key="details-btn"
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedResource(res)}
@@ -974,22 +987,26 @@ export default function ResourcesPage() {
                       </Button>
                       {/* Delete button only for uploader */}
                       {currentUserId && currentUserId === res.uploader_id && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(res.id)}
-                          disabled={deleting === res.id}
-                          className="w-full flex items-center justify-center gap-2"
-                        >
-                          <Trash2 size={18} />
-                          {deleting === res.id ? 'Deleting...' : 'Delete'}
-                        </Button>
+                        <React.Fragment key="delete-btn">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(res.id)}
+                            disabled={deleting === res.id}
+                            className="w-full flex items-center justify-center gap-2"
+                          >
+                            <Trash2 size={18} />
+                            {deleting === res.id ? 'Deleting...' : 'Delete'}
+                          </Button>
+                        </React.Fragment>
                       )}
                       {/* Message for non-uploaders */}
                       {currentUserId && currentUserId !== res.uploader_id && (
-                        <div className="w-full px-4 py-2 bg-secondary/50 rounded-lg text-center text-xs text-muted-foreground">
-                          Only uploader can delete
-                        </div>
+                        <React.Fragment key="uploader-only-msg">
+                          <div className="w-full px-4 py-2 bg-secondary/50 rounded-lg text-center text-xs text-muted-foreground">
+                            Only uploader can delete
+                          </div>
+                        </React.Fragment>
                       )}
                     </div>
                   </div>
