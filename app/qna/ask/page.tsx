@@ -1,18 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { toast } from "sonner"  // <-- Add this import
-
-const categories = [
-  { id: "it3050", name: "IT3050 - Employability Skills Development - Seminar" },
-  { id: "it3040", name: "IT3040 - IT Project Management" },
-  { id: "it3030", name: "IT3030 - Programming Applications and Frameworks" },
-  { id: "it3020", name: "IT3020 - Database Systems" },
-  { id: "it3010", name: "IT3010 - Network Design and Management" }
-]
+import { toast } from "sonner"
 
 interface FormErrors {
   title: string
@@ -22,6 +14,11 @@ interface FormErrors {
 
 export default function AskQuestionPage() {
   const router = useRouter()
+  const [selectedYear, setSelectedYear] = useState("1")
+  const [selectedSemester, setSelectedSemester] = useState("1")
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -33,6 +30,30 @@ export default function AskQuestionPage() {
     content: ""
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Fetch subjects when year or semester changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setLoading(true)
+        const params = new URLSearchParams({
+          year: selectedYear,
+          semester: selectedSemester
+        })
+        const response = await fetch(`/api/ask-subjects?${params}`)
+        const data = await response.json()
+        setSubjects(data || [])
+        setFormData(prev => ({ ...prev, category: "" }))
+      } catch (error) {
+        console.error("Failed to fetch subjects:", error)
+        setSubjects([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchSubjects()
+  }, [selectedYear, selectedSemester])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {
@@ -96,13 +117,16 @@ export default function AskQuestionPage() {
     const loadingToast = toast.loading("Posting your question...")
     
     try {
+      // Get the selected subject details
+      const selectedSubject = subjects.find(s => s.subject_code === formData.category)
+      
       // Get current user info (mock)
       const newQuestion = {
         id: Date.now().toString(),
         title: formData.title,
         content: formData.content,
         category: formData.category,
-        categoryName: categories.find(c => c.id === formData.category)?.name || "Unknown",
+        categoryName: selectedSubject ? `${selectedSubject.subject_code} - ${selectedSubject.subject_name}` : "Unknown",
         author: {
           id: "current-user",
           name: "You",
@@ -186,29 +210,69 @@ export default function AskQuestionPage() {
           )}
         </div>
 
-        {/* Category */}
-        <div className="space-y-2">
-          <label htmlFor="category" className="text-sm font-medium">
-            Category <span className="text-destructive">*</span>
-          </label>
-          <select
-            id="category"
-            value={formData.category}
-            onChange={handleInputChange}
-            className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
-              errors.category ? "border-destructive focus:ring-destructive" : "border-border"
-            }`}
-          >
-            <option value="">Select a category</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
+        {/* Year, Semester, Subject Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Year */}
+          <div className="space-y-2">
+            <label htmlFor="year" className="text-sm font-medium">
+              Year <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="year"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="1">Year 1</option>
+              <option value="2">Year 2</option>
+              <option value="3">Year 3</option>
+              <option value="4">Year 4</option>
+            </select>
+          </div>
+
+          {/* Semester */}
+          <div className="space-y-2">
+            <label htmlFor="semester" className="text-sm font-medium">
+              Semester <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="semester"
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+            </select>
+          </div>
+
+          {/* Subject */}
+          <div className="space-y-2">
+            <label htmlFor="category" className="text-sm font-medium">
+              Subject <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              disabled={loading || subjects.length === 0}
+              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.category ? "border-destructive focus:ring-destructive" : "border-border"
+              }`}
+            >
+              <option value="">
+                {loading ? "Loading subjects..." : subjects.length === 0 ? "No subjects available" : "Select a subject"}
               </option>
-            ))}
-          </select>
-          {errors.category && (
-            <p className="text-xs text-destructive">{errors.category}</p>
-          )}
+              {subjects.map((subject) => (
+                <option key={subject.subject_code} value={subject.subject_code}>
+                  {subject.subject_code} - {subject.subject_name}
+                </option>
+              ))}
+            </select>
+            {errors.category && (
+              <p className="text-xs text-destructive">{errors.category}</p>
+            )}
+          </div>
         </div>
 
         {/* Content */}

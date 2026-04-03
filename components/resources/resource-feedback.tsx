@@ -116,7 +116,7 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
 
   const averageRating =
     feedback.length > 0
-      ? (feedback.reduce((sum, f) => sum + f.rating, 0) / feedback.length).toFixed(1)
+      ? parseFloat((feedback.reduce((sum, f) => sum + f.rating, 0) / feedback.length).toFixed(1))
       : 0
 
   if (!isLoggedIn) {

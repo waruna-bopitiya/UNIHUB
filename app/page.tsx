@@ -23,6 +23,14 @@ interface Post {
   created_at: string
 }
 
+interface OnlineUser {
+  id: string
+  name: string
+  lastLogin: string | null
+  logoutTime: string | null
+  avatar: string
+}
+
 // Mock Q&A Data (Peer2Peer) - English only
 const mockQuestions = [
   {
@@ -148,7 +156,7 @@ function timeAgo(dateStr: string) {
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [subjects, setSubjects] = useState([])
-  const [onlineUsers, setOnlineUsers] = useState([])
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
