@@ -147,10 +147,13 @@ function timeAgo(dateStr: string) {
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
+  const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
   const [filteredQuestions, setFilteredQuestions] = useState(mockQuestions)
+  const [selectedYear, setSelectedYear] = useState(1)
+  const [selectedSemester, setSelectedSemester] = useState(1)
 
   const fetchPosts = async () => {
     try {
@@ -160,9 +163,33 @@ export default function Home() {
     setLoading(false)
   }
 
+  const fetchSubjects = async () => {
+    try {
+      const params = new URLSearchParams({
+        year: selectedYear.toString(),
+        semester: selectedSemester.toString(),
+      })
+      const res = await fetch(`/api/subjects?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        console.log('Fetched subjects:', data)
+        setSubjects(data)
+      } else {
+        const error = await res.json()
+        console.error('API Error:', error.details || error.error)
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error)
+    }
+  }
+
   useEffect(() => { 
     fetchPosts()
   }, [])
+
+  useEffect(() => {
+    fetchSubjects()
+  }, [selectedYear, selectedSemester])
 
   // Filter questions based on selected filter
   useEffect(() => {
@@ -446,13 +473,46 @@ export default function Home() {
                 <MessageCircle className="w-4 h-4" />
                 Subjects
               </h3>
-              <div className="space-y-2">
-                {mockCategories.map((cat, i) => (
-                  <Link key={i} href={`/qna/category/${cat.id}`} className="flex justify-between items-center hover:text-primary">
-                    <span>{cat.emoji} {cat.name}</span>
-                    <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">{cat.count}</span>
-                  </Link>
-                ))}
+              
+              {/* Year & Semester Filters */}
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Year</label>
+                  <select 
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    className="w-full px-2 py-1.5 border border-border rounded bg-background text-sm"
+                  >
+                    <option value={1}>Year 1</option>
+                    <option value={2}>Year 2</option>
+                    <option value={3}>Year 3</option>
+                    <option value={4}>Year 4</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Semester</label>
+                  <select 
+                    value={selectedSemester}
+                    onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
+                    className="w-full px-2 py-1.5 border border-border rounded bg-background text-sm"
+                  >
+                    <option value={1}>Semester 1</option>
+                    <option value={2}>Semester 2</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Subjects List */}
+              <div className="space-y-2 border-t border-border pt-3">
+                {subjects.length > 0 ? (
+                  subjects.map((cat: any, i: number) => (
+                    <Link key={i} href={`/qna/category/${cat.id}`} className="block px-3 py-2 rounded hover:bg-secondary transition-colors">
+                      <span className="text-sm">{cat.name}</span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">No subjects found</p>
+                )}
               </div>
             </div>
 
