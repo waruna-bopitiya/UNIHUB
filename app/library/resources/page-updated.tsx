@@ -62,7 +62,7 @@ export default function ResourcesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState<string | null>(null)
   const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string; resourceType: string }>({ year: '', semester: '', module_name: '', resourceType: '' })
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(true)
   const [filterSemesters, setFilterSemesters] = useState<SelectOption[]>([])
   const [filterSubjects, setFilterSubjects] = useState<SelectOption[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -72,10 +72,9 @@ export default function ResourcesPage() {
   // Get current user ID from localStorage
   useEffect(() => {
     const userId = localStorage.getItem('studentId')
-    const userName = localStorage.getItem('firstName') || localStorage.getItem('studentName') || 'Anonymous'
+    const userName = localStorage.getItem('studentName') || 'Anonymous'
     setCurrentUserId(userId)
     setCurrentUserName(userName)
-    console.log('👤 User loaded:', { userId, userName })
   }, [])
 
   // Fetch feedback stats
@@ -209,6 +208,7 @@ export default function ResourcesPage() {
     }
     
     setSubmitting(true)
+    toast.loading('Saving your resource...')
     
     const payload = {
       year: values.year,
@@ -287,32 +287,11 @@ export default function ResourcesPage() {
 
   // Handle open resource link
   const handleOpenLink = (shareableLink: string, resourceName: string) => {
-    // Validate link
-    if (!shareableLink || shareableLink.trim() === '') {
-      console.error('❌ No shareable link available')
-      toast.error('This resource does not have a shareable link')
-      return
-    }
-
     try {
-      // Ensure URL has protocol
-      let url = shareableLink.trim()
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url
-      }
-
-      console.log(`🔗 Opening link: ${url}`)
-      const newWindow = window.open(url, '_blank')
-      
-      if (!newWindow) {
-        console.error('❌ Failed to open window (popup might be blocked)')
-        toast.error('Could not open link - popup may be blocked')
-      } else {
-        console.log(`✅ Successfully opened ${resourceName}`)
-        toast.success(`Opening ${resourceName}...`)
-      }
+      window.open(shareableLink, '_blank')
+      toast.success(`Opening ${resourceName}...`)
     } catch (error) {
-      console.error('❌ Error opening link:', error)
+      console.error('Error opening link:', error)
       toast.error('Failed to open resource link')
     }
   }
@@ -487,6 +466,7 @@ export default function ResourcesPage() {
                       <Select
                         onValueChange={handleFormYearChange}
                         value={field.value}
+                        defaultValue=""
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -494,6 +474,7 @@ export default function ResourcesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Select Year</SelectItem>
                           {(years || []).map((y) => (
                             <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
                           ))}
@@ -514,6 +495,7 @@ export default function ResourcesPage() {
                       <Select
                         onValueChange={handleFormSemesterChange}
                         value={field.value}
+                        defaultValue=""
                         disabled={!form.watch('year')}
                       >
                         <FormControl>
@@ -522,6 +504,7 @@ export default function ResourcesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Select Semester</SelectItem>
                           {(semesters || []).map((s) => (
                             <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                           ))}
@@ -542,6 +525,7 @@ export default function ResourcesPage() {
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
+                        defaultValue=""
                         disabled={!form.watch('year') || !form.watch('semester')}
                       >
                         <FormControl>
@@ -550,6 +534,7 @@ export default function ResourcesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Select Module</SelectItem>
                           {(subjects || []).map((sub) => (
                             <SelectItem key={sub.value} value={sub.value}>{sub.label}</SelectItem>
                           ))}
@@ -918,7 +903,6 @@ export default function ResourcesPage() {
                 <ResourceFeedback 
                   resourceId={selectedResource.id} 
                   resourceName={selectedResource.name}
-                  onFeedbackAdded={fetchFeedbackStats}
                 />
               </div>
             </DialogContent>
