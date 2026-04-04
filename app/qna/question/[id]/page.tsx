@@ -2,18 +2,37 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { toast } from "sonner"
 import AnswerCard from "@/components/qna/AnswerCard"
 
 export default function QuestionDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [question, setQuestion] = useState<any | null>(null)
+  const [answers, setAnswers] = useState<any[]>([])
   const [answerContent, setAnswerContent] = useState("")
   const [isPosting, setIsPosting] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [answersLoading, setAnswersLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+
+  // Check if user is logged in
+  useEffect(() => {
+    const studentId = localStorage.getItem('studentId')
+    const firstName = localStorage.getItem('firstName')
+    
+    if (studentId) {
+      setIsLoggedIn(true)
+      setUserId(studentId)
+      setUserName(firstName)
+    }
+  }, [])
 
   // Fetch the question from the API
   useEffect(() => {
@@ -22,8 +41,6 @@ export default function QuestionDetailPage() {
       
       try {
         setLoading(true)
-        // Convert the question ID to fetch from our API
-        // Since the API returns the ID as a number, we need to use it
         const response = await fetch(`/api/qna/questions`)
         
         if (!response.ok) {
@@ -34,10 +51,7 @@ export default function QuestionDetailPage() {
         const foundQuestion = allQuestions.find((q: any) => q.id === params.id || q.id.toString() === params.id)
         
         if (foundQuestion) {
-          setQuestion({
-            ...foundQuestion,
-            answers: foundQuestion.answers || []
-          })
+          setQuestion(foundQuestion)
           setError(null)
         } else {
           setQuestion(null)
@@ -56,70 +70,87 @@ export default function QuestionDetailPage() {
     fetchQuestion()
   }, [params.id])
 
+  // Fetch answers for the question
+  useEffect(() => {
+    const fetchAnswers = async () => {
+      if (!params.id) return
+      
+      try {
+        setAnswersLoading(true)
+        const response = await fetch(`/api/qna/answers?questionId=${params.id}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch answers')
+        }
+
+        const data = await response.json()
+        setAnswers(data)
+      } catch (err) {
+        console.error('Error fetching answers:', err)
+        setAnswers([])
+      } finally {
+        setAnswersLoading(false)
+      }
+    }
+
+    fetchAnswers()
+  }, [params.id])
+
   const handleVote = (type: "up" | "down") => {
     // TODO: API call to vote
     console.log("Vote:", type)
   }
 
   const handlePostAnswer = async () => {
-    if (!answerContent.trim() || !question) return
-    
+    if (!isLoggedIn) {
+      toast.error("Please sign in to post an answer")
+      router.push("/auth/login")
+      return
+    }
+
+    if (!answerContent.trim() || !question) {
+      toast.error("Please enter your answer")
+      return
+    }
+
+    if (answerContent.trim().length < 10) {
+      toast.error("Answer must be at least 10 characters")
+      return
+    }
+
     setIsPosting(true)
+    const loadingToast = toast.loading("Posting your answer...")
+    
     try {
-      // TODO: API call to post answer
-      // const response = await fetch('/api/qna/answers', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     content: answerContent,
-      //     questionId: params.id,
-      //     userId: "current-user-id" // from auth
-      //   })
-      // })
-      
-      // Mock new answer
-      const newAnswer = {
-        id: Date.now().toString(),
-        content: answerContent,
-        author: {
-          id: "current-user",
-          name: "You",
-          avatar: "https://avatar.vercel.sh/you"
+      const response = await fetch('/api/qna/answers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        upvotes: 0,
-        downvotes: 0,
-        createdAt: new Date(),
-        comments: []
+        body: JSON.stringify({
+          questionId: params.id,
+          userId: userId,
+          content: answerContent.trim()
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to post answer')
       }
-      
-      const updatedQuestion = {
-        ...question,
-        answers: [newAnswer, ...question.answers]
-      }
-      
-      setQuestion(updatedQuestion)
-      
-      // Save to localStorage
-      try {
-        const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
-        const questionIndex = savedQuestions.findIndex((q: any) => q.id === question.id)
-        
-        if (questionIndex !== -1) {
-          // Update existing question
-          savedQuestions[questionIndex] = updatedQuestion
-        } else {
-          // Add new question if not found
-          savedQuestions.push(updatedQuestion)
-        }
-        
-        localStorage.setItem("qna_questions", JSON.stringify(savedQuestions))
-      } catch (storageError) {
-        console.error("Error saving to localStorage:", storageError)
-      }
-      
+
+      // Add new answer to the list
+      setAnswers([data.answer, ...answers])
       setAnswerContent("")
+      
+      toast.dismiss(loadingToast)
+      toast.success("Answer posted successfully! 🎉")
     } catch (error) {
-      console.error("Error posting answer:", error)
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      console.error("Error posting answer:", errorMessage)
+      toast.dismiss(loadingToast)
+      toast.error(errorMessage || "Failed to post answer. Please try again.")
     } finally {
       setIsPosting(false)
     }
@@ -250,39 +281,70 @@ export default function QuestionDetailPage() {
       {/* Answers section */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-4">
-          {question.answers.length} {question.answers.length === 1 ? "Answer" : "Answers"}
+          {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
         </h2>
 
         {/* Answer form */}
-        <div className="mb-6 bg-card border border-border rounded-lg p-4">
-          <textarea
-            placeholder="Write your answer..."
-            value={answerContent}
-            onChange={(e) => setAnswerContent(e.target.value)}
-            rows={4}
-            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={handlePostAnswer}
-              disabled={isPosting || !answerContent.trim()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isPosting ? "Posting..." : "Post Answer"}
-            </button>
-          </div>
-        </div>
-
-        {/* Answers list using AnswerCard component */}
-        <div className="space-y-4">
-          {question.answers.map((answer) => (
-            <AnswerCard 
-              key={answer.id} 
-              answer={answer} 
-              questionId={question.id}
-              onVote={handleAnswerVote}
+        {isLoggedIn ? (
+          <div className="mb-6 bg-card border border-border rounded-lg p-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              Signed in as <span className="font-medium text-foreground">{userName}</span>
+            </p>
+            <textarea
+              placeholder="Write your answer..."
+              value={answerContent}
+              onChange={(e) => setAnswerContent(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
-          ))}
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => setAnswerContent("")}
+                className="px-4 py-2 border border-border rounded-md hover:bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePostAnswer}
+                disabled={isPosting || !answerContent.trim()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPosting ? "Posting..." : "Post Answer"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 bg-secondary/30 rounded-lg p-4 text-center">
+            <p className="text-muted-foreground mb-4">
+              You must be signed in to post an answer
+            </p>
+            <Link
+              href="/auth/login"
+              className="inline-block px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
+        )}
+
+        {/* Answers list */}
+        <div className="space-y-4">
+          {answersLoading ? (
+            <p className="text-center py-8 text-muted-foreground">Loading answers...</p>
+          ) : answers.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">
+              No answers yet. Be the first to answer this question!
+            </p>
+          ) : (
+            answers.map((answer) => (
+              <AnswerCard 
+                key={answer.id} 
+                answer={answer} 
+                questionId={question.id}
+                onVote={handleAnswerVote}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -28,12 +28,15 @@ export async function GET(request: NextRequest) {
           q.created_at,
           q.updated_at,
           u.first_name,
-          u.second_name
+          u.second_name,
+          COUNT(a.id) as answer_count
         FROM questions q
         JOIN users u ON q.user_id = u.id
+        LEFT JOIN answers a ON q.id = a.question_id
         WHERE q.subject_code = ${subjectCode} 
           AND q.year = ${yearNum}
           AND q.semester = ${semesterNum}
+        GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -50,10 +53,13 @@ export async function GET(request: NextRequest) {
           q.created_at,
           q.updated_at,
           u.first_name,
-          u.second_name
+          u.second_name,
+          COUNT(a.id) as answer_count
         FROM questions q
         JOIN users u ON q.user_id = u.id
+        LEFT JOIN answers a ON q.id = a.question_id
         WHERE q.subject_code = ${subjectCode}
+        GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -72,10 +78,13 @@ export async function GET(request: NextRequest) {
           q.created_at,
           q.updated_at,
           u.first_name,
-          u.second_name
+          u.second_name,
+          COUNT(a.id) as answer_count
         FROM questions q
         JOIN users u ON q.user_id = u.id
+        LEFT JOIN answers a ON q.id = a.question_id
         WHERE q.year = ${yearNum} AND q.semester = ${semesterNum}
+        GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -93,9 +102,12 @@ export async function GET(request: NextRequest) {
           q.created_at,
           q.updated_at,
           u.first_name,
-          u.second_name
+          u.second_name,
+          COUNT(a.id) as answer_count
         FROM questions q
         JOIN users u ON q.user_id = u.id
+        LEFT JOIN answers a ON q.id = a.question_id
+        GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -114,7 +126,7 @@ export async function GET(request: NextRequest) {
       categoryName: q.subject_code,
       upvotes: 0,
       downvotes: 0,
-      answers: 0,
+      answers: parseInt(q.answer_count) || 0,
       createdAt: q.created_at
     }))
 

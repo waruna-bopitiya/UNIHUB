@@ -174,5 +174,23 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_created_at ON questions(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_year_semester ON questions(year, semester)`
 
+  // Table for Q&A Answers
+  await sql`
+    CREATE TABLE IF NOT EXISTS answers (
+      id              SERIAL PRIMARY KEY,
+      question_id     INTEGER       NOT NULL,
+      user_id         VARCHAR(50)   NOT NULL,
+      content         TEXT          NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answers_created_at ON answers(created_at DESC)`
+
   initialized = true
 }
