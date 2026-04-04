@@ -1,18 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { toast } from "sonner"  // <-- Add this import
-
-const categories = [
-  { id: "it3050", name: "IT3050 - Employability Skills Development - Seminar" },
-  { id: "it3040", name: "IT3040 - IT Project Management" },
-  { id: "it3030", name: "IT3030 - Programming Applications and Frameworks" },
-  { id: "it3020", name: "IT3020 - Database Systems" },
-  { id: "it3010", name: "IT3010 - Network Design and Management" }
-]
+import { toast } from "sonner"
 
 interface FormErrors {
   title: string
@@ -22,6 +14,14 @@ interface FormErrors {
 
 export default function AskQuestionPage() {
   const router = useRouter()
+  const [selectedYear, setSelectedYear] = useState("1")
+  const [selectedSemester, setSelectedSemester] = useState("1")
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -33,6 +33,42 @@ export default function AskQuestionPage() {
     content: ""
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Check if user is logged in
+  useEffect(() => {
+    const studentId = localStorage.getItem('studentId')
+    const firstName = localStorage.getItem('firstName')
+    
+    if (studentId) {
+      setIsLoggedIn(true)
+      setUserId(studentId)
+      setUserName(firstName)
+    }
+  }, [])
+
+  // Fetch subjects when year or semester changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setLoading(true)
+        const params = new URLSearchParams({
+          year: selectedYear,
+          semester: selectedSemester
+        })
+        const response = await fetch(`/api/ask-subjects?${params}`)
+        const data = await response.json()
+        setSubjects(data || [])
+        setFormData(prev => ({ ...prev, category: "" }))
+      } catch (error) {
+        console.error("Failed to fetch subjects:", error)
+        setSubjects([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchSubjects()
+  }, [selectedYear, selectedSemester])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {
@@ -96,41 +132,41 @@ export default function AskQuestionPage() {
     const loadingToast = toast.loading("Posting your question...")
     
     try {
-      // Get current user info (mock)
-      const newQuestion = {
-        id: Date.now().toString(),
-        title: formData.title,
-        content: formData.content,
-        category: formData.category,
-        categoryName: categories.find(c => c.id === formData.category)?.name || "Unknown",
-        author: {
-          id: "current-user",
-          name: "You",
-          avatar: "https://avatar.vercel.sh/user"
+      // Get the selected subject details
+      const selectedSubject = subjects.find(s => s.subject_code === formData.category)
+      
+      // Save to database
+      const response = await fetch('/api/qna/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        upvotes: 0,
-        downvotes: 0,
-        answers: [],
-        createdAt: new Date()
+        body: JSON.stringify({
+          userId: userId,
+          title: formData.title,
+          content: formData.content,
+          subjectCode: formData.category,
+          year: parseInt(selectedYear),
+          semester: parseInt(selectedSemester)
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save question')
       }
 
-      // Save to localStorage
-      const existingQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
-      existingQuestions.push(newQuestion)
-      localStorage.setItem("qna_questions", JSON.stringify(existingQuestions))
-
-      // Mock submit delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
       // Dismiss loading and show success
       toast.dismiss(loadingToast)
       toast.success("Question posted successfully! 🎉")
       
       router.push("/qna")
     } catch (error) {
-      console.error("Error posting question:", error)
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      console.error("Error posting question:", errorMessage)
       toast.dismiss(loadingToast)
-      toast.error("Failed to post question. Please try again.")
+      toast.error(errorMessage || "Failed to post question. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -148,6 +184,42 @@ export default function AskQuestionPage() {
     }
   }
 
+  // Show login required message
+  if (!isLoggedIn) {
+    return (
+      <div className="container max-w-3xl mx-auto py-6 px-4">
+        <Link 
+          href="/qna"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to questions
+        </Link>
+
+        <div className="bg-secondary/30 rounded-lg p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Sign In Required</h1>
+          <p className="text-muted-foreground mb-8">
+            You must be logged in to ask questions. Sign in with your student account to continue.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/auth/login"
+              className="px-8 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/qna"
+              className="px-8 py-3 border border-border rounded-md hover:bg-secondary transition-colors font-medium"
+            >
+              Back to Q&A
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container max-w-3xl mx-auto py-6 px-4">
       {/* Back button */}
@@ -159,7 +231,12 @@ export default function AskQuestionPage() {
         Back to questions
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">Ask a Question</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Ask a Question</h1>
+        <p className="text-muted-foreground">
+          Signed in as <span className="font-medium text-foreground">{userName}</span>
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Title */}
@@ -186,29 +263,69 @@ export default function AskQuestionPage() {
           )}
         </div>
 
-        {/* Category */}
-        <div className="space-y-2">
-          <label htmlFor="category" className="text-sm font-medium">
-            Category <span className="text-destructive">*</span>
-          </label>
-          <select
-            id="category"
-            value={formData.category}
-            onChange={handleInputChange}
-            className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
-              errors.category ? "border-destructive focus:ring-destructive" : "border-border"
-            }`}
-          >
-            <option value="">Select a category</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
+        {/* Year, Semester, Subject Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Year */}
+          <div className="space-y-2">
+            <label htmlFor="year" className="text-sm font-medium">
+              Year <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="year"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="1">Year 1</option>
+              <option value="2">Year 2</option>
+              <option value="3">Year 3</option>
+              <option value="4">Year 4</option>
+            </select>
+          </div>
+
+          {/* Semester */}
+          <div className="space-y-2">
+            <label htmlFor="semester" className="text-sm font-medium">
+              Semester <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="semester"
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+            </select>
+          </div>
+
+          {/* Subject */}
+          <div className="space-y-2">
+            <label htmlFor="category" className="text-sm font-medium">
+              Subject <span className="text-destructive">*</span>
+            </label>
+            <select
+              id="category"
+              value={formData.category}
+              onChange={handleInputChange}
+              disabled={loading || subjects.length === 0}
+              className={`w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.category ? "border-destructive focus:ring-destructive" : "border-border"
+              }`}
+            >
+              <option value="">
+                {loading ? "Loading subjects..." : subjects.length === 0 ? "No subjects available" : "Select a subject"}
               </option>
-            ))}
-          </select>
-          {errors.category && (
-            <p className="text-xs text-destructive">{errors.category}</p>
-          )}
+              {subjects.map((subject) => (
+                <option key={subject.subject_code} value={subject.subject_code}>
+                  {subject.subject_code} - {subject.subject_name}
+                </option>
+              ))}
+            </select>
+            {errors.category && (
+              <p className="text-xs text-destructive">{errors.category}</p>
+            )}
+          </div>
         </div>
 
         {/* Content */}

@@ -2,477 +2,98 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { toast } from "sonner"
 import AnswerCard from "@/components/qna/AnswerCard"
-
-// All mock questions data
-const allMockQuestions = [
-  {
-    id: "1",
-    title: "Best practices for building scalable web applications?",
-    content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
-    author: {
-      id: "user1",
-      name: "Kamal Perera",
-      avatar: "https://avatar.vercel.sh/kamal"
-    },
-    upvotes: 15,
-    downvotes: 2,
-    category: "it3030",
-    categoryName: "IT3030 - Programming Applications and Frameworks",
-    createdAt: new Date("2026-03-01T10:00:00"),
-    answers: [
-      {
-        id: "a1",
-        content: "Use modular architecture with separation of concerns. Consider using design patterns like MVC, clean architecture, or microservices for large-scale applications.",
-        author: {
-          id: "user4",
-          name: "Chamara Wickramasinghe",
-          avatar: "https://avatar.vercel.sh/chamara"
-        },
-        upvotes: 8,
-        downvotes: 0,
-        createdAt: new Date("2026-03-01T14:30:00"),
-        comments: []
-      },
-      {
-        id: "a2",
-        content: "Implement caching strategies and use load balancing. Also consider using containerization with Docker and orchestration with Kubernetes.",
-        author: {
-          id: "user10",
-          name: "Alex Kumar",
-          avatar: "https://avatar.vercel.sh/alex"
-        },
-        upvotes: 6,
-        downvotes: 0,
-        createdAt: new Date("2026-03-01T15:00:00"),
-        comments: []
-      },
-      {
-        id: "a3",
-        content: "Don't forget about monitoring and logging. Use tools like Prometheus, ELK stack, or similar for observability.",
-        author: {
-          id: "user11",
-          name: "Sarah Chen",
-          avatar: "https://avatar.vercel.sh/sarah"
-        },
-        upvotes: 4,
-        downvotes: 0,
-        createdAt: new Date("2026-03-01T16:00:00"),
-        comments: []
-      }
-    ]
-  },
-  {
-    id: "2",
-    title: "Database design for large-scale systems?",
-    content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
-    author: {
-      id: "user2",
-      name: "Nimal Silva",
-      avatar: "https://avatar.vercel.sh/nimal"
-    },
-    upvotes: 8,
-    downvotes: 1,
-    category: "it3020",
-    categoryName: "IT3020 - Database Systems",
-    createdAt: new Date("2026-03-02T14:30:00"),
-    answers: [
-      {
-        id: "a1",
-        content: "Choose SQL for structured data with ACID requirements. NoSQL is better for unstructured, rapidly evolving data. Consider data consistency, scalability, and query patterns.",
-        author: {
-          id: "user6",
-          name: "Priya Sharma",
-          avatar: "https://avatar.vercel.sh/priya"
-        },
-        upvotes: 12,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T15:00:00"),
-        comments: []
-      },
-      {
-        id: "a2",
-        content: "Think about sharding and partitioning strategies for scaling horizontally. Indexing is also crucial for query performance.",
-        author: {
-          id: "user12",
-          name: "James Wilson",
-          avatar: "https://avatar.vercel.sh/james"
-        },
-        upvotes: 9,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T16:00:00"),
-        comments: []
-      },
-      {
-        id: "a3",
-        content: "Consider using a combination - SQL for transactional data and NoSQL for caching and analytics.",
-        author: {
-          id: "user13",
-          name: "Monica Perera",
-          avatar: "https://avatar.vercel.sh/monica"
-        },
-        upvotes: 7,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T16:30:00"),
-        comments: []
-      },
-      {
-        id: "a4",
-        content: "Always backup your data and test your disaster recovery plan before going live.",
-        author: {
-          id: "user14",
-          name: "David Lee",
-          avatar: "https://avatar.vercel.sh/david"
-        },
-        upvotes: 5,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T17:00:00"),
-        comments: []
-      },
-      {
-        id: "a5",
-        content: "Use connection pooling to manage database connections efficiently and reduce overhead.",
-        author: {
-          id: "user15",
-          name: "Emma Brown",
-          avatar: "https://avatar.vercel.sh/emma"
-        },
-        upvotes: 3,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T17:30:00"),
-        comments: []
-      }
-    ]
-  },
-  {
-    id: "3",
-    title: "Network architecture for distributed systems?",
-    content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
-    author: {
-      id: "user3",
-      name: "Sachini Jayawardena",
-      avatar: "https://avatar.vercel.sh/sachini"
-    },
-    upvotes: 22,
-    downvotes: 0,
-    category: "it3010",
-    categoryName: "IT3010 - Network Design and Management",
-    createdAt: new Date("2026-03-03T09:15:00"),
-    answers: [
-      {
-        id: "a1",
-        content: "Implement load balancing, use CDNs for geographic distribution, ensure redundancy, and monitor network health. Consider latency, bandwidth, and fault tolerance.",
-        author: {
-          id: "user7",
-          name: "Kasun Perera",
-          avatar: "https://avatar.vercel.sh/kasun"
-        },
-        upvotes: 15,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T11:00:00"),
-        comments: []
-      },
-      {
-        id: "a2",
-        content: "Use service mesh architecture like Istio for better traffic management and observability.",
-        author: {
-          id: "user16",
-          name: "Ravi Nair",
-          avatar: "https://avatar.vercel.sh/ravi"
-        },
-        upvotes: 11,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T11:30:00"),
-        comments: []
-      },
-      {
-        id: "a3",
-        content: "Implement circuit breakers and retry logic to handle failures gracefully.",
-        author: {
-          id: "user17",
-          name: "Sophie Martin",
-          avatar: "https://avatar.vercel.sh/sophie"
-        },
-        upvotes: 9,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T12:00:00"),
-        comments: []
-      },
-      {
-        id: "a4",
-        content: "Consider API gateways for centralized request routing and authentication.",
-        author: {
-          id: "user18",
-          name: "Marcus Johnson",
-          avatar: "https://avatar.vercel.sh/marcus"
-        },
-        upvotes: 8,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T12:30:00"),
-        comments: []
-      },
-      {
-        id: "a5",
-        content: "Use message queues like RabbitMQ or Kafka for asynchronous communication between services.",
-        author: {
-          id: "user19",
-          name: "Lisa Anderson",
-          avatar: "https://avatar.vercel.sh/lisa"
-        },
-        upvotes: 6,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T13:00:00"),
-        comments: []
-      },
-      {
-        id: "a6",
-        content: "Implement proper logging and trace IDs to track requests across services.",
-        author: {
-          id: "user20",
-          name: "Chris Taylor",
-          avatar: "https://avatar.vercel.sh/chris"
-        },
-        upvotes: 5,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T13:30:00"),
-        comments: []
-      },
-      {
-        id: "a7",
-        content: "Don't forget about security - implement TLS/SSL, VPNs, and network isolation.",
-        author: {
-          id: "user21",
-          name: "Nina White",
-          avatar: "https://avatar.vercel.sh/nina"
-        },
-        upvotes: 4,
-        downvotes: 0,
-        createdAt: new Date("2026-03-03T14:00:00"),
-        comments: []
-      }
-    ]
-  },
-  {
-    id: "4",
-    title: "How to manage IT project timelines effectively?",
-    content: "Any tips on managing project timelines and scope in IT projects? How to handle scope creep?",
-    author: {
-      id: "user4",
-      name: "Janaka Wijesinghe",
-      avatar: "https://avatar.vercel.sh/janaka"
-    },
-    upvotes: 32,
-    downvotes: 1,
-    category: "it3040",
-    categoryName: "IT3040 - IT Project Management",
-    createdAt: new Date("2026-03-02T16:45:00"),
-    answers: [
-      {
-        id: "a1",
-        content: "Use Agile or Scrum methodologies. Define clear requirements upfront, use time-boxing for sprints, maintain a prioritized backlog, and communicate scope changes early.",
-        author: {
-          id: "user8",
-          name: "Nadee Silva",
-          avatar: "https://avatar.vercel.sh/nadee"
-        },
-        upvotes: 18,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T17:30:00"),
-        comments: []
-      },
-      {
-        id: "a2",
-        content: "Implement risk management - identify potential risks early and create mitigation strategies.",
-        author: {
-          id: "user22",
-          name: "Robert Garcia",
-          avatar: "https://avatar.vercel.sh/robert"
-        },
-        upvotes: 14,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T18:00:00"),
-        comments: []
-      },
-      {
-        id: "a3",
-        content: "Use project management tools like Jira, Asana, or Monday.com for better tracking and visibility.",
-        author: {
-          id: "user23",
-          name: "Catherine Zhou",
-          avatar: "https://avatar.vercel.sh/catherine"
-        },
-        upvotes: 12,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T18:30:00"),
-        comments: []
-      },
-      {
-        id: "a4",
-        content: "Regular status meetings and stakeholder communication are essential. Keep everyone aligned.",
-        author: {
-          id: "user24",
-          name: "Michael Brown",
-          avatar: "https://avatar.vercel.sh/michael"
-        },
-        upvotes: 10,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T19:00:00"),
-        comments: []
-      },
-      {
-        id: "a5",
-        content: "Buffer for unknown delays - add contingency time to estimates. Most projects slip timelines.",
-        author: {
-          id: "user25",
-          name: "Jessica Peters",
-          avatar: "https://avatar.vercel.sh/jessica"
-        },
-        upvotes: 9,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T19:30:00"),
-        comments: []
-      },
-      {
-        id: "a6",
-        content: "Document everything - requirements, decisions, changes, and their impact on timeline.",
-        author: {
-          id: "user26",
-          name: "Kevin Park",
-          avatar: "https://avatar.vercel.sh/kevin"
-        },
-        upvotes: 7,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T20:00:00"),
-        comments: []
-      },
-      {
-        id: "a7",
-        content: "Use velocity tracking to measure team productivity and improve estimates.",
-        author: {
-          id: "user27",
-          name: "Laura Martinez",
-          avatar: "https://avatar.vercel.sh/laura"
-        },
-        upvotes: 5,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T20:30:00"),
-        comments: []
-      },
-      {
-        id: "a8",
-        content: "Escalate issues immediately when you see timeline risks. Don't wait until it's critical.",
-        author: {
-          id: "user28",
-          name: "Thomas Fischer",
-          avatar: "https://avatar.vercel.sh/thomas"
-        },
-        upvotes: 3,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T21:00:00"),
-        comments: []
-      }
-    ]
-  },
-  {
-    id: "5",
-    title: "Key employability skills for IT professionals?",
-    content: "What are the most important employability skills I should focus on developing for my IT career?",
-    author: {
-      id: "user5",
-      name: "Ravindra Karunarathne",
-      avatar: "https://avatar.vercel.sh/ravindra"
-    },
-    upvotes: 11,
-    downvotes: 0,
-    category: "it3050",
-    categoryName: "IT3050 - Employability Skills Development - Seminar",
-    createdAt: new Date("2026-03-02T11:20:00"),
-    answers: [
-      {
-        id: "a1",
-        content: "Communication, teamwork, time management, continuous learning, problem-solving, and adaptability. Also develop soft skills like leadership and emotional intelligence.",
-        author: {
-          id: "user9",
-          name: "Anura Gunawardena",
-          avatar: "https://avatar.vercel.sh/anura"
-        },
-        upvotes: 20,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T12:00:00"),
-        comments: []
-      },
-      {
-        id: "a2",
-        content: "Build a strong portfolio showcasing your projects and contributions. GitHub is your best friend.",
-        author: {
-          id: "user29",
-          name: "Victoria Hall",
-          avatar: "https://avatar.vercel.sh/victoria"
-        },
-        upvotes: 15,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T12:30:00"),
-        comments: []
-      },
-      {
-        id: "a3",
-        content: "Networking is key - attend conferences, meetups, and connect with other professionals in your field.",
-        author: {
-          id: "user30",
-          name: "Oliver Schmidt",
-          avatar: "https://avatar.vercel.sh/oliver"
-        },
-        upvotes: 11,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T13:00:00"),
-        comments: []
-      },
-      {
-        id: "a4",
-        content: "Don't just focus on technical skills - develop presentation, writing, and business acumen too.",
-        author: {
-          id: "user31",
-          name: "Rachel Thompson",
-          avatar: "https://avatar.vercel.sh/rachel"
-        },
-        upvotes: 8,
-        downvotes: 0,
-        createdAt: new Date("2026-03-02T13:30:00"),
-        comments: []
-      }
-    ]
-  }
-]
 
 export default function QuestionDetailPage() {
   const params = useParams()
-  const [question, setQuestion] = useState<typeof allMockQuestions[0] | null>(null)
+  const router = useRouter()
+  const [question, setQuestion] = useState<any | null>(null)
+  const [answers, setAnswers] = useState<any[]>([])
   const [answerContent, setAnswerContent] = useState("")
   const [isPosting, setIsPosting] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [answersLoading, setAnswersLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
 
-  // Fetch the correct question based on ID parameter
+  // Check if user is logged in
   useEffect(() => {
-    if (params.id) {
-      // Load saved questions from localStorage
-      const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
-      const allQuestions = [...allMockQuestions, ...savedQuestions]
+    const studentId = localStorage.getItem('studentId')
+    const firstName = localStorage.getItem('firstName')
+    
+    if (studentId) {
+      setIsLoggedIn(true)
+      setUserId(studentId)
+      setUserName(firstName)
+    }
+  }, [])
+
+  // Fetch the question from the API
+  useEffect(() => {
+    const fetchQuestion = async () => {
+      if (!params.id) return
       
-      // Find the question matching the ID
-      let foundQuestion = allQuestions.find((q: any) => q.id === params.id)
-      
-      // Ensure the question has answers array
-      if (foundQuestion) {
-        if (!foundQuestion.answers) {
-          foundQuestion.answers = []
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/qna/questions`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch questions')
         }
-        setQuestion(foundQuestion)
-      } else {
+
+        const allQuestions = await response.json()
+        const foundQuestion = allQuestions.find((q: any) => q.id === params.id || q.id.toString() === params.id)
+        
+        if (foundQuestion) {
+          setQuestion(foundQuestion)
+          setError(null)
+        } else {
+          setQuestion(null)
+          setError('Question not found')
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load question'
+        console.error('Error fetching question:', errorMessage)
         setQuestion(null)
+        setError(errorMessage)
+      } finally {
+        setLoading(false)
       }
     }
+
+    fetchQuestion()
+  }, [params.id])
+
+  // Fetch answers for the question
+  useEffect(() => {
+    const fetchAnswers = async () => {
+      if (!params.id) return
+      
+      try {
+        setAnswersLoading(true)
+        const response = await fetch(`/api/qna/answers?questionId=${params.id}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch answers')
+        }
+
+        const data = await response.json()
+        setAnswers(data)
+      } catch (err) {
+        console.error('Error fetching answers:', err)
+        setAnswers([])
+      } finally {
+        setAnswersLoading(false)
+      }
+    }
+
+    fetchAnswers()
   }, [params.id])
 
   const handleVote = (type: "up" | "down") => {
@@ -481,43 +102,55 @@ export default function QuestionDetailPage() {
   }
 
   const handlePostAnswer = async () => {
-    if (!answerContent.trim() || !question) return
-    
+    if (!isLoggedIn) {
+      toast.error("Please sign in to post an answer")
+      router.push("/auth/login")
+      return
+    }
+
+    if (!answerContent.trim() || !question) {
+      toast.error("Please enter your answer")
+      return
+    }
+
+    if (answerContent.trim().length < 10) {
+      toast.error("Answer must be at least 10 characters")
+      return
+    }
+
     setIsPosting(true)
+    const loadingToast = toast.loading("Posting your answer...")
+    
     try {
-      // TODO: API call to post answer
-      // const response = await fetch('/api/qna/answers', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     content: answerContent,
-      //     questionId: params.id,
-      //     userId: "current-user-id" // from auth
-      //   })
-      // })
-      
-      // Mock new answer
-      const newAnswer = {
-        id: Date.now().toString(),
-        content: answerContent,
-        author: {
-          id: "current-user",
-          name: "You",
-          avatar: "https://avatar.vercel.sh/you"
+      const response = await fetch('/api/qna/answers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        upvotes: 0,
-        downvotes: 0,
-        createdAt: new Date(),
-        comments: []
-      }
-      
-      setQuestion({
-        ...question,
-        answers: [newAnswer, ...question.answers]
+        body: JSON.stringify({
+          questionId: params.id,
+          userId: userId,
+          content: answerContent.trim()
+        })
       })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to post answer')
+      }
+
+      // Add new answer to the list
+      setAnswers([data.answer, ...answers])
       setAnswerContent("")
+      
+      toast.dismiss(loadingToast)
+      toast.success("Answer posted successfully! 🎉")
     } catch (error) {
-      console.error("Error posting answer:", error)
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      console.error("Error posting answer:", errorMessage)
+      toast.dismiss(loadingToast)
+      toast.error(errorMessage || "Failed to post answer. Please try again.")
     } finally {
       setIsPosting(false)
     }
@@ -545,7 +178,7 @@ export default function QuestionDetailPage() {
 
   const netQuestionVotes = question ? question.upvotes - question.downvotes : 0
 
-  if (!question) {
+  if (loading) {
     return (
       <div className="container max-w-3xl mx-auto py-6 px-4">
         <Link 
@@ -556,7 +189,24 @@ export default function QuestionDetailPage() {
           Back to questions
         </Link>
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Question not found</p>
+          <p className="text-muted-foreground">Loading question...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!question || error) {
+    return (
+      <div className="container max-w-3xl mx-auto py-6 px-4">
+        <Link 
+          href="/qna"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to questions
+        </Link>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">{error || 'Question not found'}</p>
         </div>
       </div>
     )
@@ -631,39 +281,70 @@ export default function QuestionDetailPage() {
       {/* Answers section */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-4">
-          {question.answers.length} {question.answers.length === 1 ? "Answer" : "Answers"}
+          {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
         </h2>
 
         {/* Answer form */}
-        <div className="mb-6 bg-card border border-border rounded-lg p-4">
-          <textarea
-            placeholder="Write your answer..."
-            value={answerContent}
-            onChange={(e) => setAnswerContent(e.target.value)}
-            rows={4}
-            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={handlePostAnswer}
-              disabled={isPosting || !answerContent.trim()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isPosting ? "Posting..." : "Post Answer"}
-            </button>
-          </div>
-        </div>
-
-        {/* Answers list using AnswerCard component */}
-        <div className="space-y-4">
-          {question.answers.map((answer) => (
-            <AnswerCard 
-              key={answer.id} 
-              answer={answer} 
-              questionId={question.id}
-              onVote={handleAnswerVote}
+        {isLoggedIn ? (
+          <div className="mb-6 bg-card border border-border rounded-lg p-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              Signed in as <span className="font-medium text-foreground">{userName}</span>
+            </p>
+            <textarea
+              placeholder="Write your answer..."
+              value={answerContent}
+              onChange={(e) => setAnswerContent(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
-          ))}
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => setAnswerContent("")}
+                className="px-4 py-2 border border-border rounded-md hover:bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePostAnswer}
+                disabled={isPosting || !answerContent.trim()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPosting ? "Posting..." : "Post Answer"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 bg-secondary/30 rounded-lg p-4 text-center">
+            <p className="text-muted-foreground mb-4">
+              You must be signed in to post an answer
+            </p>
+            <Link
+              href="/auth/login"
+              className="inline-block px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
+        )}
+
+        {/* Answers list */}
+        <div className="space-y-4">
+          {answersLoading ? (
+            <p className="text-center py-8 text-muted-foreground">Loading answers...</p>
+          ) : answers.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">
+              No answers yet. Be the first to answer this question!
+            </p>
+          ) : (
+            answers.map((answer) => (
+              <AnswerCard 
+                key={answer.id} 
+                answer={answer} 
+                questionId={question.id}
+                onVote={handleAnswerVote}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

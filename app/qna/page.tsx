@@ -5,104 +5,52 @@ import Link from "next/link"
 import { PlusCircle, ArrowLeft } from "lucide-react"
 import { useState, useEffect } from "react"
 
-// Step 1: Mock data array එක (මේකත් මෙතනම)
-const mockQuestions = [
-  {
-    id: "1",
-    title: "Best practices for building scalable web applications?",
-    content: "I'm starting a new project using modern frameworks. What are the best practices for building scalable applications?",
-    author: {
-      id: "user1",
-      name: "කමල් පෙරේරා",
-      avatar: "https://avatar.vercel.sh/kamal"
-    },
-    upvotes: 15,
-    downvotes: 2,
-    answers: 3,
-    category: "it3030",
-    categoryName: "IT3030 - Programming Applications and Frameworks",
-    createdAt: new Date("2026-03-01T10:00:00")
-  },
-  {
-    id: "2",
-    title: "Database design for large-scale systems?",
-    content: "What are the key considerations when designing a database for a large-scale system? SQL vs NoSQL?",
-    author: {
-      id: "user2",
-      name: "නිමල් සිල්වා",
-      avatar: "https://avatar.vercel.sh/nimal"
-    },
-    upvotes: 8,
-    downvotes: 1,
-    answers: 5,
-    category: "it3020",
-    categoryName: "IT3020 - Database Systems",
-    createdAt: new Date("2026-03-02T14:30:00")
-  },
-  {
-    id: "3",
-    title: "Network architecture for distributed systems?",
-    content: "How do I design a network that can handle distributed systems? Any best practices for network management?",
-    author: {
-      id: "user3",
-      name: "සචිනි ජයවර්ධන",
-      avatar: "https://avatar.vercel.sh/sachini"
-    },
-    upvotes: 22,
-    downvotes: 0,
-    answers: 7,
-    category: "it3010",
-    categoryName: "IT3010 - Network Design and Management",
-    createdAt: new Date("2026-03-03T09:15:00")
-  },
-  {
-    id: "4",
-    title: "How to manage IT project timelines effectively?",
-    content: "Any tips on managing project timelines and scope in IT projects? How to handle scope creep?",
-    author: {
-      id: "user4",
-      name: "Janaka Wijesinghe",
-      avatar: "https://avatar.vercel.sh/janaka"
-    },
-    upvotes: 32,
-    downvotes: 1,
-    answers: 8,
-    category: "it3040",
-    categoryName: "IT3040 - IT Project Management",
-    createdAt: new Date("2026-03-02T16:45:00")
-  },
-  {
-    id: "5",
-    title: "Key employability skills for IT professionals?",
-    content: "What are the most important employability skills I should focus on developing for my IT career?",
-    author: {
-      id: "user5",
-      name: "Ravindra Karunarathne",
-      avatar: "https://avatar.vercel.sh/ravindra"
-    },
-    upvotes: 11,
-    downvotes: 0,
-    answers: 4,
-    category: "it3050",
-    categoryName: "IT3050 - Employability Skills Development - Seminar",
-    createdAt: new Date("2026-03-02T11:20:00")
+interface Question {
+  id: string
+  title: string
+  content: string
+  author: {
+    id: string
+    name: string
+    avatar: string
   }
-]
+  category: string
+  categoryName: string
+  upvotes: number
+  downvotes: number
+  answers: number
+  createdAt: string | Date
+}
 
-// Step 3: Main page component එක
 export default function QnaPage() {
-  const [allQuestions, setAllQuestions] = useState(mockQuestions)
+  const [allQuestions, setAllQuestions] = useState<Question[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load saved questions from localStorage
-    try {
-      const savedQuestions = JSON.parse(localStorage.getItem("qna_questions") || "[]")
-      // Combine mock questions with saved questions
-      setAllQuestions([...mockQuestions, ...savedQuestions])
-    } catch (error) {
-      console.error("Error loading questions:", error)
-      setAllQuestions(mockQuestions)
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/qna/questions')
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch questions')
+        }
+
+        const questions = await response.json()
+        setAllQuestions(questions)
+        setError(null)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load questions'
+        console.error('Error fetching questions:', errorMessage)
+        setError(errorMessage)
+        setAllQuestions([])
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchQuestions()
   }, [])
 
   return (
@@ -170,9 +118,26 @@ export default function QnaPage() {
 
       {/* Questions list */}
       <div className="space-y-4">
-        {allQuestions.map((question) => (
-          <QuestionCard key={question.id} question={question} />
-        ))}
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading questions...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-destructive/10 border border-destructive rounded-lg p-4">
+            <p className="text-destructive">Error: {error}</p>
+          </div>
+        ) : allQuestions.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">No questions found</p>
+            <p className="text-sm text-muted-foreground">
+              Be the first to ask a question!
+            </p>
+          </div>
+        ) : (
+          allQuestions.map((question) => (
+            <QuestionCard key={question.id} question={question} />
+          ))
+        )}
       </div>
     </div>
   )
