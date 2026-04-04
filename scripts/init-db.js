@@ -37,6 +37,14 @@ async function init() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
 
+  await sql`CREATE TABLE IF NOT EXISTS live_chat_messages (
+    id SERIAL PRIMARY KEY,
+    stream_id INTEGER NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+    author_name VARCHAR(255) NOT NULL DEFAULT 'Anonymous',
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+
   console.log('✅ Tables created (or already exist)');
 }
 
