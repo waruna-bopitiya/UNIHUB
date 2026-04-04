@@ -14,6 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ResourceFeedback } from '@/components/resources/resource-feedback'
+import { UserRecentResources } from '@/components/resources/user-recent-resources'
 import { useAcademicData, type SelectOption } from '@/hooks/use-academic-data'
 
 type CmpYesSemMod = {
@@ -62,6 +63,7 @@ export default function ResourcesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState<string | null>(null)
   const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string; resourceType: string }>({ year: '', semester: '', module_name: '', resourceType: '' })
+  const [searchQuery, setSearchQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [filterSemesters, setFilterSemesters] = useState<SelectOption[]>([])
   const [filterSubjects, setFilterSubjects] = useState<SelectOption[]>([])
@@ -371,7 +373,12 @@ export default function ResourcesPage() {
       (!filter.year || r.year === filter.year) &&
       (!filter.semester || r.semester === filter.semester) &&
       (!filter.module_name || r.module_name === filter.module_name) &&
-      (!filter.resourceType || r.resource_type === filter.resourceType)
+      (!filter.resourceType || r.resource_type === filter.resourceType) &&
+      (!searchQuery ||
+        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.module_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.uploader_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Top resource (highest avg rating)
@@ -387,7 +394,7 @@ export default function ResourcesPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto py-12 px-6">
+      <div className="w-full py-12 px-4 md:px-6 lg:px-8">
         <h1 className="text-3xl font-bold mb-8 tracking-tight text-primary">Resources</h1>
         
         {/* Refresh Button */}
@@ -659,9 +666,40 @@ export default function ResourcesPage() {
           </Form>
         )}
 
+        {/* User's Recent Resources Section */}
+        {currentUserId && currentUserName && (
+          <div className="my-12 py-8 border-t border-b bg-secondary/20 rounded-lg p-8 mb-10">
+            <UserRecentResources 
+              uploaderId={currentUserId} 
+              uploaderName={currentUserName}
+            />
+          </div>
+        )}
+
         {/* Filter Section */}
         <div className="mb-10">
           <h2 className="text-xl font-semibold mb-4">Filter Resources</h2>
+          
+          {/* Search Bar */}
+          <div className="mb-6">
+            <Input
+              placeholder="🔍 Search resources by name, description, module, or uploader..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full md:w-1/2"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="mt-2"
+              >
+                Clear Search
+              </Button>
+            )}
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
               <Label className="mb-1 block">Year</Label>

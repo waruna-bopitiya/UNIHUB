@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Users, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
+import { AppLayout } from '@/components/layout/app-layout'
 
 interface FormErrors {
   title: string
@@ -221,24 +222,61 @@ export default function AskQuestionPage() {
   }
 
   return (
-    <div className="container max-w-3xl mx-auto py-6 px-4">
-      {/* Back button */}
-      <Link 
-        href="/qna"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to questions
-      </Link>
+    <AppLayout>
+      <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+      {/* Main Grid - 3 Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Sidebar - Quick Links & Tips */}
+        <div className="lg:col-span-3 space-y-4">
+          {/* Quick Navigation */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-3 flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Navigation
+            </h3>
+            <div className="space-y-2">
+              <Link
+                href="/qna"
+                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                ← Back to Questions
+              </Link>
+              <Link
+                href="/qna/category/it3050"
+                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                📚 Browse Questions
+              </Link>
+            </div>
+          </div>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Ask a Question</h1>
-        <p className="text-muted-foreground">
-          Signed in as <span className="font-medium text-foreground">{userName}</span>
-        </p>
-      </div>
+          {/* Tips Card */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Tips for Good Questions
+            </h3>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li>✓ Be clear and specific</li>
+              <li>✓ Use meaningful titles</li>
+              <li>✓ Include relevant context</li>
+              <li>✓ Proofread before posting</li>
+              <li>✓ Select correct category</li>
+            </ul>
+          </div>
+        </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Middle Section - Main Form */}
+        <div className="lg:col-span-6">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-2">Ask a Question</h1>
+            <p className="text-muted-foreground">
+              Signed in as <span className="font-medium text-foreground">{userName}</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6 bg-card border border-border rounded-lg p-6">
         {/* Title */}
         <div className="space-y-2">
           <label htmlFor="title" className="text-sm font-medium">
@@ -378,7 +416,52 @@ export default function AskQuestionPage() {
             Cancel
           </Link>
         </div>
-      </form>
+            </form>
+        </div>
+
+        {/* Right Sidebar - Categories & Resources */}
+        <div className="lg:col-span-3 space-y-4">
+          {/* Related Categories */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-3">📚 Popular Categories</h3>
+            <div className="space-y-2">
+              <Link
+                href="/qna/category/it3050"
+                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                IT3050 - Employability
+              </Link>
+              <Link
+                href="/qna/category/it3040"
+                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                IT3040 - Project Mgmt
+              </Link>
+              <Link
+                href="/qna/category/it3030"
+                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
+              >
+                IT3030 - Programming
+              </Link>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h3 className="font-medium mb-3 flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Community Info
+            </h3>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <p>💡 Share your expertise</p>
+              <p>🤝 Help your peers</p>
+              <p>⭐ Get better answers</p>
+              <p>🎯 Build your reputation</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+    </AppLayout>
   )
 }

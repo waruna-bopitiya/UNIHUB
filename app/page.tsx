@@ -31,42 +31,6 @@ interface OnlineUser {
   avatar: string
 }
 
-// Mock Q&A Data (Peer2Peer) - English only
-// Mock Online Peers
-const mockOnlinePeers = [
-  { name: "Chamara", avatar: "https://avatar.vercel.sh/chamara", status: "online" },
-  { name: "Dinesh", avatar: "https://avatar.vercel.sh/dinesh", status: "online" },
-  { name: "Kasun", avatar: "https://avatar.vercel.sh/kasun", status: "away" },
-  { name: "Nadee", avatar: "https://avatar.vercel.sh/nadee", status: "online" },
-  { name: "Priya", avatar: "https://avatar.vercel.sh/priya", status: "online" },
-  { name: "Anura", avatar: "https://avatar.vercel.sh/anura", status: "online" },
-  { name: "Suresh", avatar: "https://avatar.vercel.sh/suresh", status: "away" },
-]
-
-// Mock Categories with counts
-const mockCategories = [
-  { id: "it3050", name: "IT3050 - Employability Skills", emoji: "💼", count: 18 },
-  { id: "it3040", name: "IT3040 - IT Project Management", emoji: "📊", count: 15 },
-  { id: "it3030", name: "IT3030 - Programming & Frameworks", emoji: "💻", count: 24 },
-  { id: "it3020", name: "IT3020 - Database Systems", emoji: "🗄️", count: 21 },
-  { id: "it3010", name: "IT3010 - Network Design & Management", emoji: "🌐", count: 19 },
-]
-
-// Mock Trending Questions
-const mockTrendings = [
-  { title: "Best frameworks for web applications?", answers: 12, time: "2h ago" },
-  { title: "Database design best practices?", answers: 8, time: "30m ago" },
-  { title: "Network security fundamentals?", answers: 5, time: "1h ago" },
-  { title: "How to manage IT project timelines?", answers: 15, time: "3h ago" },
-]
-
-// Mock Top Helpers/Contributors
-const mockTopHelpers = [
-  { name: "Prof. Sarah Chen", points: 342, medal: "🥇" },
-  { name: "Dr. James Wilson", points: 287, medal: "🥈" },
-  { name: "Alex Kumar", points: 198, medal: "🥉" },
-]
-
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000
   if (diff < 60) return 'just now'
@@ -275,7 +239,7 @@ export default function Home() {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="w-full py-6 px-4 md:px-6 lg:px-8">
         {/* Hero Section with Tab Navigation */}
         <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
@@ -397,13 +361,16 @@ export default function Home() {
                 Top Helpers
               </h3>
               <div className="space-y-2 text-sm">
-                {mockTopHelpers.map((helper, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span>{helper.medal}</span>
-                    <span>{helper.name}</span>
-                    <span className="ml-auto text-muted-foreground">{helper.points} pts</span>
-                  </div>
-                ))}
+                {filteredQuestions.length > 0 ? (
+                  sortedOnlineUsers.slice(0, 3).map((user, i) => (
+                    <div key={user.id || i} className="flex items-center gap-2">
+                      <span>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                      <span>{user.name || 'Anonymous'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">No helpers yet</p>
+                )}
               </div>
             </div>
           </div>
@@ -629,12 +596,21 @@ export default function Home() {
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-medium mb-3">🔥 Trending Now</h3>
               <div className="space-y-3">
-                {mockTrendings.map((item, i) => (
-                  <div key={i} className="text-sm">
-                    <p className="font-medium line-clamp-2">{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{item.answers} answers · {item.time}</p>
-                  </div>
+                {filteredQuestions.slice(0, 5).map((question, i) => (
+                  <Link
+                    key={question.id}
+                    href={`/qna/question/${question.id}`}
+                    className="block text-sm hover:text-primary transition-colors"
+                  >
+                    <p className="font-medium line-clamp-2">{question.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      By {question.askerName || 'Anonymous'} · {timeAgo(question.createdAt)}
+                    </p>
+                  </Link>
                 ))}
+                {filteredQuestions.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No trending questions yet</p>
+                )}
               </div>
             </div>
 

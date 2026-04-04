@@ -54,7 +54,7 @@ export default function QnaPage() {
   }, [])
 
   return (
-    <div className="container max-w-4xl mx-auto py-6 px-4">
+    <div className="w-full py-6 px-4 md:px-6 lg:px-8">
       {/* Back button */}
       <Link 
         href="/?section=qna"
