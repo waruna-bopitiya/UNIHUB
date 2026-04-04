@@ -83,9 +83,13 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
   const [filteredQuestions, setFilteredQuestions] = useState<any[]>([])
-  const [selectedYear, setSelectedYear] = useState(1)
-  const [selectedSemester, setSelectedSemester] = useState(1)
+  const [selectedYear, setSelectedYear] = useState<string | number>(1)
+  const [selectedSemester, setSelectedSemester] = useState<string | number>(1)
   const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [years, setYears] = useState<Array<{ value: string; label: string }>>([])
+  const [semesters, setSemesters] = useState<Array<{ value: string; label: string }>>([])
+  const [yearsLoading, setYearsLoading] = useState(false)
+  const [semestersLoading, setSemestersLoading] = useState(false)
 
   // Get real-time status based on last_login and logouttime
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
@@ -178,17 +182,69 @@ export default function Home() {
     }
   }
 
+  const fetchYears = async () => {
+    try {
+      setYearsLoading(true)
+      const res = await fetch('/api/subjects')
+      if (res.ok) {
+        const data = await res.json()
+        console.log('Fetched years:', data)
+        setYears(data)
+        // Set first year as default if available
+        if (data.length > 0) {
+          setSelectedYear(data[0].value)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching years:', error)
+    } finally {
+      setYearsLoading(false)
+    }
+  }
+
+  const fetchSemesters = async (year: string | number) => {
+    try {
+      setSemestersLoading(true)
+      const params = new URLSearchParams({ year: String(year) })
+      const res = await fetch(`/api/subjects?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        console.log('Fetched semesters:', data)
+        setSemesters(data)
+        // Set first semester as default if available
+        if (data.length > 0) {
+          setSelectedSemester(data[0].value)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching semesters:', error)
+    } finally {
+      setSemestersLoading(false)
+    }
+  }
+
   useEffect(() => { 
     fetchPosts()
     fetchOnlineUsers()
     fetchQuestions()
+    fetchYears()
     // Refresh user list every 10 seconds to catch logouts and new logins immediately
     const interval = setInterval(fetchOnlineUsers, 10 * 1000)
     return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
-    fetchSubjects()
+    // Fetch semesters when year changes
+    if (selectedYear) {
+      fetchSemesters(selectedYear)
+    }
+  }, [selectedYear])
+
+  useEffect(() => {
+    // Fetch subjects when year and semester change
+    if (selectedYear && selectedSemester) {
+      fetchSubjects()
+    }
   }, [selectedYear, selectedSemester])
 
   // Filter questions based on selected filter
@@ -514,24 +570,42 @@ export default function Home() {
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Year</label>
                   <select 
                     value={selectedYear}
-                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    onChange={(e) => setSelectedYear(e.target.value)}
                     className="w-full px-2 py-1.5 border border-border rounded bg-background text-sm"
+                    disabled={yearsLoading}
                   >
-                    <option value={1}>Year 1</option>
-                    <option value={2}>Year 2</option>
-                    <option value={3}>Year 3</option>
-                    <option value={4}>Year 4</option>
+                    {yearsLoading ? (
+                      <option>Loading years...</option>
+                    ) : years.length > 0 ? (
+                      years.map((year, i) => (
+                        <option key={i} value={year.value}>
+                          {year.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option>No years available</option>
+                    )}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Semester</label>
                   <select 
                     value={selectedSemester}
-                    onChange={(e) => setSelectedSemester(parseInt(e.target.value))}
+                    onChange={(e) => setSelectedSemester(e.target.value)}
                     className="w-full px-2 py-1.5 border border-border rounded bg-background text-sm"
+                    disabled={semestersLoading || years.length === 0}
                   >
-                    <option value={1}>Semester 1</option>
-                    <option value={2}>Semester 2</option>
+                    {semestersLoading ? (
+                      <option>Loading semesters...</option>
+                    ) : semesters.length > 0 ? (
+                      semesters.map((semester, i) => (
+                        <option key={i} value={semester.value}>
+                          {semester.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option>No semesters available</option>
+                    )}
                   </select>
                 </div>
               </div>
@@ -540,8 +614,9 @@ export default function Home() {
               <div className="space-y-2 border-t border-border pt-3">
                 {subjects.length > 0 ? (
                   subjects.map((cat: any, i: number) => (
-                    <Link key={i} href={`/qna/category/${cat.id}`} className="block px-3 py-2 rounded hover:bg-secondary transition-colors">
-                      <span className="text-sm">{cat.name}</span>
+                    <Link key={i} href={`/qna/category/${cat.value}`} className="flex justify-between items-center px-3 py-2 rounded hover:bg-secondary transition-colors">
+                      <span>{cat.emoji} {cat.label}</span>
+                      <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">{cat.count}</span>
                     </Link>
                   ))
                 ) : (
