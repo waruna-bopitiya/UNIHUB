@@ -165,7 +165,7 @@ export default function QuestionDetailPage() {
     // Update local state
     setQuestion({
       ...question,
-      answers: question.answers.map(a => {
+      answers: question.answers.map((a: any) => { 
         if (a.id === answerId) {
           const newUpvotes = value === 1 ? a.upvotes + 1 : value === -1 ? a.upvotes - 1 : a.upvotes
           const newDownvotes = value === -1 ? a.downvotes + 1 : value === 1 ? a.downvotes - 1 : a.downvotes
