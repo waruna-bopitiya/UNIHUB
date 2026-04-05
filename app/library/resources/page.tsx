@@ -437,14 +437,12 @@ export default function ResourcesPage() {
 
   return (
     <AppLayout>
-      <div className="w-full min-h-screen flex flex-col">
-        <div className="flex-1 px-4 md:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground">📚 My Resources</h1>
-          </div>
+      <div className="w-full">
+        <div className="px-4 md:px-6 lg:px-8 py-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-8 text-foreground">📚 My Resources</h1>
           
           {/* Refresh Button */}
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-8">
           <Button 
             onClick={() => {
               console.log('🔄 Manually refreshing resources...')
@@ -506,19 +504,19 @@ export default function ResourcesPage() {
 
         {/* Add Resource Button and Form */}
         {!showForm && (
-          <div className="flex justify-end mb-6">
-            <Button size="sm" onClick={() => setShowForm(true)}>
+          <div className="flex justify-end mb-8">
+            <Button size="lg" onClick={() => setShowForm(true)}>
               + Add Resource
             </Button>
           </div>
         )}
 
         {showForm && (
-          <div className="mb-8">
+          <div className="mb-12">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 bg-card border border-border/50 rounded-lg p-6 shadow-lg">
-                <div className="flex items-center justify-between pb-4 border-b border-border/30">
-                  <h2 className="text-xl font-bold text-foreground">Add New Resource</h2>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card border border-border/50 rounded-xl p-8 shadow-lg">
+                <div className="flex items-center justify-between pb-6 border-b border-border/30">
+                  <h2 className="text-2xl font-bold text-foreground">Add New Resource</h2>
                   <Button 
                     type="button" 
                     variant="ghost" 
@@ -803,96 +801,75 @@ export default function ResourcesPage() {
                 </Button>
               )}
             </div>
-
-            {/* Slide Navigation Bar for Filters */}
-            <div className="bg-card border border-border/50 rounded-lg p-3 mt-6 overflow-x-auto">
-              <div className="flex gap-3 min-w-min">
-                {/* Year Filter */}
-                <div className="flex-shrink-0 w-32">
-                  <select 
-                    className="w-full h-9 text-sm border border-border rounded-lg px-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
-                    value={filter.year} 
-                    onChange={(e) => handleFilterYearChange(e.target.value)}
-                  >
-                  <option value="">📅 Year</option>
-                  {(years || []).map((y) => (
-                    <option key={y.value} value={y.value}>{y.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Semester Filter */}
-              <div className="flex-shrink-0 w-32">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Label className="mb-2 block text-sm font-semibold">Year</Label>
                 <select 
-                  className="w-full h-9 text-sm border border-border rounded-lg px-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition disabled:opacity-50" 
-                  value={filter.semester} 
-                  onChange={(e) => handleFilterSemesterChange(e.target.value)}
-                  disabled={!filter.year}
+                  className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                  value={filter.year} 
+                  onChange={(e) => handleFilterYearChange(e.target.value)}
                 >
-                  <option value="">📚 Semester</option>
-                  {(filterSemesters || []).map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Module Filter */}
-              <div className="flex-shrink-0 w-36">
-                <select 
-                  className="w-full h-9 text-sm border border-border rounded-lg px-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition disabled:opacity-50" 
-                  value={filter.module_name} 
-                  onChange={(e) => setFilter((f) => ({ ...f, module_name: e.target.value }))}
-                  disabled={!filter.year || !filter.semester}
-                >
-                  <option value="">📖 Module</option>
-                  {(filterSubjects || []).map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Resource Type Filter */}
-              <div className="flex-shrink-0 w-32">
-                <select 
-                  className="w-full h-9 text-sm border border-border rounded-lg px-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
-                  value={filter.resourceType} 
-                  onChange={(e) => setFilter((f) => ({ ...f, resourceType: e.target.value }))}
-                >
-                  <option value="">📁 Type</option>
-                  {RESOURCE_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Clear Filters Button */}
-              {(filter.year || filter.semester || filter.module_name || filter.resourceType) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setFilter({ year: '', semester: '', module_name: '', resourceType: '' })
-                    setFilterSemesters([])
-                    setFilterSubjects([])
-                  }}
-                  className="flex-shrink-0 h-9 px-3 text-xs"
-                >
-                  ✕ Clear
-                </Button>
-              )}
+                <option value="">Select Year</option>
+                {(years || []).map((y) => (
+                  <option key={y.value} value={y.value}>{y.label}</option>
+                ))}
+              </select>
             </div>
+            <div>
+              <Label className="mb-2 block text-sm font-semibold">Semester</Label>
+              <select 
+                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                value={filter.semester} 
+                onChange={(e) => handleFilterSemesterChange(e.target.value)}
+                disabled={!filter.year}
+              >
+                <option value="">All Semesters</option>
+                {(filterSemesters || []).map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label className="mb-2 block text-sm font-semibold">Module</Label>
+              <select 
+                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                value={filter.module_name} 
+                onChange={(e) => setFilter((f) => ({ ...f, module_name: e.target.value }))}
+                disabled={!filter.year || !filter.semester}
+              >
+                <option value="">All Modules</option>
+                {(filterSubjects || []).map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label className="mb-2 block text-sm font-semibold">Resource Type</Label>
+              <select 
+                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                value={filter.resourceType} 
+                onChange={(e) => setFilter((f) => ({ ...f, resourceType: e.target.value }))}
+              >
+                <option value="">All Types</option>
+                {RESOURCE_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           </div>
         </div>
 
         {/* Top Resource */}
         {!loading && topResource && (
-          <div className="mb-8">
-            <div className="border-2 border-primary/30 rounded-lg p-6 bg-gradient-to-br from-primary/5 to-primary/2 shadow-md">
+          <div className="mb-8 flex justify-center">
+            <div className="w-full max-w-2xl border border-primary/30 rounded-lg p-5 bg-gradient-to-br from-primary/5 to-primary/2 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-2xl">⭐</span>
-                <div className="font-bold text-lg text-primary">Top Resource</div>
+                <div className="font-bold text-base text-primary">Top Resource</div>
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-foreground">{topResource.name}</h3>
+              <h3 className="text-base font-semibold mb-2 text-foreground">{topResource.name}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
                 <div>Year: <span className="font-medium text-foreground">{topResource.year}</span> | Semester: <span className="font-medium text-foreground">{topResource.semester}</span></div>
                 <div>Module: <span className="font-medium text-foreground">{topResource.module_name}</span></div>
@@ -907,12 +884,12 @@ export default function ResourcesPage() {
               )}
               
               {/* Top Resource Rating */}
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex gap-1">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      size={16}
+                      size={14}
                       className={i < Math.round(feedbackStats[topResource.id]?.average_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
                     />
                   ))}
@@ -925,19 +902,19 @@ export default function ResourcesPage() {
               <div className="flex gap-2">
                 <Button 
                   onClick={() => handleOpenLink(topResource.shareableLink, topResource.name)}
-                  className="gap-2 shadow-md hover:shadow-lg text-sm h-9"
+                  className="gap-1 shadow-sm hover:shadow-md text-sm h-8"
                   size="sm"
                 >
-                  <ExternalLink size={16} />
-                  Open
+                  <ExternalLink size={14} />
+                  Open Resource
                 </Button>
                 <Button
                   onClick={() => setSelectedResource(topResource)}
                   variant="outline"
                   size="sm"
-                  className="text-sm h-9"
+                  className="text-sm h-8"
                 >
-                  📊 Feedback
+                  � View Feedback
                 </Button>
               </div>
             </div>
@@ -946,75 +923,75 @@ export default function ResourcesPage() {
 
         {/* All Resources Grid */}
         <div>
-          <h2 className="text-2xl font-bold mb-6 text-foreground">📚 All Resources</h2>
+          <h2 className="text-3xl font-bold mb-8 text-foreground">📚 All Resources</h2>
           {loading ? (
-            <p className="text-muted-foreground text-center py-8 text-sm">Loading resources...</p>
+            <p className="text-muted-foreground text-center py-12 text-lg">Loading resources...</p>
           ) : filtered.length === 0 ? (
-            <div className="bg-card border border-border/50 rounded-lg p-6 text-center">
+            <div className="bg-card border border-border/50 rounded-xl p-8 text-center">
               <p className="text-muted-foreground text-lg">No resources found. Try adjusting your filters.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((res) => {
                 const stat = feedbackStats[res.id] || { feedback_count: 0, average_rating: 0 };
                 const avg = stat.average_rating || 0;
                 const isOwner = currentUserId === res.uploader_id;
 
                 return (
-                  <div key={res.id} className="border rounded-lg p-4 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow">
+                  <div key={res.id} className="border rounded-xl p-6 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow">
                     <div>
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-base line-clamp-2">{res.name}</h3>
+                        <h3 className="font-semibold text-lg line-clamp-2">{res.name}</h3>
                         <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded whitespace-nowrap ml-2">
                           {res.resource_type}
                         </span>
                       </div>
                       
-                      <div className="text-xs text-muted-foreground mb-2">
-                        <div>📅 {res.year} • 📚 {res.semester}</div>
-                        <div className="font-medium">{res.module_name}</div>
-                        <div className="text-xs mt-1">👤 {res.uploader_name || 'Anonymous'}</div>
+                      <div className="text-sm text-muted-foreground mb-3">
+                        <div>Year: {res.year} | Sem: {res.semester}</div>
+                        <div>{res.module_name}</div>
+                        <div className="text-xs mt-1">By: {res.uploader_name || 'Anonymous'}</div>
                       </div>
 
                       {res.description && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{res.description}</p>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{res.description}</p>
                       )}
 
                       {/* Rating Section */}
                       <div className="mb-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <div className="flex gap-0.5">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
-                                size={12}
+                                size={14}
                                 className={i < Math.round(avg) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
                               />
                             ))}
                           </div>
                           <span className="text-xs font-semibold">{avg.toFixed(1)}</span>
-                          <span className="text-xs text-muted-foreground">({stat.feedback_count})</span>
                         </div>
+                        <span className="text-xs text-muted-foreground">{stat.feedback_count} reviews</span>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 mt-3 pt-3 border-t">
+                    <div className="flex gap-2 mt-4 pt-4 border-t">
                       <Button
                         onClick={() => handleOpenLink(res.shareableLink, res.name)}
                         size="sm"
-                        className="flex-1 gap-1 h-8 text-xs"
+                        className="flex-1 gap-2"
                       >
-                        <ExternalLink size={14} />
+                        <ExternalLink size={16} />
                         Open
                       </Button>
                       <Button
                         onClick={() => setSelectedResource(res)}
                         size="sm"
                         variant="outline"
-                        className="flex-1 h-8 text-xs"
+                        className="flex-1"
                       >
-                        💬
+                        💬 Feedback
                       </Button>
                       {isOwner && (
                         <Button
@@ -1022,9 +999,9 @@ export default function ResourcesPage() {
                           size="sm"
                           variant="destructive"
                           disabled={deleting === res.id}
-                          className="gap-1 h-8 px-2"
+                          className="gap-1"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </Button>
                       )}
                     </div>
@@ -1092,8 +1069,7 @@ export default function ResourcesPage() {
           </Dialog>
         )}
         </div>
-      </div>
-      </div>
+        </div>
     </AppLayout>
   );
 }
