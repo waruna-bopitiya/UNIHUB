@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Award, MessageCircle, TrendingUp, Download, Trash2, Star } from "lucide-react"
+import { ArrowLeft, Calendar, Award, MessageCircle, TrendingUp, Download, Trash2, Star, X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import QuestionCard from "@/components/qna/QuestionCard"
 import AnswerCard from "@/components/qna/AnswerCard"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { ResourceFeedback } from '@/components/resources/resource-feedback'
 
 export default function ProfilePage() {
   const params = useParams()
@@ -15,12 +18,10 @@ export default function ProfilePage() {
   const [questions, setQuestions] = useState<any[]>([])
   const [answers, setAnswers] = useState<any[]>([])
   const [resources, setResources] = useState<any[]>([])
-  const [resourceFeedback, setResourceFeedback] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<"questions" | "answers" | "resources" | "about">("questions")
   const [loading, setLoading] = useState(true)
-  const [feedbackRating, setFeedbackRating] = useState(5)
-  const [feedbackComment, setFeedbackComment] = useState("")
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+  const [selectedResource, setSelectedResource] = useState<any>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Fetch user data from API
   useEffect(() => {
@@ -34,6 +35,8 @@ export default function ProfilePage() {
         if (userRes.ok) {
           const userData = await userRes.json()
           setUser(userData)
+        } else {
+          console.error('Failed to fetch user profile')
         }
 
         // Fetch user's questions
@@ -50,18 +53,13 @@ export default function ProfilePage() {
           setAnswers(answersData)
         }
 
-        // Fetch user's uploaded resources
-        const resourceRes = await fetch(`/api/resources?userId=${userId}`)
-        if (resourceRes.ok) {
-          const resourceData = await resourceRes.json()
-          setResources(resourceData)
-        }
-
-        // Fetch feedback on user's resources
-        const feedbackRes = await fetch(`/api/resources/feedback?userId=${userId}`)
-        if (feedbackRes.ok) {
-          const feedbackData = await feedbackRes.json()
-          setResourceFeedback(feedbackData)
+        // Fetch ALL resources first, then filter by uploader_id
+        const allResourcesRes = await fetch(`/api/resources`)
+        if (allResourcesRes.ok) {
+          const allResourcesData = await allResourcesRes.json()
+          const userResources = allResourcesData.filter((r: any) => r.uploader_id === userId)
+          console.log(`Found ${userResources.length} resources for user ${userId}:`, userResources)
+          setResources(userResources)
         }
       } catch (error) {
         console.error('Error fetching user data:', error)
@@ -82,46 +80,6 @@ export default function ProfilePage() {
       setCurrentUserId(userId)
     }
   }, [])
-
-  // Add feedback for a resource
-  const handleAddFeedback = async (resourceId: string) => {
-    if (!currentUserId) {
-      alert('Please log in to add feedback')
-      return
-    }
-
-    if (!feedbackComment.trim()) {
-      alert('Please enter a comment')
-      return
-    }
-
-    setFeedbackSubmitting(true)
-    try {
-      const response = await fetch('/api/resources/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resourceId,
-          rating: feedbackRating,
-          comment: feedbackComment,
-          userId: currentUserId,
-        }),
-      })
-
-      if (response.ok) {
-        const newFeedback = await response.json()
-        setResourceFeedback([...resourceFeedback, newFeedback])
-        setFeedbackComment('')
-        setFeedbackRating(5)
-        alert('Feedback added successfully!')
-      }
-    } catch (error) {
-      console.error('Error adding feedback:', error)
-      alert('Failed to add feedback')
-    } finally {
-      setFeedbackSubmitting(false)
-    }
-  }
 
   // Download resource
   const handleDownload = async (resource: any) => {
@@ -165,7 +123,6 @@ export default function ProfilePage() {
 
       if (response.ok) {
         setResources(resources.filter(r => r.id !== resourceId))
-        setResourceFeedback(resourceFeedback.filter(f => f.resource_id !== resourceId))
         alert('Resource deleted successfully!')
       } else {
         alert('Failed to delete resource')
@@ -286,10 +243,6 @@ export default function ProfilePage() {
                 <div className="text-xl font-bold">{resources.length}</div>
                 <div className="text-xs text-muted-foreground">Resources</div>
               </div>
-              <div className="bg-secondary/50 rounded-lg p-3 text-center">
-                <div className="text-xl font-bold">{resourceFeedback.length}</div>
-                <div className="text-xs text-muted-foreground">Feedback</div>
-              </div>
             </div>
           </div>
         </div>
@@ -404,7 +357,7 @@ export default function ProfilePage() {
       )}
 
       {activeTab === "resources" && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {resources.length === 0 ? (
             <div className="text-center py-12 bg-card border border-border rounded-lg">
               <p className="text-muted-foreground">No resources uploaded yet</p>
@@ -416,117 +369,100 @@ export default function ProfilePage() {
               </Link>
             </div>
           ) : (
-            // Show all resources with details directly
-            <>
-              {resources.map((resource) => (
-                <div key={resource.id} className="bg-card border border-border rounded-lg p-6 space-y-4">
-                  {/* Resource Header */}
-                  <div className="flex justify-between items-start gap-4">
+            resources.map((resource) => {
+              return (
+                <button
+                  key={resource.id}
+                  onClick={() => setSelectedResource(resource)}
+                  className="w-full text-left bg-card border border-border rounded-lg p-4 hover:border-primary/50 hover:shadow-md transition-all space-y-2"
+                >
+                  <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold">{resource.title}</h3>
-                      <p className="text-muted-foreground mt-2">{resource.description}</p>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      {currentUserId === user.id && (
-                        <button
-                          onClick={() => handleDeleteResource(resource.id)}
-                          className="px-3 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md text-sm flex items-center gap-2 whitespace-nowrap"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDownload(resource)}
-                        className="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-md text-sm flex items-center gap-2 whitespace-nowrap"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download
-                      </button>
+                      <h4 className="font-semibold text-sm">{resource.name || resource.title}</h4>
+                      <p className="text-muted-foreground text-sm line-clamp-2">{resource.description}</p>
                     </div>
                   </div>
-
-                  {/* Resource Metadata */}
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <span className="text-xs bg-secondary/50 px-3 py-1 rounded-full font-medium">
-                      {resource.subject || 'General'}
+                  
+                  <div className="flex items-center gap-3 flex-wrap text-xs">
+                    <span className="bg-secondary/50 px-2 py-0.5 rounded-full">
+                      {resource.resource_type || 'Resource'}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground">
                       📅 {formatDistanceToNow(new Date(resource.created_at), { addSuffix: true })}
                     </span>
-                    <span className="text-xs text-primary font-medium flex items-center gap-1">
-                      ⭐ {resourceFeedback.filter(f => f.resource_id === resource.id).reduce((sum, f) => sum + f.rating, 0) / Math.max(resourceFeedback.filter(f => f.resource_id === resource.id).length, 1) || 'No'} ({resourceFeedback.filter(f => f.resource_id === resource.id).length} {resourceFeedback.filter(f => f.resource_id === resource.id).length === 1 ? 'feedback' : 'feedbacks'})
-                    </span>
                   </div>
-
-                  {/* Feedback Section */}
-                  <div className="border-t border-border pt-4">
-                    <h4 className="font-semibold mb-3">Feedback</h4>
-
-                    {/* Add Feedback Form */}
-                    <div className="bg-secondary/20 rounded-lg p-4 mb-4 space-y-3">
-                      <div>
-                        <label className="text-sm font-medium">Rating</label>
-                        <div className="flex gap-1 mt-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              onClick={() => setFeedbackRating(star)}
-                              className={`text-2xl transition-colors cursor-pointer ${feedbackRating >= star ? 'text-yellow-400' : 'text-gray-300'}`}
-                            >
-                              ⭐
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium">Comment</label>
-                        <textarea
-                          value={feedbackComment}
-                          onChange={(e) => setFeedbackComment(e.target.value)}
-                          placeholder="Share your feedback..."
-                          className="w-full mt-2 p-2 border border-border rounded-md bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                          rows={2}
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => handleAddFeedback(resource.id)}
-                        disabled={feedbackSubmitting}
-                        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50"
-                      >
-                        {feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'}
-                      </button>
-                    </div>
-
-                    {/* Display Feedback */}
-                    {resourceFeedback.filter(f => f.resource_id === resource.id).length > 0 ? (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {resourceFeedback
-                          .filter(f => f.resource_id === resource.id)
-                          .map((feedback) => (
-                            <div key={feedback.id} className="bg-background border border-border/50 rounded p-3">
-                              <div className="flex justify-between items-start mb-1">
-                                <span className="font-medium text-sm">⭐ {feedback.rating}/5</span>
-                                <span className="text-xs text-muted-foreground">{feedback.user_name}</span>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{feedback.comment}</p>
-                              <span className="text-xs text-muted-foreground mt-1 block">
-                                {formatDistanceToNow(new Date(feedback.created_at), { addSuffix: true })}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">No feedback yet. Be the first to add feedback!</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </>
+                </button>
+              )
+            })
           )}
         </div>
+      )}
+
+      {/* Resource Detail Modal */}
+      {selectedResource && (
+        <Dialog open={!!selectedResource} onOpenChange={(open) => {
+          if (!open) {
+            setSelectedResource(null)
+          }
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedResource.title}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Resource Info */}
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Description</h3>
+                <p className="text-sm text-muted-foreground">{selectedResource.description || 'No description'}</p>
+              </div>
+
+              {/* Resource Details */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium">{selectedResource.subject || 'General'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Uploaded</p>
+                  <p className="font-medium">{formatDistanceToNow(new Date(selectedResource.created_at), { addSuffix: true })}</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {currentUserId === user.id && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      handleDeleteResource(selectedResource.id)
+                      setSelectedResource(null)
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => handleDownload(selectedResource)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+
+              {/* Feedback Section - Using ResourceFeedback Component */}
+              <ResourceFeedback
+                resourceId={selectedResource.id}
+                resourceName={selectedResource.title}
+                onFeedbackAdded={() => setRefreshKey(refreshKey + 1)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {activeTab === "about" && (
