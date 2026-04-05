@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, Award, MessageCircle, TrendingUp, Download, Trash2, Star, X } from "lucide-react"
+import { ArrowLeft, Calendar, Award, MessageCircle, TrendingUp, Download, Trash2, Star, X, User, Clock } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import QuestionCard from "@/components/qna/QuestionCard"
 import AnswerCard from "@/components/qna/AnswerCard"
@@ -133,6 +133,19 @@ export default function ProfilePage() {
     }
   }
 
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      localStorage.removeItem('studentId')
+      localStorage.removeItem('email')
+      localStorage.removeItem('firstName')
+      window.location.href = '/auth/login'
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="container max-w-5xl mx-auto py-6 px-4 text-center">
@@ -159,17 +172,22 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container max-w-5xl mx-auto py-6 px-4">
-      {/* Back button */}
-      <Link 
-        href="/"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to home
-      </Link>
+    <div className="w-full bg-background">
+      <div className="w-full mx-auto py-6 px-4 lg:px-8">
+        {/* Back button */}
+        <Link 
+          href="/"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to home
+        </Link>
 
-      {/* Profile Header */}
+        {/* Main Grid Layout - Full Width */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* MAIN CONTENT - Takes 2 columns on lg */}
+          <div className="lg:col-span-2 space-y-6">
       <div className="bg-card border border-border rounded-lg p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-6">
           {/* Avatar */}
@@ -357,7 +375,7 @@ export default function ProfilePage() {
       )}
 
       {activeTab === "resources" && (
-        <div className="space-y-3">
+        <div className="space-y-6">
           {resources.length === 0 ? (
             <div className="text-center py-12 bg-card border border-border rounded-lg">
               <p className="text-muted-foreground">No resources uploaded yet</p>
@@ -369,31 +387,81 @@ export default function ProfilePage() {
               </Link>
             </div>
           ) : (
-            resources.map((resource) => {
-              return (
-                <button
-                  key={resource.id}
-                  onClick={() => setSelectedResource(resource)}
-                  className="w-full text-left bg-card border border-border rounded-lg p-4 hover:border-primary/50 hover:shadow-md transition-all space-y-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-sm">{resource.name || resource.title}</h4>
-                      <p className="text-muted-foreground text-sm line-clamp-2">{resource.description}</p>
+            <>
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold">📚 Resources ({resources.length})</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {resources.map((resource) => (
+                  <div
+                    key={resource.id}
+                    className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
+                  >
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-primary/15 to-secondary/15 p-6 border-b border-border/50">
+                      <h4 className="font-bold text-lg line-clamp-2 mb-3 text-foreground">
+                        {resource.name || resource.title}
+                      </h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm bg-primary/20 text-primary px-3 py-1.5 rounded-full font-semibold">
+                          {resource.resource_type || 'Resource'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6 flex-1 flex flex-col">
+                      {resource.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
+                          {resource.description}
+                        </p>
+                      )}
+
+                      {/* Metadata */}
+                      <div className="text-sm text-muted-foreground space-y-2 mb-6 flex-1">
+                        <div className="flex items-center gap-2 font-medium">
+                          📅 <span className="text-foreground">{formatDistanceToNow(new Date(resource.created_at), { addSuffix: true })}</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-medium">
+                          📁 <span className="text-foreground">{resource.resource_type || 'File'}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 mt-auto pt-6 border-t border-border/30">
+                        <Button
+                          variant="default"
+                          size="lg"
+                          onClick={() => handleDownload(resource)}
+                          className="flex-1 gap-2 font-semibold"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          onClick={() => setSelectedResource(resource)}
+                          className="flex-1 font-semibold"
+                        >
+                          💬 Reviews
+                        </Button>
+                        {currentUserId === user.id && (
+                          <Button
+                            variant="destructive"
+                            size="lg"
+                            onClick={() => handleDeleteResource(resource.id)}
+                            className="gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-3 flex-wrap text-xs">
-                    <span className="bg-secondary/50 px-2 py-0.5 rounded-full">
-                      {resource.resource_type || 'Resource'}
-                    </span>
-                    <span className="text-muted-foreground">
-                      📅 {formatDistanceToNow(new Date(resource.created_at), { addSuffix: true })}
-                    </span>
-                  </div>
-                </button>
-              )
-            })
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -510,6 +578,81 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+          </div>
+
+          {/* RIGHT SIDEBAR - Additional Info */}
+          <div className="lg:col-span-1 space-y-4">
+            {/* User Badges */}
+            {user?.badges && user.badges.length > 0 && (
+              <div className="bg-card border border-border rounded-lg p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-orange-500" />
+                  Achievements
+                </h3>
+                <div className="space-y-2">
+                  {user.badges.map((badge: string, i: number) => (
+                    <div key={i} className="bg-orange-100/20 border border-orange-200/30 rounded-lg p-3">
+                      <p className="text-sm font-medium">🏆 {badge}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Academic Info Card */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="font-bold text-lg mb-4">Academic Level</h3>
+              <div className="space-y-3">
+                {user?.year_of_university && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Year</p>
+                    <p className="text-lg font-bold text-primary">Year {user.year_of_university}</p>
+                  </div>
+                )}
+                {user?.semester && (
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-1">Semester</p>
+                    <p className="text-lg font-bold text-secondary">Semester {user.semester}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* User Bio Card */}
+            {user?.bio && (
+              <div className="bg-card border border-border rounded-lg p-6">
+                <h3 className="font-bold text-lg mb-4">Bio</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{user.bio}</p>
+              </div>
+            )}
+
+            {/* Contact Info */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="font-bold text-lg mb-4">Contact</h3>
+              <div className="space-y-3 text-sm">
+                {user?.email && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Email</p>
+                    <p className="text-foreground break-all">{user.email}</p>
+                  </div>
+                )}
+                {user?.phone_number && (
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                    <p className="text-foreground">{user.phone_number}</p>
+                  </div>
+                )}
+                {user?.address && (
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-1">Location</p>
+                    <p className="text-foreground">{user.address}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
