@@ -43,6 +43,7 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [subjects, setSubjects] = useState([])
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
+  const [currentUser, setCurrentUser] = useState<OnlineUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
@@ -54,6 +55,7 @@ export default function Home() {
   const [semesters, setSemesters] = useState<Array<{ value: string; label: string }>>([])
   const [yearsLoading, setYearsLoading] = useState(false)
   const [semestersLoading, setSemestersLoading] = useState(false)
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
 
   // Get real-time status based on last_login and logouttime
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
@@ -73,14 +75,29 @@ export default function Home() {
     return 'away'
   }
 
-  // Sort users: online first, then away/offline
-  const sortedOnlineUsers = [...onlineUsers].sort((a, b) => {
-    const statusA = getOnlineStatus(a.lastLogin, a.logoutTime)
-    const statusB = getOnlineStatus(b.lastLogin, b.logoutTime)
-    if (statusA === 'online' && statusB !== 'online') return -1
-    if (statusA !== 'online' && statusB === 'online') return 1
-    return 0
-  })
+  // Sort users: current user first, then online, then away/offline
+  const sortedOnlineUsers = (() => {
+    let allUsers = [...onlineUsers]
+    
+    // Add current user to the list if they exist and not already in the list
+    if (currentUser && !allUsers.find(u => u.id === currentUser.id)) {
+      allUsers = [currentUser, ...allUsers]
+    }
+    
+    // Sort: current user first, then by status (online first)
+    return allUsers.sort((a, b) => {
+      // Current user always first
+      if (currentUser && a.id === currentUser.id) return -1
+      if (currentUser && b.id === currentUser.id) return 1
+      
+      // Then sort by status
+      const statusA = getOnlineStatus(a.lastLogin, a.logoutTime)
+      const statusB = getOnlineStatus(b.lastLogin, b.logoutTime)
+      if (statusA === 'online' && statusB !== 'online') return -1
+      if (statusA !== 'online' && statusB === 'online') return 1
+      return 0
+    })
+  })()
 
   const fetchPosts = async () => {
     try {
@@ -95,14 +112,44 @@ export default function Home() {
       const res = await fetch('/api/online-users')
       if (res.ok) {
         const data = await res.json()
-        console.log('Fetched online users:', data)
+        console.log('✅ Fetched online users:', data)
         setOnlineUsers(data)
+        setLastRefreshTime(new Date())
       } else {
         const error = await res.json()
         console.error('API Error:', error.details || error.error)
       }
     } catch (error) {
       console.error('Error fetching online users:', error)
+    }
+  }
+
+  const fetchCurrentUser = async () => {
+    try {
+      // Get user ID from localStorage (set during login)
+      const userId = localStorage.getItem('studentId')
+      const email = localStorage.getItem('email')
+      
+      if (!userId && !email) {
+        console.warn('⚠️ No user ID or email in localStorage')
+        return
+      }
+
+      // Fetch current user with userId as query parameter
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      if (email) params.append('email', email)
+
+      const res = await fetch(`/api/user/me?${params.toString()}`)
+      if (res.ok) {
+        const user = await res.json()
+        console.log('👤 Current user:', user)
+        setCurrentUser(user)
+      } else {
+        console.warn('Could not fetch current user:', res.status)
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error)
     }
   }
 
@@ -188,13 +235,22 @@ export default function Home() {
   }
 
   useEffect(() => { 
+    // Fetch all initial data
     fetchPosts()
     fetchOnlineUsers()
+    fetchCurrentUser() // Fetch current user info
     fetchQuestions()
     fetchYears()
-    // Refresh user list every 10 seconds to catch logouts and new logins immediately
-    const interval = setInterval(fetchOnlineUsers, 10 * 1000)
-    return () => clearInterval(interval)
+    
+    // Set up auto-refresh interval for online users only (no full page refresh)
+    const onlineUsersInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing online users...')
+      fetchOnlineUsers()
+    }, 40000) // Refresh every 40 seconds
+    
+    return () => {
+      clearInterval(onlineUsersInterval)
+    }
   }, [])
 
   useEffect(() => {
@@ -283,46 +339,68 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-4">
             {/* Online Peers */}
             <div className="bg-card border border-border rounded-lg p-4">
-              <h3 className="font-medium mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Online Now
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-medium flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Online Now
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  Updated: {lastRefreshTime.toLocaleTimeString()}
+                </span>
+              </div>
               <div className="space-y-3">
                 {sortedOnlineUsers.length > 0 ? (
                   <>
                     {/* Online Users Section */}
                     {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online') && (
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground mb-2">ONLINE</p>
+                        <p className="text-xs font-semibold text-emerald-500 mb-2 flex items-center gap-1">
+                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          ONLINE ({sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online').length})
+                        </p>
                         {sortedOnlineUsers
                           .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online')
-                          .map((peer: any, i: number) => (
-                            <div key={`online-${i}`} className="flex items-center gap-2 mb-2">
-                              <div className="relative">
-                                <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
-                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                          .map((peer: any, i: number) => {
+                            const isCurrentUser = currentUser && peer.id === currentUser.id
+                            return (
+                              <div key={`online-${i}`} className={`flex items-center gap-2 mb-2 ${isCurrentUser ? 'bg-primary/10 px-2 py-1 rounded' : ''}`}>
+                                <div className="relative">
+                                  <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
+                                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-background animate-pulse" />
+                                </div>
+                                <span className={`text-sm ${isCurrentUser ? 'font-semibold' : ''}`}>
+                                  {peer.name}
+                                  {isCurrentUser && <span className="text-xs text-primary ml-1">(You)</span>}
+                                </span>
                               </div>
-                              <span className="text-sm">{peer.name}</span>
-                            </div>
-                          ))}
+                            )
+                          })}
                       </div>
                     )}
 
                     {/* Away/Offline Users Section */}
                     {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online') && (
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground mb-2 pt-2 border-t border-border">AWAY</p>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 pt-2 border-t border-border flex items-center gap-1">
+                          AWAY ({sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online').length})
+                        </p>
                         {sortedOnlineUsers
                           .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online')
-                          .map((peer: any, i: number) => (
-                            <div key={`away-${i}`} className="flex items-center gap-2 mb-2 opacity-60">
-                              <div className="relative">
-                                <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
-                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+                          .map((peer: any, i: number) => {
+                            const isCurrentUser = currentUser && peer.id === currentUser.id
+                            return (
+                              <div key={`away-${i}`} className={`flex items-center gap-2 mb-2 ${isCurrentUser ? '' : 'opacity-60'}`}>
+                                <div className="relative">
+                                  <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
+                                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-gray-400 ring-2 ring-background" />
+                                </div>
+                                <span className={`text-sm ${isCurrentUser ? 'font-semibold text-primary' : ''}`}>
+                                  {peer.name}
+                                  {isCurrentUser && <span className="text-xs text-primary ml-1">(You)</span>}
+                                </span>
                               </div>
-                              <span className="text-sm">{peer.name}</span>
-                            </div>
-                          ))}
+                            )
+                          })}
                       </div>
                     )}
                   </>
