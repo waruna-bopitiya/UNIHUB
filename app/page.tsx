@@ -374,7 +374,11 @@ export default function Home() {
                           .map((peer: any, i: number) => {
                             const isCurrentUser = currentUser && peer.id === currentUser.id
                             return (
-                              <div key={`online-${i}`} className={`flex items-center gap-2 mb-2 ${isCurrentUser ? 'bg-primary/10 px-2 py-1 rounded' : ''}`}>
+                              <Link
+                                key={`online-${i}`}
+                                href={`/qna/profile/${peer.id}`}
+                                className={`flex items-center gap-2 mb-2 transition-all hover:opacity-80 ${isCurrentUser ? 'bg-primary/10 px-2 py-1 rounded' : ''}`}
+                              >
                                 <div className="relative">
                                   <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
                                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-background animate-pulse" />
@@ -383,7 +387,7 @@ export default function Home() {
                                   {peer.name}
                                   {isCurrentUser && <span className="text-xs text-primary ml-1">(You)</span>}
                                 </span>
-                              </div>
+                              </Link>
                             )
                           })}
                       </div>
@@ -400,7 +404,11 @@ export default function Home() {
                           .map((peer: any, i: number) => {
                             const isCurrentUser = currentUser && peer.id === currentUser.id
                             return (
-                              <div key={`away-${i}`} className={`flex items-center gap-2 mb-2 ${isCurrentUser ? '' : 'opacity-60'}`}>
+                              <Link
+                                key={`away-${i}`}
+                                href={`/qna/profile/${peer.id}`}
+                                className={`flex items-center gap-2 mb-2 transition-all hover:opacity-80 ${isCurrentUser ? '' : 'opacity-60'}`}
+                              >
                                 <div className="relative">
                                   <img src={peer.avatar} className="w-8 h-8 rounded-full" alt={peer.name} />
                                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-gray-400 ring-2 ring-background" />
@@ -409,7 +417,7 @@ export default function Home() {
                                   {peer.name}
                                   {isCurrentUser && <span className="text-xs text-primary ml-1">(You)</span>}
                                 </span>
-                              </div>
+                              </Link>
                             )
                           })}
                       </div>
