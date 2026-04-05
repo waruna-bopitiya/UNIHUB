@@ -636,12 +636,7 @@ export default function ProfilePage() {
                     <p className="text-foreground break-all">{user.email}</p>
                   </div>
                 )}
-                {user?.phone_number && (
-                  <div className="border-t pt-3">
-                    <p className="text-xs text-muted-foreground mb-1">Phone</p>
-                    <p className="text-foreground">{user.phone_number}</p>
-                  </div>
-                )}
+
                 {user?.address && (
                   <div className="border-t pt-3">
                     <p className="text-xs text-muted-foreground mb-1">Location</p>
