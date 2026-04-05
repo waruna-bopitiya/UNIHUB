@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AlertCircle, CheckCircle, Eye, EyeOff, Home } from 'lucide-react'
+import { AlertCircle, CheckCircle, Eye, EyeOff, Home, GraduationCap } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -166,128 +166,164 @@ export default function LoginPage() {
     }
   }
 
+  // ─── Shared style tokens (matching signup page) ────────────────────────────
+  const inputCls =
+    'h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-800'
+
+  const labelCls = 'block text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-300 mb-1'
+
+  const primaryBtn =
+    'w-full h-9 rounded-lg bg-indigo-600 text-white text-sm font-semibold tracking-wide shadow-sm hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Welcome Back</h1>
-            <p className="text-muted-foreground">Sign in to your UniHub account</p>
+    <div className="min-h-screen w-full bg-gradient-to-br from-gray-100 via-slate-50 to-gray-100 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900 flex flex-col">
+
+      {/* ── Top Nav ── */}
+      <header className="w-full border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-slate-800/70 dark:bg-slate-950/80 flex-shrink-0">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors text-sm font-medium">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Home</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-indigo-600" />
+            <span className="font-bold text-sm tracking-tight text-slate-800 dark:text-white">UniHub</span>
           </div>
+        </div>
+      </header>
 
-          {/* Error Alert */}
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+      {/* ── Main ── */}
+      <main className="flex-1 flex items-center justify-center px-3 py-10">
+        <div className="w-full max-w-md">
 
-          {/* Success Alert */}
-          {success && (
-            <div className="space-y-3 mb-6">
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <AlertDescription className="text-green-600 dark:text-green-400">{success}</AlertDescription>
-              </Alert>
-              {lastLoginData && (
-                <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <AlertDescription className="text-blue-600 dark:text-blue-400">
-                    Last login: {formatLastLogin(lastLoginData.lastLogin)}
-                  </AlertDescription>
+          {/* ── Form Card ── */}
+          <div className="w-full rounded-2xl border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-200/50 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-900/90 dark:shadow-none overflow-hidden">
+
+            {/* Card Header Strip */}
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Welcome Back</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sign in to your UniHub account</p>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+
+              {/* Error Alert */}
+              {error && (
+                <Alert variant="destructive" className="rounded-lg border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40 py-2.5 px-3">
+                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 text-red-600 dark:text-red-400" />
+                  <AlertDescription className="text-xs text-red-700 dark:text-red-300 ml-2">{error}</AlertDescription>
                 </Alert>
               )}
-            </div>
-          )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-semibold">
-                Email Address
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="your.name@my.sliit.lk"
-                value={formData.email}
-                onChange={handleChange}
-                className="border-border focus:ring-ring"
-                autoComplete="email"
-                required
-              />
-            </div>
+              {/* Success Alerts */}
+              {success && (
+                <div className="space-y-2">
+                  <Alert className="rounded-lg border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40 py-2.5 px-3">
+                    <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <AlertDescription className="text-xs text-emerald-700 dark:text-emerald-300 ml-2">{success}</AlertDescription>
+                  </Alert>
+                  {lastLoginData && (
+                    <Alert className="rounded-lg border-indigo-200 bg-indigo-50 dark:border-indigo-900 dark:bg-indigo-950/40 py-2.5 px-3">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
+                      <AlertDescription className="text-xs text-indigo-700 dark:text-indigo-300 ml-2">
+                        Last login: {formatLastLogin(lastLoginData.lastLogin)}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="font-semibold">
-                  Password
-                </Label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="border-border focus:ring-ring pr-10"
-                  autoComplete="current-password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className={labelCls}>Email Address</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="your.name@my.sliit.lk"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={inputCls}
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="password" className="text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-300">
+                      Password
+                    </label>
+                    <Link
+                      href="/auth/forgot-password"
+                      className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`${inputCls} pr-9`}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me */}
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="h-3.5 w-3.5 rounded border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                  />
+                  <label
+                    htmlFor="rememberMe"
+                    className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none"
+                  >
+                    Remember me
+                  </label>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-slate-100 dark:border-slate-800" />
+
+                {/* Submit */}
+                <button type="submit" disabled={loading} className={primaryBtn}>
+                  {loading ? 'Signing in…' : 'Sign In →'}
                 </button>
-              </div>
-            </div>
 
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="rememberMe"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-              />
-              <Label htmlFor="rememberMe" className="font-normal cursor-pointer">
-                Remember me
-              </Label>
-            </div>
+                {/* Signup Link */}
+                <p className="text-center text-xs text-slate-500 dark:text-slate-400 pb-1">
+                  Don't have an account?{' '}
+                  <Link href="/auth/signup" className="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2">
+                    Sign up
+                  </Link>
+                </p>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 h-auto"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-
-            {/* Signup Link */}
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">Don't have an account? </span>
-              <Link href="/auth/signup" className="text-primary hover:underline font-semibold">
-                Sign up
-              </Link>
+              </form>
             </div>
-          </form>
+          </div>
         </div>
-      </Card>
+      </main>
     </div>
   )
 }
