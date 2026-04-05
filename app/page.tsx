@@ -56,6 +56,7 @@ export default function Home() {
   const [yearsLoading, setYearsLoading] = useState(false)
   const [semestersLoading, setSemestersLoading] = useState(false)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
+  const [onlineUsersSearch, setOnlineUsersSearch] = useState('')
 
   // Get real-time status based on last_login and logouttime
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
@@ -348,18 +349,28 @@ export default function Home() {
                   Updated: {lastRefreshTime.toLocaleTimeString()}
                 </span>
               </div>
+              
+              {/* Search Bar */}
+              <input
+                type="text"
+                placeholder="Search by first or last name..."
+                value={onlineUsersSearch}
+                onChange={(e) => setOnlineUsersSearch(e.target.value)}
+                className="w-full px-3 py-2 mb-3 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+
               <div className="space-y-3">
                 {sortedOnlineUsers.length > 0 ? (
                   <>
                     {/* Online Users Section */}
-                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online') && (
+                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online' && u.name?.toLowerCase().includes(onlineUsersSearch.toLowerCase())) && (
                       <div>
                         <p className="text-xs font-semibold text-emerald-500 mb-2 flex items-center gap-1">
                           <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                          ONLINE ({sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online').length})
+                          ONLINE ({sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online' && u.name?.toLowerCase().includes(onlineUsersSearch.toLowerCase())).length})
                         </p>
                         {sortedOnlineUsers
-                          .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online')
+                          .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) === 'online' && u.name?.toLowerCase().includes(onlineUsersSearch.toLowerCase()))
                           .map((peer: any, i: number) => {
                             const isCurrentUser = currentUser && peer.id === currentUser.id
                             return (
@@ -379,13 +390,13 @@ export default function Home() {
                     )}
 
                     {/* Away/Offline Users Section */}
-                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online') && (
+                    {sortedOnlineUsers.some(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online' && u.name?.toLowerCase().includes(onlineUsersSearch.toLowerCase())) && (
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground mb-2 pt-2 border-t border-border flex items-center gap-1">
-                          AWAY ({sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online').length})
+                          AWAY ({sortedOnlineUsers.filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online' && u.name?.toLowerCase().includes(onlineUsersSearch.toLowerCase())).length})
                         </p>
                         {sortedOnlineUsers
-                          .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online')
+                          .filter(u => getOnlineStatus(u.lastLogin, u.logoutTime) !== 'online' && u.name?.toLowerCase().includes(onlineUsersSearch.toLowerCase()))
                           .map((peer: any, i: number) => {
                             const isCurrentUser = currentUser && peer.id === currentUser.id
                             return (
