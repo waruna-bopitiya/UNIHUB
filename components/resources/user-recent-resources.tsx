@@ -10,8 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { External, Trash2 } from 'lucide-react'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface SelectOption {
@@ -170,188 +169,180 @@ export function UserRecentResources({ uploaderId, uploaderName }: UserRecentReso
 
       {/* Expanded Content */}
       {isExpanded && (
-        <>
+        <div className="space-y-6">
           {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Filter Resources</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Year Filter */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Year</label>
-                  <Select
-                    value={filters.year}
-                    onValueChange={(value) =>
-                      setFilters(f => ({ ...f, year: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearOptions.map(year => (
-                        <SelectItem key={year.value} value={year.value}>
-                          {year.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Semester Filter */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Semester</label>
-                  <Select
-                    value={filters.semester}
-                    onValueChange={(value) =>
-                      setFilters(f => ({ ...f, semester: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Semesters" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {semesterOptions.map(semester => (
-                        <SelectItem key={semester.value} value={semester.value}>
-                          {semester.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Module Filter */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Module</label>
-                  <Select
-                    value={filters.moduleName}
-                    onValueChange={(value) =>
-                      setFilters(f => ({ ...f, moduleName: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Modules" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {moduleOptions.map(module => (
-                        <SelectItem key={module.value} value={module.value}>
-                          {module.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="bg-secondary/5 border border-border/30 rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">🔍 Filter Resources</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Year Filter */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-foreground">Year</label>
+                <Select
+                  value={filters.year}
+                  onValueChange={(value) =>
+                    setFilters(f => ({ ...f, year: value }))
+                  }
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="All Years" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map(year => (
+                      <SelectItem key={year.value} value={year.value}>
+                        {year.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Clear Filters Button */}
-              {(filters.year || filters.semester || filters.moduleName) && (
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setFilters({ year: '', semester: '', moduleName: '' })
-                    }
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              {/* Semester Filter */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-foreground">Semester</label>
+                <Select
+                  value={filters.semester}
+                  onValueChange={(value) =>
+                    setFilters(f => ({ ...f, semester: value }))
+                  }
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="All Semesters" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {semesterOptions.map(semester => (
+                      <SelectItem key={semester.value} value={semester.value}>
+                        {semester.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Resources List */}
+              {/* Module Filter */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-foreground">Module</label>
+                <Select
+                  value={filters.moduleName}
+                  onValueChange={(value) =>
+                    setFilters(f => ({ ...f, moduleName: value }))
+                  }
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="All Modules" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {moduleOptions.map(module => (
+                      <SelectItem key={module.value} value={module.value}>
+                        {module.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            {(filters.year || filters.semester || filters.moduleName) && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setFilters({ year: '', semester: '', moduleName: '' })
+                  }
+                  className="text-xs"
+                >
+                  ✕ Clear Filters
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Resources Grid */}
           <div>
             {loading ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">Loading resources...</p>
               </div>
             ) : resources.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">
-                    {(filters.year || filters.semester || filters.moduleName)
-                      ? 'No resources found matching your filters'
-                      : 'You have not uploaded any resources yet'}
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="bg-secondary/5 border border-border/30 rounded-xl p-12 text-center">
+                <p className="text-muted-foreground text-lg">
+                  {(filters.year || filters.semester || filters.moduleName)
+                    ? 'No resources found matching your filters'
+                    : 'You have not uploaded any resources yet'}
+                </p>
+              </div>
             ) : (
-              <div className="grid gap-4">
-                {resources.map(resource => (
-                  <Card key={resource.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="space-y-3">
-                        {/* Resource Header */}
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{resource.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {resource.year} | {resource.semester} | {resource.module_name}
-                            </p>
-                          </div>
-                          <div className="bg-secondary px-3 py-1 rounded-full">
-                            <span className="text-xs font-medium">{resource.resource_type}</span>
-                          </div>
-                        </div>
-
-                        {/* Description */}
-                        {resource.description && (
-                          <p className="text-sm text-gray-600 italic">
-                            {resource.description}
-                          </p>
-                        )}
-
-                        {/* Upload Info */}
-                        <div className="flex gap-4 text-xs text-muted-foreground">
-                          <span>
-                            Uploaded: {new Date(resource.created_at).toLocaleDateString()}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {resources.map(resource => (
+                    <div key={resource.id} className="bg-card border border-border/50 rounded-xl p-6 shadow-sm hover:shadow-md hover:border-border transition-all duration-200 flex flex-col">
+                      {/* Header */}
+                      <div className="mb-4 pb-4 border-b border-border/30">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1">{resource.name}</h3>
+                          <span className="flex-shrink-0 bg-primary/10 text-primary text-xs px-3 py-1 rounded-md font-medium whitespace-nowrap">
+                            {resource.resource_type}
                           </span>
                         </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 pt-2 border-t">
-                          {resource.shareable_link && (
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                handleOpenLink(
-                                  resource.shareable_link,
-                                  resource.name
-                                )
-                              }
-                              className="gap-2 flex-1"
-                            >
-                              <ExternalLink size={16} />
-                              Open Resource
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={deleting === resource.id}
-                            onClick={() => handleDelete(resource.id)}
-                            className="gap-2"
-                          >
-                            <Trash2 size={16} />
-                            {deleting === resource.id ? 'Deleting...' : 'Delete'}
-                          </Button>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                          <span className="px-2 py-1 bg-secondary/10 text-secondary rounded-md font-medium">
+                            {resource.module_name}
+                          </span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+                      {/* Details */}
+                      <div className="mb-4 space-y-2 text-sm text-muted-foreground">
+                        <div>📅 <span className="font-medium text-foreground">{resource.year}</span> - Semester <span className="font-medium text-foreground">{resource.semester}</span></div>
+                        <div>📤 <span className="font-medium text-foreground">{new Date(resource.created_at).toLocaleDateString()}</span></div>
+                        {resource.description && (
+                          <p className="italic text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-2">
+                            "{resource.description}"
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col gap-2 mt-auto">
+                        {resource.shareable_link && (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              handleOpenLink(
+                                resource.shareable_link,
+                                resource.name
+                              )
+                            }
+                            className="w-full gap-1 shadow-sm hover:shadow-md"
+                          >
+                            <ExternalLink size={16} />
+                            View Resource
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deleting === resource.id}
+                          onClick={() => handleDelete(resource.id)}
+                          className="w-full gap-1"
+                        >
+                          <Trash2 size={16} />
+                          {deleting === resource.id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Results Count */}
-                <div className="text-center text-sm text-muted-foreground py-4">
+                <div className="text-center text-sm text-muted-foreground py-4 border-t border-border/30">
                   Showing {resources.length} resource{resources.length !== 1 ? 's' : ''}
                 </div>
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

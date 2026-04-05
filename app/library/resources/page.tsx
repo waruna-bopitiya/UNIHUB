@@ -25,13 +25,56 @@ type CmpYesSemMod = {
 
 const RESOURCE_TYPES = ['PDF', 'PPT', 'Word', 'TXT', 'Excel', 'Image', 'Video', 'Audio', 'Other'] as const;
 
+// Helper function to detect which platform the link is from
+const detectLinkPlatform = (url: string): string | null => {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    if (hostname.includes('drive.google.com')) return 'Google Drive (drive.google.com)';
+    if (hostname.includes('onedrive.live.com')) return 'Microsoft OneDrive (onedrive.live.com)';
+    if (hostname.includes('sharepoint.com')) return 'SharePoint (sharepoint.com)';
+    if (hostname.includes('github.com')) return 'GitHub (github.com)';
+    
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const isValidShareableLink = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Allow Google Drive
+    if (hostname.includes('drive.google.com')) return true;
+    
+    // Allow Microsoft OneDrive/SharePoint
+    if (hostname.includes('onedrive.live.com') || hostname.includes('sharepoint.com')) return true;
+    
+    // Allow GitHub
+    if (hostname.includes('github.com')) return true;
+    
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 const resourceSchema = z.object({
   year: z.string().min(1, 'Year is required'),
   semester: z.string().min(1, 'Semester is required'),
   module_name: z.string().min(1, 'Module is required'),
   name: z.string().min(1, 'Resource name is required'),
   resourceType: z.enum(RESOURCE_TYPES, { errorMap: () => ({ message: 'Please select a resource type' }) }),
-  shareableLink: z.string().url('Please enter a valid URL').min(1, 'Shareable link is required'),
+  shareableLink: z.string()
+    .url('Please enter a valid URL')
+    .min(1, 'Shareable link is required')
+    .refine(
+      (url) => isValidShareableLink(url),
+      'Only Google Drive, Microsoft OneDrive/SharePoint, and GitHub links are allowed'
+    ),
   description: z.string().optional(),
 });
 
@@ -378,7 +421,7 @@ export default function ResourcesPage() {
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.module_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.uploader_name.toLowerCase().includes(searchQuery.toLowerCase()))
+        r.uploader_name?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Top resource (highest avg rating)
@@ -394,11 +437,12 @@ export default function ResourcesPage() {
 
   return (
     <AppLayout>
-      <div className="w-full py-12 px-4 md:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold mb-8 tracking-tight text-primary">Resources</h1>
-        
-        {/* Refresh Button */}
-        <div className="flex gap-2 mb-8">
+      <div className="w-full">
+        <div className="px-4 md:px-6 lg:px-8 py-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-8 text-foreground">📚 My Resources</h1>
+          
+          {/* Refresh Button */}
+          <div className="flex gap-2 mb-8">
           <Button 
             onClick={() => {
               console.log('🔄 Manually refreshing resources...')
@@ -468,20 +512,21 @@ export default function ResourcesPage() {
         )}
 
         {showForm && (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 bg-card border rounded-lg p-6 mb-8 relative z-10 animate-in fade-in">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Add Resource</h2>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowForm(false)}
-                  disabled={submitting}
-                >
-                  ✕ Close
-                </Button>
-              </div>
+          <div className="mb-12">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card border border-border/50 rounded-xl p-8 shadow-lg">
+                <div className="flex items-center justify-between pb-6 border-b border-border/30">
+                  <h2 className="text-2xl font-bold text-foreground">Add New Resource</h2>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowForm(false)}
+                    disabled={submitting}
+                  >
+                    ✕
+                  </Button>
+                </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Year Dropdown */}
@@ -613,13 +658,62 @@ export default function ResourcesPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Shareable Link</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="https://drive.google.com/file/d/..." 
-                          type="url"
-                          {...field} 
-                        />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl className="flex-1">
+                          <Input 
+                            placeholder="https://drive.google.com/file/d/..." 
+                            type="url"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            field.onChange('')
+                            toast.success('Link cleared')
+                          }}
+                          disabled={!field.value}
+                          className="shrink-0"
+                          title="Clear field"
+                        >
+                          🗑️ Clear
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const text = await navigator.clipboard.readText()
+                              field.onChange(text)
+                              toast.success('Link pasted successfully')
+                            } catch (err) {
+                              console.error('Failed to read clipboard:', err)
+                              toast.error('Failed to paste from clipboard')
+                            }
+                          }}
+                          className="shrink-0"
+                          title="Paste from clipboard"
+                        >
+                          📋 Paste
+                        </Button>
+                      </div>
+                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Allowed platforms:</p>
+                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                          <li>✅ Google Drive (drive.google.com)</li>
+                          <li>✅ Microsoft OneDrive (onedrive.live.com)</li>
+                          <li>✅ SharePoint (sharepoint.com)</li>
+                          <li>✅ GitHub (github.com)</li>
+                        </ul>
+                      </div>
+                      {field.value && (
+                        <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                          <p className="text-xs font-semibold text-green-900 dark:text-green-100">
+                            ✅ Detected: {detectLinkPlatform(field.value) || 'Unknown platform'}
+                          </p>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -644,11 +738,11 @@ export default function ResourcesPage() {
                 />
               </div>
 
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex gap-3 pt-6 border-t border-border/30">
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="flex-1"
+                  className="flex-1 h-11 text-base font-semibold"
                 >
                   {submitting ? '⏳ Saving...' : '✓ Save Resource'}
                 </Button>
@@ -657,57 +751,65 @@ export default function ResourcesPage() {
                   variant="outline" 
                   onClick={() => setShowForm(false)} 
                   disabled={submitting}
-                  className="flex-1"
+                  className="flex-1 h-11 text-base font-semibold"
                 >
                   Cancel
                 </Button>
               </div>
             </form>
           </Form>
+          </div>
         )}
 
         {/* User's Recent Resources Section */}
         {currentUserId && currentUserName && (
-          <div className="my-12 py-8 border-t border-b bg-secondary/20 rounded-lg p-8 mb-10">
-            <UserRecentResources 
-              uploaderId={currentUserId} 
-              uploaderName={currentUserName}
-            />
+          <div className="mb-12">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold mb-2 text-foreground">📤 Your Resources</h2>
+              <p className="text-muted-foreground">Resources you've uploaded to the community</p>
+            </div>
+            <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
+              <UserRecentResources 
+                uploaderId={currentUserId} 
+                uploaderName={currentUserName}
+              />
+            </div>
           </div>
         )}
 
         {/* Filter Section */}
-        <div className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Filter Resources</h2>
-          
-          {/* Search Bar */}
-          <div className="mb-6">
-            <Input
-              placeholder="🔍 Search resources by name, description, module, or uploader..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full md:w-1/2"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchQuery('')}
-                className="mt-2"
-              >
-                Clear Search
-              </Button>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <Label className="mb-1 block">Year</Label>
-              <select 
-                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
-                value={filter.year} 
-                onChange={(e) => handleFilterYearChange(e.target.value)}
-              >
+        <div className="mb-12">
+          <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
+            <h2 className="text-2xl font-bold mb-6 text-foreground">🔍 Filter & Search</h2>
+            
+            {/* Search Bar */}
+            <div className="mb-8">
+              <Input
+                placeholder="Search by name, description, module, or uploader..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 text-base"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery('')}
+                  className="mt-3"
+                >
+                  ✕ Clear Search
+                </Button>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Label className="mb-2 block text-sm font-semibold">Year</Label>
+                <select 
+                  className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                  value={filter.year} 
+                  onChange={(e) => handleFilterYearChange(e.target.value)}
+                >
                 <option value="">Select Year</option>
                 {(years || []).map((y) => (
                   <option key={y.value} value={y.value}>{y.label}</option>
@@ -715,37 +817,37 @@ export default function ResourcesPage() {
               </select>
             </div>
             <div>
-              <Label className="mb-1 block">Semester</Label>
+              <Label className="mb-2 block text-sm font-semibold">Semester</Label>
               <select 
-                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
                 value={filter.semester} 
                 onChange={(e) => handleFilterSemesterChange(e.target.value)}
                 disabled={!filter.year}
               >
-                <option value="">Select Semester</option>
+                <option value="">All Semesters</option>
                 {(filterSemesters || []).map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <Label className="mb-1 block">Module</Label>
+              <Label className="mb-2 block text-sm font-semibold">Module</Label>
               <select 
-                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
                 value={filter.module_name} 
                 onChange={(e) => setFilter((f) => ({ ...f, module_name: e.target.value }))}
                 disabled={!filter.year || !filter.semester}
               >
-                <option value="">Select Module</option>
+                <option value="">All Modules</option>
                 {(filterSubjects || []).map((m) => (
                   <option key={m.value} value={m.value}>{m.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <Label className="mb-1 block">Resource Type</Label>
+              <Label className="mb-2 block text-sm font-semibold">Resource Type</Label>
               <select 
-                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
                 value={filter.resourceType} 
                 onChange={(e) => setFilter((f) => ({ ...f, resourceType: e.target.value }))}
               >
@@ -756,76 +858,77 @@ export default function ResourcesPage() {
               </select>
             </div>
           </div>
+          </div>
         </div>
 
         {/* Top Resource */}
         {!loading && topResource && (
-          <div className="border-2 border-primary rounded-xl p-6 mb-10 bg-card shadow-lg">
-            <div className="font-bold text-xl mb-2 text-primary">⭐ Top Resource: {topResource.name}</div>
-            <div className="text-sm mb-2 text-muted-foreground">
-              Year: {topResource.year} | Semester: {topResource.semester} | Module: {topResource.module_name} | Type: {topResource.resource_type}
-            </div>
-            <div className="text-sm text-muted-foreground mb-3">
-              Uploaded by: <span className="font-medium">{topResource.uploader_name || 'Anonymous'}</span>
-            </div>
-            
-            {topResource.description && (
-              <div className="mb-3 text-sm text-gray-700 italic">
-                {topResource.description}
+          <div className="mb-12">
+            <div className="border-2 border-primary/30 rounded-xl p-8 bg-gradient-to-br from-primary/5 to-primary/2 shadow-md">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">⭐</span>
+                <div className="font-bold text-2xl text-primary">Top Resource</div>
               </div>
-            )}
-            
-            {/* Top Resource Rating */}
-            <div className="mb-3 bg-secondary/30 rounded-lg p-3">
-              <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold mb-3 text-foreground">{topResource.name}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground mb-4">
+                <div>Year: <span className="font-medium text-foreground">{topResource.year}</span> | Semester: <span className="font-medium text-foreground">{topResource.semester}</span></div>
+                <div>Module: <span className="font-medium text-foreground">{topResource.module_name}</span></div>
+                <div>Type: <span className="font-medium text-foreground">{topResource.resource_type}</span></div>
+                <div>By: <span className="font-medium text-foreground">{topResource.uploader_name || 'Anonymous'}</span></div>
+              </div>
+              
+              {topResource.description && (
+                <p className="text-sm text-gray-700 dark:text-gray-300 italic mb-4">
+                  "{topResource.description}"
+                </p>
+              )}
+              
+              {/* Top Resource Rating */}
+              <div className="mb-4 flex items-center gap-4">
                 <div className="flex gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      size={16}
+                      size={18}
                       className={i < Math.round(feedbackStats[topResource.id]?.average_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
                     />
                   ))}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground font-medium">
                   {feedbackStats[topResource.id]?.average_rating.toFixed(1) || 0}/5 ({feedbackStats[topResource.id]?.feedback_count || 0} reviews)
                 </div>
               </div>
-            </div>
 
-            {topResource.review && (
-              <div className="italic text-base mb-2 text-gray-700">
-                Review: {topResource.review}
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => handleOpenLink(topResource.shareableLink, topResource.name)}
+                  className="gap-2 shadow-md hover:shadow-lg"
+                >
+                  <ExternalLink size={18} />
+                  Open Resource
+                </Button>
+                <Button
+                  onClick={() => setSelectedResource(topResource)}
+                  variant="outline"
+                >
+                  📊 View Feedback
+                </Button>
               </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button 
-                onClick={() => handleOpenLink(topResource.shareableLink, topResource.name)}
-                className="gap-2"
-              >
-                <ExternalLink size={18} />
-                Open Resource
-              </Button>
-              <Button
-                onClick={() => setSelectedResource(topResource)}
-                variant="outline"
-              >
-                📊 View Feedback
-              </Button>
             </div>
           </div>
         )}
 
         {/* All Resources Grid */}
         <div>
-          <h2 className="text-2xl font-semibold mb-6">Resources List</h2>
+          <h2 className="text-3xl font-bold mb-8 text-foreground">📚 All Resources</h2>
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading resources...</p>
+            <p className="text-muted-foreground text-center py-12 text-lg">Loading resources...</p>
           ) : filtered.length === 0 ? (
-            <p className="text-muted-foreground">No resources found.</p>
+            <div className="bg-card border border-border/50 rounded-xl p-8 text-center">
+              <p className="text-muted-foreground text-lg">No resources found. Try adjusting your filters.</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((res) => {
                 const stat = feedbackStats[res.id] || { feedback_count: 0, average_rating: 0 };
                 const avg = stat.average_rating || 0;
@@ -962,7 +1065,8 @@ export default function ResourcesPage() {
             </DialogContent>
           </Dialog>
         )}
-      </div>
+        </div>
+        </div>
     </AppLayout>
   );
 }

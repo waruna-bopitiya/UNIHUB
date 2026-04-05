@@ -292,21 +292,83 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary to-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl shadow-lg">
-        <div className="p-8">
+    <div className="min-h-screen w-full bg-gradient-to-br from-background via-secondary to-background">
+      {/* Top Navigation */}
+      <div className="w-full border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="w-full py-2 px-4 md:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors text-sm">
+            <Home className="h-4 w-4" />
+            <span className="font-semibold">Home</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="w-full py-2 px-4 md:px-6 lg:px-8 flex-shrink-0">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
+          {/* Left Column - Benefits */}
+          <div className="flex flex-col justify-center items-start space-y-3">
+            <div>
+              <h2 className="text-4xl font-bold text-foreground mb-2">Welcome to UniHub</h2>
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Join thousands of students sharing knowledge, asking questions, and learning together in one unified platform.
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              <div className="flex gap-2">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-base">Learn from Community</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Access resources and get answers from peers</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-base">Share Your Knowledge</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Upload resources and help others succeed</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-base">Live Learning Sessions</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Participate in Q&As and live tutoring</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Form (2/3 width) */}
+          <Card className="shadow-lg border border-border h-fit lg:col-span-2">
+            <div className="p-4 md:p-5">
           {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Create Your Account</h1>
-            <p className="text-muted-foreground">
-              {step === 'form' && 'Join UniHub and start learning with your community'}
-              {step === 'otp' && 'Verify your email address'}
+          <div className="mb-3 text-center">
+            <h1 className="text-xl font-bold text-foreground mb-0.5">Create Your Account</h1>
+            <p className="text-sm text-muted-foreground">
+              {step === 'form' && 'Join UniHub and start learning'}
+              {step === 'otp' && 'Verify your email'}
             </p>
           </div>
 
           {/* Error Alert */}
           {error && (
-            <Alert variant="destructive" className="mb-6">
+            <Alert variant="destructive" className="mb-3">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -314,7 +376,7 @@ export default function SignupPage() {
 
           {/* Success Alert */}
           {success && (
-            <Alert className="mb-6 border-green-500 bg-green-50 dark:bg-green-950">
+            <Alert className="mb-3 border-green-500 bg-green-50 dark:bg-green-950">
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertDescription className="text-green-600 dark:text-green-400">{success}</AlertDescription>
             </Alert>
@@ -322,11 +384,11 @@ export default function SignupPage() {
 
           {/* STEP 1: Signup Form */}
           {step === 'form' && (
-            <form onSubmit={handleSendOTP} className="space-y-6">
+            <form onSubmit={handleSendOTP} className="space-y-2">
               {/* Name Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="font-semibold">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <div className="space-y-1">
+                  <Label htmlFor="firstName" className="font-semibold text-xs">
                     First Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -336,14 +398,14 @@ export default function SignupPage() {
                     placeholder="John"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className="border-border focus:ring-ring"
+                    className="border-border focus:ring-ring h-8 text-xs"
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="secondName" className="font-semibold">
-                    Second Name
+                <div className="space-y-1">
+                  <Label htmlFor="secondName" className="font-semibold text-xs">
+                    Last Name
                   </Label>
                   <Input
                     id="secondName"
@@ -352,15 +414,15 @@ export default function SignupPage() {
                     placeholder="Doe"
                     value={formData.secondName}
                     onChange={handleChange}
-                    className="border-border focus:ring-ring"
+                    className="border-border focus:ring-ring h-8 text-xs"
                   />
                 </div>
               </div>
 
               {/* Email Field */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="font-semibold">
-                  Email Address <span className="text-destructive">*</span>
+              <div className="space-y-1">
+                <Label htmlFor="email" className="font-semibold text-xs">
+                  Email <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -369,29 +431,29 @@ export default function SignupPage() {
                   placeholder="your.name@my.sliit.lk"
                   value={formData.email}
                   onChange={handleChange}
-                  className="border-border focus:ring-ring"
+                  className="border-border focus:ring-ring h-8 text-xs"
                   required
                 />
-                <p className="text-xs text-muted-foreground">Must be in format: user@my.sliit.lk</p>
+                <p className="text-xs text-muted-foreground">Must be user@my.sliit.lk</p>
               </div>
 
               {/* Phone Number with Country Code */}
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="font-semibold">
-                  Phone Number <span className="text-destructive">*</span>
+              <div className="space-y-1">
+                <Label className="font-semibold text-xs">
+                  Phone <span className="text-destructive">*</span>
                 </Label>
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   {/* Country Code Dropdown */}
                   <Select value={formData.countryId} onValueChange={(value) => 
                     setFormData(prev => ({ ...prev, countryId: value }))
                   }>
-                    <SelectTrigger className="w-32 border-border focus:ring-ring">
+                    <SelectTrigger className="w-24 sm:w-28 border-border focus:ring-ring h-10">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {COUNTRIES.map((country) => (
                         <SelectItem key={country.id} value={country.id}>
-                          <span className="flex items-center gap-2">
+                          <span className="flex items-center gap-1">
                             <span className="text-lg">{country.flag}</span>
                             <span className="text-sm">{country.code}</span>
                           </span>
@@ -405,21 +467,19 @@ export default function SignupPage() {
                     id="phoneNumber"
                     name="phoneNumber"
                     type="tel"
-                    placeholder="71 234 5678"
+                    placeholder="712345678"
                     value={formData.phoneNumber}
                     onChange={handleChange}
-                    className="flex-1 border-border focus:ring-ring"
+                    className="flex-1 border-border focus:ring-ring h-10"
                     required
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Your full number will be: {getCountryCodeById(formData.countryId)} {formData.phoneNumber}
-                </p>
+                <p className="text-xs text-muted-foreground">{getCountryCodeById(formData.countryId)} {formData.phoneNumber || '—'}</p>
               </div>
 
               {/* Password Field */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="font-semibold">
+              <div className="space-y-1">
+                <Label htmlFor="password" className="font-semibold text-xs">
                   Password <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
@@ -427,18 +487,18 @@ export default function SignupPage() {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter a strong password (min 8 characters)"
+                    placeholder="Min 8 characters"
                     value={formData.password}
                     onChange={handleChange}
-                    className="border-border focus:ring-ring pr-10"
+                    className="border-border focus:ring-ring pr-10 h-8 text-xs"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                   </button>
                 </div>
 
@@ -446,7 +506,7 @@ export default function SignupPage() {
                 {formData.password && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Password Strength:</span>
+                      <span className="text-xs text-muted-foreground">Strength:</span>
                       <span className={`text-xs font-semibold ${
                         passwordStrength.level === 'Weak' ? 'text-destructive' :
                         passwordStrength.level === 'Fair' ? 'text-yellow-600 dark:text-yellow-500' :
@@ -456,115 +516,109 @@ export default function SignupPage() {
                         {passwordStrength.level}
                       </span>
                     </div>
-                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${passwordStrength.color} transition-all duration-300`}
                         style={{ width: `${(passwordStrength.score / 7) * 100}%` }}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Use uppercase, lowercase, numbers, and symbols for a stronger password
-                    </p>
                   </div>
                 )}
               </div>
 
               {/* Address */}
-              <div className="space-y-2">
-                <Label htmlFor="address" className="font-semibold">
+              <div className="space-y-1">
+                <Label htmlFor="address" className="font-semibold text-xs">
                   Address
                 </Label>
                 <Input
                   id="address"
                   name="address"
                   type="text"
-                  placeholder="Your address"
+                  placeholder="Street address"
                   value={formData.address}
                   onChange={handleChange}
-                  className="border-border focus:ring-ring"
+                  className="border-border focus:ring-ring h-8 text-xs"
                 />
               </div>
 
               {/* Gender */}
-              <div className="space-y-3">
-                <Label className="font-semibold">Gender</Label>
-                <RadioGroup value={formData.gender} onValueChange={(value) => handleRadioChange('gender', value)}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="male" id="male" />
-                    <Label htmlFor="male" className="font-normal cursor-pointer">
-                      Male
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="female" id="female" />
-                    <Label htmlFor="female" className="font-normal cursor-pointer">
-                      Female
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="other" id="other" />
-                    <Label htmlFor="other" className="font-normal cursor-pointer">
-                      Other
-                    </Label>
-                  </div>
-                </RadioGroup>
+              <div className="space-y-1">
+                <Label className="font-semibold text-xs block">Gender</Label>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-2">
+                  <RadioGroup value={formData.gender} onValueChange={(value) => handleRadioChange('gender', value)}>
+                    <div className="grid grid-cols-3 gap-1">
+                      {[
+                        { value: 'male', label: 'Male' },
+                        { value: 'female', label: 'Female' },
+                        { value: 'other', label: 'Other' }
+                      ].map((option) => (
+                      <div key={option.value} className="flex items-center space-x-1 p-1 rounded-md border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer">
+                        <RadioGroupItem value={option.value} id={option.value} className="h-3 w-3" />
+                          <Label htmlFor={option.value} className="font-normal cursor-pointer text-xs flex-1">
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
 
               {/* Year of University */}
-              <div className="space-y-3">
-                <Label className="font-semibold">
-                  Year of University <span className="text-destructive">*</span>
+              <div className="space-y-1">
+                <Label className="font-semibold text-xs block">
+                  Year <span className="text-destructive">*</span>
                 </Label>
-                <RadioGroup value={formData.yearOfUniversity} onValueChange={(value) => handleRadioChange('yearOfUniversity', value)}>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((year) => (
-                      <div key={year} className="flex items-center space-x-2">
-                        <RadioGroupItem value={year.toString()} id={`year-${year}`} />
-                        <Label htmlFor={`year-${year}`} className="font-normal cursor-pointer">
-                          Year {year}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-2">
+                  <RadioGroup value={formData.yearOfUniversity} onValueChange={(value) => handleRadioChange('yearOfUniversity', value)}>
+                    <div className="grid grid-cols-4 gap-1">
+                      {[1, 2, 3, 4].map((year) => (
+                        <div key={year} className="flex items-center justify-center space-x-1 p-1 rounded-md border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer">
+                          <RadioGroupItem value={year.toString()} id={`year-${year}`} className="h-3 w-3" />
+                          <Label htmlFor={`year-${year}`} className="font-normal cursor-pointer text-xs">
+                            {year}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
 
               {/* Semester */}
-              <div className="space-y-3">
-                <Label className="font-semibold">
+              <div className="space-y-1">
+                <Label className="font-semibold text-xs block">
                   Semester <span className="text-destructive">*</span>
                 </Label>
-                <RadioGroup value={formData.semester} onValueChange={(value) => handleRadioChange('semester', value)}>
-                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                    {[1, 2].map((semester) => (
-                      <div key={semester} className="flex items-center space-x-2">
-                        <RadioGroupItem value={semester.toString()} id={`semester-${semester}`} />
-                        <Label htmlFor={`semester-${semester}`} className="font-normal cursor-pointer">
-                          Semester {semester}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
+                <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-2">
+                  <RadioGroup value={formData.semester} onValueChange={(value) => handleRadioChange('semester', value)}>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[1, 2].map((semester) => (
+                        <div key={semester} className="flex items-center space-x-1 p-1 rounded-md border border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer">
+                          <RadioGroupItem value={semester.toString()} id={`semester-${semester}`} className="h-3 w-3" />
+                          <Label htmlFor={`semester-${semester}`} className="font-normal cursor-pointer text-xs flex-1">
+                            Semester {semester}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
 
               {/* Submit Button */}
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 h-auto"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1 h-8 text-xs mt-1"
               >
                 {loading ? 'Sending OTP...' : 'Continue'}
               </Button>
 
-              {/* Required Fields Note */}
-              <p className="text-xs text-muted-foreground text-center">
-                <span className="text-destructive">*</span> indicates required fields
-              </p>
-
               {/* Login Link */}
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">Already have an account? </span>
+              <div className="pt-1 text-center text-xs border-t border-border">
+                <span className="text-muted-foreground">Already have account? </span>
                 <Link href="/auth/login" className="text-primary hover:underline font-semibold">
                   Sign in
                 </Link>
@@ -574,16 +628,16 @@ export default function SignupPage() {
 
           {/* STEP 2: OTP Verification */}
           {step === 'otp' && (
-            <form onSubmit={handleVerifyOTP} className="space-y-6">
-              <div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  We sent a 6-digit OTP to <strong>{formData.email}</strong>
+            <form onSubmit={handleVerifyOTP} className="space-y-3">
+              <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-900 dark:text-blue-100">
+                  OTP sent to <strong className="font-semibold break-all">{formData.email}</strong>
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="otp" className="font-semibold">
-                  Enter OTP
+              <div className="space-y-1">
+                <Label htmlFor="otp" className="font-semibold text-xs">
+                  Enter 6-Digit OTP
                 </Label>
                 <Input
                   id="otp"
@@ -598,35 +652,37 @@ export default function SignupPage() {
                   }}
                   maxLength={6}
                   inputMode="numeric"
-                  className="border-border focus:ring-ring text-center text-2xl tracking-widest font-mono"
+                  className="border-border focus:ring-ring text-center text-3xl tracking-widest font-mono h-12"
                   required
                 />
               </div>
 
               {otpTimer > 0 && (
-                <div className="text-sm text-muted-foreground text-center">
-                  OTP expires in: <strong>{formatTime(otpTimer)}</strong>
+                <div className="text-xs text-center p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <span className="text-amber-900 dark:text-amber-100">
+                    Expires in: <strong className="font-semibold">{formatTime(otpTimer)}</strong>
+                  </span>
                 </div>
               )}
 
               <Button
                 type="submit"
                 disabled={loading || otp.length !== 6}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 h-auto"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-1 h-9 text-sm"
               >
-                {loading ? 'Verifying...' : 'Verify & Create Account'}
+                {loading ? 'Verifying...' : 'Verify & Create'}
               </Button>
 
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleBackToForm}
-                className="w-full"
+                className="w-full h-9 text-sm"
               >
                 Back
               </Button>
 
-              <div className="text-center text-sm">
+              <div className="pt-1 text-center text-xs border-t border-border">
                 <span className="text-muted-foreground">Already have an account? </span>
                 <Link href="/auth/login" className="text-primary hover:underline font-semibold">
                   Sign in
@@ -634,8 +690,10 @@ export default function SignupPage() {
               </div>
             </form>
           )}
+            </div>
+          </Card>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }
