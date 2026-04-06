@@ -98,6 +98,19 @@ export async function ensureTablesExist() {
   `
 
   await sql`
+    CREATE TABLE IF NOT EXISTS live_chat_messages (
+      id              SERIAL PRIMARY KEY,
+      stream_id       INTEGER       NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+      author_name     VARCHAR(255)  NOT NULL DEFAULT 'Anonymous',
+      message         TEXT          NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_live_chat_messages_stream_id ON live_chat_messages(stream_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_live_chat_messages_created_at ON live_chat_messages(created_at DESC)`
+
+  await sql`
     CREATE TABLE IF NOT EXISTS subject4years (
       id              SERIAL PRIMARY KEY,
       year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
