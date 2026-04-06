@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Send, Search, Plus } from 'lucide-react'
+import { X, Send, Search, Plus, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
@@ -20,6 +20,7 @@ interface ChatConversation {
   avatar: string
   lastMessage: string
   unread: number
+  lastLogin?: string
   messages: ChatMessage[]
 }
 
@@ -131,12 +132,19 @@ const mockConversations: ChatConversation[] = [
 ]
 
 export function ChatModal({ isOpen, onClose }: ChatModalProps) {
-  const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(mockConversations[0])
+  const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null)
   const [newMessage, setNewMessage] = useState('')
-  const [conversations, setConversations] = useState<ChatConversation[]>(mockConversations)
+  const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewChatForm, setShowNewChatForm] = useState(false)
   const [newMemberName, setNewMemberName] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
+  const [loadingChats, setLoadingChats] = useState(true)
+  
+  // User suggestions state
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<any>(null)
   
   // Resizable state
   const [width, setWidth] = useState(800) // increased default width
@@ -144,6 +152,50 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const [isResizing, setIsResizing] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
   const [cursor, setCursor] = useState('default')
+
+  // Load user ID and fetch chats on mount
+  useEffect(() => {
+    const loadChats = async () => {
+      try {
+        const storedUserId = localStorage.getItem('studentId')
+        if (!storedUserId) {
+          console.log('⚠️ No user ID found - using mock data')
+          setConversations(mockConversations)
+          setSelectedConversation(mockConversations[0])
+          setLoadingChats(false)
+          return
+        }
+
+        setUserId(storedUserId)
+        console.log('👤 Fetching chats for user:', storedUserId)
+
+        const response = await fetch(`/api/chat?userId=${storedUserId}`)
+        const result = await response.json()
+
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          console.log('✅ Chats loaded from database:', result.data.length, 'chats')
+          setConversations(result.data)
+          if (result.data.length > 0) {
+            setSelectedConversation(result.data[0])
+          }
+        } else {
+          console.log('⚠️ No chats found, using mock data')
+          setConversations(mockConversations)
+          setSelectedConversation(mockConversations[0])
+        }
+      } catch (error) {
+        console.error('❌ Error loading chats:', error)
+        setConversations(mockConversations)
+        setSelectedConversation(mockConversations[0])
+      } finally {
+        setLoadingChats(false)
+      }
+    }
+
+    if (isOpen) {
+      loadChats()
+    }
+  }, [isOpen])
 
   // Handle resize mouse down
   const handleResizeStart = (position: string) => (e: React.MouseEvent) => {
@@ -220,65 +272,322 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return
+  // Handle member name input and fetch suggestions
+  const handleMemberNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setNewMemberName(value)
 
-    const updatedConversations = conversations.map((conv) => {
-      if (conv.id === selectedConversation.id) {
-        const newMsg: ChatMessage = {
-          id: Date.now().toString(),
+    if (value.trim().length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      setSelectedUser(null)
+      return
+    }
+
+    try {
+      console.log('🔍 Fetching suggestions for:', value)
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(value)}&limit=8`)
+      const result = await response.json()
+
+      if (result.status === 'success' && Array.isArray(result.data)) {
+        console.log('✅ Got', result.data.length, 'suggestions')
+        setSuggestions(result.data)
+        setShowSuggestions(true)
+      } else {
+        setSuggestions([])
+        setShowSuggestions(false)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching suggestions:', error)
+      setSuggestions([])
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSelectUser = (user: any) => {
+    console.log('👤 Selected user:', user.fullName)
+    setSelectedUser(user)
+    setNewMemberName(user.fullName)
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation || !userId) return
+
+    try {
+      console.log('💬 Sending message to chat:', selectedConversation.id)
+
+      // Save message to backend
+      const response = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: parseInt(selectedConversation.id),
           sender: 'You',
           senderAvatar: 'Y',
           content: newMessage,
-          timestamp: new Date().toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
           isOwn: true,
-        }
-        return {
-          ...conv,
-          messages: [...conv.messages, newMsg],
-          lastMessage: newMessage,
-        }
-      }
-      return conv
-    })
+        })
+      })
 
-    setConversations(updatedConversations)
-    setSelectedConversation(updatedConversations.find((c) => c.id === selectedConversation.id) || null)
-    setNewMessage('')
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ Failed to send message:', result.message)
+        return
+      }
+
+      console.log('✅ Message sent successfully')
+
+      // Update frontend state
+      const updatedConversations = conversations.map((conv) => {
+        if (conv.id === selectedConversation.id) {
+          return {
+            ...conv,
+            messages: [...conv.messages, result.data],
+            lastMessage: newMessage,
+          }
+        }
+        return conv
+      })
+
+      setConversations(updatedConversations)
+      setSelectedConversation(updatedConversations.find((c) => c.id === selectedConversation.id) || null)
+      setNewMessage('')
+    } catch (error) {
+      console.error('❌ Error sending message:', error)
+    }
   }
 
-  const handleCreateNewChat = () => {
-    if (!newMemberName.trim()) return
+  const handleCreateNewChat = async () => {
+    if (!newMemberName.trim() || !userId) return
 
-    const newConversation: ChatConversation = {
-      id: Date.now().toString(),
-      name: newMemberName,
-      avatar: newMemberName.charAt(0).toUpperCase(),
-      lastMessage: 'Chat started',
-      unread: 0,
-      messages: [
-        {
-          id: '1',
-          sender: newMemberName,
-          senderAvatar: newMemberName.charAt(0).toUpperCase(),
-          content: `Hi! I'm ${newMemberName}. Let's chat!`,
-          timestamp: new Date().toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
-          isOwn: false,
+    try {
+      const displayName = selectedUser?.fullName || newMemberName
+      console.log('💾 Creating new chat with participant:', displayName)
+
+      // Save chat to backend
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          participantName: displayName,
+          participantId: selectedUser?.id || null,
+        })
+      })
+
+      const apiResult = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ Failed to create chat:', apiResult.message)
+        alert('Error creating chat: ' + apiResult.message)
+        return
+      }
+
+      console.log('✅ Chat created successfully:', apiResult.data)
+
+      // Add to frontend state
+      const updatedConversations = [apiResult.data, ...conversations]
+      setConversations(updatedConversations)
+      setSelectedConversation(apiResult.data)
+      setNewMemberName('')
+      setSelectedUser(null)
+      setSuggestions([])
+      setShowSuggestions(false)
+      setShowNewChatForm(false)
+    } catch (error) {
+      console.error('❌ Error creating chat:', error)
+      alert('Failed to create chat. Check console for details.')
+    }
+  }
+
+  const handleSelectConversation = async (conv: ChatConversation) => {
+    console.log('👤 Selected conversation:', conv.id, 'with', conv.unread, 'unread messages')
+    
+    // Set the selected conversation
+    setSelectedConversation(conv)
+
+    // If there are unread messages, mark them as read
+    if (conv.unread > 0) {
+      try {
+        console.log('📖 Marking messages as read for chat:', conv.id)
+        const response = await fetch('/api/chat/messages/mark-read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId: conv.id }),
+        })
+
+        const result = await response.json()
+
+        if (result.status === 'success') {
+          console.log('✅ Marked', result.data.markedCount, 'messages as read')
+
+          // Update the conversation to reflect zero unread
+          const updatedConversations = conversations.map((c) => {
+            if (c.id === conv.id) {
+              return { ...c, unread: 0 }
+            }
+            return c
+          })
+
+          setConversations(updatedConversations)
         }
-      ]
+      } catch (error) {
+        console.error('❌ Error marking messages as read:', error)
+      }
+    }
+  }
+
+  const handleDeleteChat = async () => {
+    console.log('🗑️ handleDeleteChat called')
+    
+    if (!selectedConversation) {
+      console.error('❌ No selected conversation')
+      alert('No chat selected')
+      return
+    }
+    
+    if (!confirm('Are you sure you want to delete this entire chat? This cannot be undone.')) {
+      console.log('User cancelled deletion')
+      return
     }
 
-    const updatedConversations = [newConversation, ...conversations]
-    setConversations(updatedConversations)
-    setSelectedConversation(newConversation)
-    setNewMemberName('')
-    setShowNewChatForm(false)
+    try {
+      console.log('🔍 Chat to delete ID:', selectedConversation.id, 'type:', typeof selectedConversation.id)
+      
+      // Ensure chatId is a valid number
+      const id = parseInt(selectedConversation.id, 10)
+      if (isNaN(id) || id <= 0) {
+        console.error('❌ Invalid chat ID:', selectedConversation.id, '-> parsed:', id)
+        alert('Invalid chat ID: ' + selectedConversation.id)
+        return
+      }
+
+      console.log('📤 Sending DELETE request to /api/chat/' + id)
+
+      const response = await fetch(`/api/chat/${id}`, {
+        method: 'DELETE',
+      })
+
+      console.log('📥 Response status:', response.status, 'ok:', response.ok)
+
+      const result = await response.json()
+      console.log('📋 Response data:', result)
+
+      if (!response.ok) {
+        console.error('❌ HTTP Error:', response.status, result.message)
+        alert('Error: ' + result.message)
+        return
+      }
+
+      console.log('✅ Chat deleted successfully from database')
+
+      // Remove from frontend state
+      const chatIdStr = selectedConversation.id.toString()
+      const updatedConversations = conversations.filter((c) => {
+        const convIdStr = c.id.toString()
+        const shouldKeep = convIdStr !== chatIdStr
+        if (!shouldKeep) {
+          console.log('🎯 Removing chat:', c.id, 'name:', c.name)
+        }
+        return shouldKeep
+      })
+      console.log('After filter - remaining conversations:', updatedConversations.length)
+      setConversations(updatedConversations)
+      setSelectedConversation(updatedConversations.length > 0 ? updatedConversations[0] : null)
+      console.log('✅ UI updated successfully')
+    } catch (error) {
+      console.error('❌ Exception during delete:', error)
+      alert('Failed to delete chat: ' + String(error))
+    }
+  }
+
+  const handleDeleteMessage = async (messageId: string) => {
+    console.log('🗑️ handleDeleteMessage called with:', messageId, 'type:', typeof messageId)
+    
+    if (!selectedConversation) {
+      console.error('❌ No selected conversation')
+      alert('No chat selected')
+      return
+    }
+    
+    if (!confirm('Are you sure you want to delete this message? This cannot be undone.')) {
+      console.log('User cancelled deletion')
+      return
+    }
+
+    try {
+      console.log('🔍 Message to delete ID:', messageId)
+      
+      // Ensure messageId is a valid number
+      const id = parseInt(messageId, 10)
+      if (isNaN(id) || id <= 0) {
+        console.error('❌ Invalid message ID:', messageId, '-> parsed:', id)
+        alert('Invalid message ID: ' + messageId)
+        return
+      }
+
+      console.log('📤 Sending DELETE request to /api/chat/messages/' + id)
+      
+      const response = await fetch(`/api/chat/messages/${id}`, {
+        method: 'DELETE',
+      })
+
+      console.log('📥 Response status:', response.status, 'ok:', response.ok)
+
+      const result = await response.json()
+      console.log('📋 Response data:', result)
+
+      if (!response.ok) {
+        console.error('❌ HTTP Error:', response.status, result.message)
+        alert('Error: ' + result.message)
+        return
+      }
+
+      console.log('✅ Message deleted successfully from database')
+      console.log('📊 Updating UI for conversation:', selectedConversation.id)
+
+      // Remove from frontend state using numeric comparison
+      const updatedConversations = conversations.map((conv) => {
+        if (conv.id === selectedConversation.id) {
+          console.log('Found matching conversation')
+          console.log('Before filter - total messages:', conv.messages.length)
+          
+          const messageIdNum = parseInt(messageId, 10)
+          const newMessages = conv.messages.filter((m) => {
+            const msgIdNum = parseInt(m.id, 10)
+            const shouldKeep = msgIdNum !== messageIdNum
+            
+            if (msgIdNum === messageIdNum) {
+              console.log('🎯 DELETING message ID:', m.id)
+            }
+            return shouldKeep
+          })
+          
+          console.log('After filter - total messages:', newMessages.length)
+          console.log('Deleted count:', conv.messages.length - newMessages.length)
+          
+          return {
+            ...conv,
+            messages: newMessages,
+            lastMessage: newMessages.length > 0 ? newMessages[newMessages.length - 1].content : 'No messages yet',
+          }
+        }
+        return conv
+      })
+
+      console.log('🔄 Setting updated conversations')
+      setConversations(updatedConversations)
+      
+      const updated = updatedConversations.find((c) => c.id === selectedConversation.id)
+      setSelectedConversation(updated || null)
+      console.log('✅ UI updated successfully')
+    } catch (error) {
+      console.error('❌ Exception during delete:', error)
+      alert('Failed to delete message: ' + String(error))
+    }
   }
 
   if (!isOpen) return null
@@ -351,19 +660,42 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
               </button>
             ) : (
               <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Enter member name..."
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleCreateNewChat()
-                    }
-                  }}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-xs sm:text-sm"
-                  autoFocus
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Enter member name or email..."
+                    value={newMemberName}
+                    onChange={handleMemberNameChange}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateNewChat()
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-xs sm:text-sm"
+                    autoFocus
+                  />
+                  
+                  {/* Suggestions Dropdown */}
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                      {suggestions.map((user) => (
+                        <button
+                          key={user.id}
+                          onClick={() => handleSelectUser(user)}
+                          className="w-full px-3 py-2 text-left hover:bg-primary/10 transition-colors border-b border-border last:border-b-0 focus:outline-none focus:bg-primary/10"
+                        >
+                          <div className="text-xs sm:text-sm font-medium text-foreground">
+                            {user.fullName}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {user.email} • Year {user.year} Sem {user.semester}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateNewChat}
@@ -376,6 +708,9 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
                     onClick={() => {
                       setShowNewChatForm(false)
                       setNewMemberName('')
+                      setSelectedUser(null)
+                      setSuggestions([])
+                      setShowSuggestions(false)
                     }}
                     className="flex-1 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground hover:opacity-90 transition-opacity text-xs font-medium"
                   >
@@ -391,7 +726,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
             {filteredConversations.map((conv) => (
               <button
                 key={conv.id}
-                onClick={() => setSelectedConversation(conv)}
+                onClick={() => handleSelectConversation(conv)}
                 className={`w-full px-4 py-3 border-b border-border text-left transition-colors hover:bg-secondary ${
                   selectedConversation?.id === conv.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''
                 }`}
@@ -425,14 +760,23 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
         {selectedConversation && (
           <div className="flex-1 flex flex-col w-full sm:w-2/3 lg:w-3/5 xl:w-2/3">
             {/* Chat Header */}
-            <div className="p-4 border-b border-border bg-primary/5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center">
-                {selectedConversation.avatar}
+            <div className="p-4 border-b border-border bg-primary/5 flex items-center gap-3 justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center">
+                  {selectedConversation.avatar}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm sm:text-base">{selectedConversation.name}</p>
+                  <p className="text-xs text-muted-foreground">Last login: {selectedConversation.lastLogin || 'Never'}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-foreground text-sm sm:text-base">{selectedConversation.name}</p>
-                <p className="text-xs text-muted-foreground">Online</p>
-              </div>
+              <button
+                onClick={handleDeleteChat}
+                className="p-2 hover:bg-red-500/20 rounded-lg text-red-500 transition-colors"
+                title="Delete entire chat"
+              >
+                <Trash2 size={18} />
+              </button>
             </div>
 
             {/* Messages */}
@@ -445,33 +789,42 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
               {selectedConversation.messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'} group`}
                 >
                   {!msg.isOwn && (
                     <div className="w-8 h-8 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center text-xs mr-2 flex-shrink-0">
                       {msg.senderAvatar}
                     </div>
                   )}
-                  <div
-                    className={`
-                      /* Mobile */
-                      max-w-[70%]
-                      /* Tablet and up */
-                      sm:max-w-xs
-                      px-3 py-2 rounded-lg text-sm ${
-                      msg.isOwn
-                        ? 'bg-primary text-primary-foreground rounded-br-none'
-                        : 'bg-secondary text-secondary-foreground rounded-bl-none'
-                    }`}
-                  >
-                    <p>{msg.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      msg.isOwn 
-                        ? 'text-primary-foreground/70' 
-                        : 'text-secondary-foreground/70'
-                    }`}>
-                      {msg.timestamp}
-                    </p>
+                  <div className="flex items-end gap-2">
+                    <div
+                      className={`
+                        /* Mobile */
+                        max-w-[70%]
+                        /* Tablet and up */
+                        sm:max-w-xs
+                        px-3 py-2 rounded-lg text-sm ${
+                        msg.isOwn
+                          ? 'bg-primary text-primary-foreground rounded-br-none'
+                          : 'bg-secondary text-secondary-foreground rounded-bl-none'
+                      }`}
+                    >
+                      <p>{msg.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        msg.isOwn 
+                          ? 'text-primary-foreground/70' 
+                          : 'text-secondary-foreground/70'
+                      }`}>
+                        {msg.timestamp}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteMessage(msg.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded text-red-500 transition-all"
+                      title="Delete message"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))}
