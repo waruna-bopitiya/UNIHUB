@@ -575,6 +575,110 @@ const mockQuizzes: Quiz[] = [
     semester: 2,
     course: 'Mobile Application Development',
   },
+  {
+    id: '27',
+    title: 'Business Management for IT - Strategic IT Management',
+    description: 'Understand IT management and strategic business alignment',
+    creator: 'Dr. Sarah Johnson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary goal of IT management in organizations?',
+        options: [
+          'To maximize hardware spending',
+          'To align IT strategy with business objectives',
+          'To eliminate all technology costs',
+          'To prevent all system updates',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 20,
+    participants: 198,
+    category: 'Business',
+    difficulty: 'Medium',
+    year: 3,
+    semester: 2,
+    course: 'Business Management for IT',
+  },
+  {
+    id: '28',
+    title: 'Data Science & Analytics - Advanced Analytics',
+    description: 'Explore data science techniques and analytics methodologies',
+    creator: 'Prof. Michael Zhang',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary purpose of exploratory data analysis?',
+        options: [
+          'To delete data',
+          'To understand data patterns and characteristics',
+          'To encrypt sensitive information',
+          'To increase data size',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 22,
+    participants: 215,
+    category: 'Data Science',
+    difficulty: 'Hard',
+    year: 3,
+    semester: 2,
+    course: 'Data Science & Analytics',
+  },
+  {
+    id: '29',
+    title: 'Information Assurance & Security - Security Fundamentals',
+    description: 'Master information security principles and assurance practices',
+    creator: 'Prof. James McCarthy',
+    questions: [
+      {
+        id: '1',
+        question: 'What are the three pillars of information security (CIA triad)?',
+        options: [
+          'Confidentiality, Integrity, Availability',
+          'Computer, Internet, Application',
+          'Centralized, Integrated, Automated',
+          'Capability, Implementation, Assessment',
+        ],
+        correctAnswer: 0,
+      },
+    ],
+    duration: 21,
+    participants: 187,
+    category: 'Security',
+    difficulty: 'Hard',
+    year: 3,
+    semester: 2,
+    course: 'Information Assurance & Security',
+  },
+  {
+    id: '30',
+    title: 'Human Computer Interaction - User Experience Design',
+    description: 'Learn HCI principles and user experience design methodologies',
+    creator: 'Dr. Emma Wilson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary focus of user-centered design?',
+        options: [
+          'Maximizing technical complexity',
+          'Understanding user needs and designing accordingly',
+          'Reducing design costs',
+          'Using the latest technologies only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 18,
+    participants: 172,
+    category: 'Design',
+    difficulty: 'Medium',
+    year: 3,
+    semester: 2,
+    course: 'Human Computer Interaction',
+  },
 ]
 
 const ensureThreeQuestions = (quiz: Quiz): Quiz => {
@@ -1129,7 +1233,7 @@ export default function QuizPage() {
         return {
           course: entry.course,
           shortCourse:
-            entry.course.length > 22 ? `${entry.course.slice(0, 22)}...` : entry.course,
+            entry.course.length > 1 ? `${entry.course.slice(0, 1)}...` : entry.course,
           participants: entry.participants,
           attempts: attemptsForCourse.length,
           avgScore,
@@ -1216,8 +1320,8 @@ export default function QuizPage() {
   )
     .map((participant) => ({
       name: participant.name,
-      attempts: participant.attempts,
-      quizzesTaken: participant.quizzes.size,
+      attempts: 1,
+      quizzesTaken: 1,
       averageScore: Math.round((participant.totalPercentage / participant.attempts) * 10) / 10,
     }))
     .sort((a, b) => b.averageScore - a.averageScore)
