@@ -152,5 +152,144 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_resource_id ON resource_feedback(resource_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_resource_feedback_created_at ON resource_feedback(created_at DESC)`
 
+  // Quiz tables
+  await sql`
+    CREATE TABLE IF NOT EXISTS quizzes (
+      id              SERIAL PRIMARY KEY,
+      title           VARCHAR(500)  NOT NULL,
+      description     TEXT,
+      creator         VARCHAR(255)  NOT NULL,
+      year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
+      semester        INTEGER       NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      course          VARCHAR(500)  NOT NULL,
+      category        VARCHAR(100)  NOT NULL,
+      difficulty      VARCHAR(50)   NOT NULL CHECK (difficulty IN ('Easy', 'Medium', 'Hard')),
+      duration        INTEGER       NOT NULL,
+      participants    INTEGER       NOT NULL DEFAULT 0,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS quiz_questions (
+      id              SERIAL PRIMARY KEY,
+      quiz_id         INTEGER       NOT NULL,
+      question_text   TEXT          NOT NULL,
+      options         TEXT[]        NOT NULL,
+      correct_answer  INTEGER       NOT NULL CHECK (correct_answer >= 0),
+      question_order  INTEGER       NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS quiz_responses (
+      id              SERIAL PRIMARY KEY,
+      quiz_id         INTEGER       NOT NULL,
+      participant_name VARCHAR(255) NOT NULL DEFAULT 'Anonymous',
+      answers         INTEGER[]     NOT NULL,
+      score           INTEGER       NOT NULL,
+      total_questions INTEGER       NOT NULL,
+      date_taken      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS quiz_comments (
+      id              SERIAL PRIMARY KEY,
+      quiz_id         INTEGER       NOT NULL,
+      name            VARCHAR(255)  NOT NULL DEFAULT 'Anonymous',
+      message         TEXT          NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS quiz_ratings (
+      id              SERIAL PRIMARY KEY,
+      quiz_id         INTEGER       NOT NULL,
+      name            VARCHAR(255)  NOT NULL DEFAULT 'Anonymous',
+      rating          INTEGER       NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+    )
+  `
+
+  // Chat tables
+  await sql`
+    CREATE TABLE IF NOT EXISTS chats (
+      id              SERIAL PRIMARY KEY,
+      user_id         VARCHAR(50)   NOT NULL,
+      chat_name       VARCHAR(255)  NOT NULL,
+      participant_name VARCHAR(255) NOT NULL,
+      avatar          VARCHAR(10)   NOT NULL DEFAULT 'U',
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id              SERIAL PRIMARY KEY,
+      chat_id         INTEGER       NOT NULL,
+      sender          VARCHAR(255)  NOT NULL,
+      sender_avatar   VARCHAR(10)   NOT NULL,
+      content         TEXT          NOT NULL,
+      is_own          BOOLEAN       NOT NULL DEFAULT false,
+      is_read         BOOLEAN       NOT NULL DEFAULT false,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    )
+  `
+
+  // Chat table indexes
+  // Migration: Add is_read column to chat_messages if it doesn't exist
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false
+    `
+    console.log('✅ is_read column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add is_read column:', error.message)
+    }
+  }
+  // Migration: Add participant_id column to chats table
+  try {
+    await sql`
+      ALTER TABLE chats
+      ADD COLUMN IF NOT EXISTS participant_id VARCHAR(50)
+    `
+    console.log('✅ participant_id column added to chats table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('Could not add participant_id column:', error.message)
+    }
+  }
+  await sql`CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chats_created_at ON chats(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id ON chat_messages(chat_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_is_read ON chat_messages(is_read)`
+
+  // Quiz table indexes
+  await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_year_semester ON quizzes(year, semester)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_course ON quizzes(course)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_created_at ON quizzes(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz_id ON quiz_questions(quiz_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_responses_quiz_id ON quiz_responses(quiz_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_responses_date ON quiz_responses(date_taken DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_comments_quiz_id ON quiz_comments(quiz_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_comments_created_at ON quiz_comments(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_ratings_quiz_id ON quiz_ratings(quiz_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quiz_ratings_created_at ON quiz_ratings(created_at DESC)`
+
   initialized = true
 }
