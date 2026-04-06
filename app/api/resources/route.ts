@@ -61,84 +61,88 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await ensureTablesExist()
-    const formData = await request.formData()
-    const year = formData.get('year') as string
-    const semester = formData.get('semester') as string
-    const module_name = formData.get('module_name') as string
-    const name = formData.get('name') as string
-    const resourceType = formData.get('resourceType') as string
-    const link = formData.get('link') as string
-    const uploaderId = formData.get('uploaderId') as string
-    const file = formData.get('file') as File | null
+    
+    // Handle both FormData (for backward compatibility) and JSON
+    let year: string
+    let semester: string
+    let module_name: string
+    let name: string
+    let resourceType: string
+    let uploader_id: string
+    let uploader_name: string
+    let shareable_link: string
+    let description: string
 
-    console.log('Received form data:', {
-      year,
-      semester,
-      module_name,
-      name,
-      resourceType,
-      uploaderId,
-      link,
-      fileInfo: file ? { name: file.name, size: file.size, type: file.type } : null,
-    })
+    const contentType = request.headers.get('content-type') || ''
+    
+    if (contentType.includes('application/json')) {
+      // Handle JSON request
+      const body = await request.json()
+      year = body.year
+      semester = body.semester
+      module_name = body.module_name
+      name = body.name
+      resourceType = body.resource_type || body.resourceType
+      shareable_link = body.shareable_link || body.shareableLink
+      uploader_id = body.uploader_id
+      uploader_name = body.uploader_name || 'Anonymous'
+      description = body.description || ''
 
-    if (!year || !semester || !module_name || !name || !resourceType || !uploaderId) {
+      console.log('Received JSON request:', {
+        year,
+        semester,
+        module_name,
+        name,
+        resourceType,
+        uploader_id,
+        uploader_name,
+        shareable_link,
+        description,
+      })
+    } else {
+      // Handle FormData for backward compatibility
+      const formData = await request.formData()
+      year = formData.get('year') as string
+      semester = formData.get('semester') as string
+      module_name = formData.get('module_name') as string
+      name = formData.get('name') as string
+      resourceType = formData.get('resourceType') as string
+      uploader_id = formData.get('uploaderId') as string
+      uploader_name = formData.get('uploaderName') as string || 'Anonymous'
+      shareable_link = formData.get('shareableLink') as string || ''
+      description = formData.get('description') as string || ''
+
+      console.log('Received FormData request:', {
+        year,
+        semester,
+        module_name,
+        name,
+        resourceType,
+        uploader_id,
+        uploader_name,
+        shareable_link,
+        description,
+      })
+    }
+
+    // Validate required fields
+    if (!year || !semester || !module_name || !name || !resourceType || !uploader_id) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    let filePath = null
-
-    // Handle file upload
-    if (resourceType === 'file' && file) {
+    // Validate shareable_link if provided
+    if (shareable_link) {
       try {
-        console.log('Starting file upload:', file.name)
-        const uploadDir = join(process.cwd(), 'public', 'uploads', 'resources')
-        
-        console.log('Upload directory:', uploadDir)
-        
-        // Create directory if it doesn't exist
-        if (!existsSync(uploadDir)) {
-          console.log('Directory does not exist, creating...')
-          await mkdir(uploadDir, { recursive: true })
-          console.log('Directory created successfully')
-        }
-
-        // Generate unique filename
-        const timestamp = Date.now()
-        // Sanitize filename: remove non-ASCII characters and problematic chars
-        const sanitized = file.name
-          .replace(/[<>:"|?*\\/]/g, '_')  // Remove problematic filesystem characters
-          .replace(/[^\x00-\x7F]/g, '_')   // Replace non-ASCII with underscore
-        const filename = `${timestamp}_${sanitized}`
-        const fullPath = join(uploadDir, filename)
-
-        console.log('Writing file to:', fullPath)
-
-        // Read file and save it
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
-        await writeFile(fullPath, buffer)
-
-        console.log('File uploaded successfully')
-
-        // Store relative path for serving
-        filePath = `/uploads/resources/${filename}`
-      } catch (uploadError) {
-        console.error('Error uploading file:', uploadError)
+        new URL(shareable_link)
+      } catch {
         return NextResponse.json(
-          { error: `Failed to upload file: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}` },
-          { status: 500 }
+          { error: 'Invalid shareable link URL' },
+          { status: 400 }
         )
       }
-    } else if (resourceType === 'file' && !file) {
-      console.error('File upload requested but no file provided')
-      return NextResponse.json(
-        { error: 'No file provided for file upload' },
-        { status: 400 }
-      )
     }
 
     // Save to database
@@ -149,19 +153,49 @@ export async function POST(request: Request) {
         module_name,
         name,
         resourceType,
-        uploaderId,
-        link,
-        filePath,
+        uploader_id,
+        uploader_name,
+        shareable_link,
+        description,
       })
 
       const result = await sql`
-        INSERT INTO resources (uploader_id, year, semester, module_name, name, resource_type, link, file_path, download_count)
-        VALUES (${uploaderId}, ${year}, ${semester}, ${module_name}, ${name}, ${resourceType}, ${link || null}, ${filePath}, 0)
+        INSERT INTO resources (uploader_id, uploader_name, year, semester, module_name, name, resource_type, shareable_link, description, download_count, created_at)
+        VALUES (${uploader_id}, ${uploader_name}, ${year}, ${semester}, ${module_name}, ${name}, ${resourceType}, ${shareable_link || null}, ${description}, 0, NOW())
         RETURNING *
       `
 
-      console.log('Database insert successful:', result[0])
-      return NextResponse.json(result[0], { status: 201 })
+      const resource = result[0]
+      console.log('Database insert successful:', { id: resource.id, name: resource.name })
+
+      // Send to Google Sheets via AppScript (non-blocking)
+      sendToGoogleSheet({
+        id: resource.id,
+        year,
+        semester,
+        module_name,
+        name,
+        resource_type: resourceType,
+        shareable_link,
+        description,
+        uploader_id,
+        uploader_name,
+        created_at: new Date().toISOString(),
+      }).catch(err => console.error('Error sending to Google Sheet:', err))
+
+      return NextResponse.json({
+        id: resource.id,
+        uploader_id: resource.uploader_id,
+        uploader_name: resource.uploader_name,
+        year: resource.year,
+        semester: resource.semester,
+        module_name: resource.module_name,
+        name: resource.name,
+        resource_type: resource.resource_type,
+        shareable_link: resource.shareable_link,
+        description: resource.description,
+        created_at: resource.created_at,
+      }, { status: 201 })
     } catch (dbError) {
       console.error('Database error:', dbError)
       return NextResponse.json(
@@ -172,5 +206,51 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating resource:', error)
     return NextResponse.json({ error: 'Failed to create resource' }, { status: 500 })
+  }
+}
+
+// Function to send resource to Google Sheet via AppScript
+async function sendToGoogleSheet(resource: any) {
+  try {
+    const APPSCRIPT_URL = process.env.GOOGLE_APPSCRIPT_DEPLOYMENT_URL
+
+    if (!APPSCRIPT_URL) {
+      console.warn('⚠️ GOOGLE_APPSCRIPT_DEPLOYMENT_URL not configured - skipping Google Sheets sync')
+      return
+    }
+
+    console.log('📤 Sending resource to Google Sheet...')
+    const response = await fetch(APPSCRIPT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'addResource',
+        resource: {
+          id: resource.id,
+          year: resource.year,
+          semester: resource.semester,
+          module_name: resource.module_name,
+          name: resource.name,
+          resource_type: resource.resource_type,
+          shareable_link: resource.shareable_link,
+          description: resource.description,
+          uploader_id: resource.uploader_id,
+          uploader_name: resource.uploader_name,
+          created_at: resource.created_at,
+          timestamp: new Date().toLocaleString(),
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      console.error('⚠️ Failed to send to Google Sheet:', response.statusText)
+    } else {
+      console.log('✅ Successfully sent to Google Sheet')
+    }
+  } catch (error) {
+    console.error('⚠️ Error sending to Google Sheet:', error)
+    // Don't throw - this is non-blocking
   }
 }

@@ -14,7 +14,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ResourceFeedback } from '@/components/resources/resource-feedback'
-import { UserRecentResources } from '@/components/resources/user-recent-resources'
 import { useAcademicData, type SelectOption } from '@/hooks/use-academic-data'
 
 type CmpYesSemMod = {
@@ -25,56 +24,13 @@ type CmpYesSemMod = {
 
 const RESOURCE_TYPES = ['PDF', 'PPT', 'Word', 'TXT', 'Excel', 'Image', 'Video', 'Audio', 'Other'] as const;
 
-// Helper function to detect which platform the link is from
-const detectLinkPlatform = (url: string): string | null => {
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-    
-    if (hostname.includes('drive.google.com')) return 'Google Drive (drive.google.com)';
-    if (hostname.includes('onedrive.live.com')) return 'Microsoft OneDrive (onedrive.live.com)';
-    if (hostname.includes('sharepoint.com')) return 'SharePoint (sharepoint.com)';
-    if (hostname.includes('github.com')) return 'GitHub (github.com)';
-    
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-const isValidShareableLink = (url: string): boolean => {
-  try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
-    
-    // Allow Google Drive
-    if (hostname.includes('drive.google.com')) return true;
-    
-    // Allow Microsoft OneDrive/SharePoint
-    if (hostname.includes('onedrive.live.com') || hostname.includes('sharepoint.com')) return true;
-    
-    // Allow GitHub
-    if (hostname.includes('github.com')) return true;
-    
-    return false;
-  } catch {
-    return false;
-  }
-};
-
 const resourceSchema = z.object({
   year: z.string().min(1, 'Year is required'),
   semester: z.string().min(1, 'Semester is required'),
   module_name: z.string().min(1, 'Module is required'),
   name: z.string().min(1, 'Resource name is required'),
   resourceType: z.enum(RESOURCE_TYPES, { errorMap: () => ({ message: 'Please select a resource type' }) }),
-  shareableLink: z.string()
-    .url('Please enter a valid URL')
-    .min(1, 'Shareable link is required')
-    .refine(
-      (url) => isValidShareableLink(url),
-      'Only Google Drive, Microsoft OneDrive/SharePoint, and GitHub links are allowed'
-    ),
+  shareableLink: z.string().url('Please enter a valid URL').min(1, 'Shareable link is required'),
   description: z.string().optional(),
 });
 
@@ -106,8 +62,7 @@ export default function ResourcesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState<string | null>(null)
   const [filter, setFilter] = useState<{ year: string; semester: string; module_name: string; resourceType: string }>({ year: '', semester: '', module_name: '', resourceType: '' })
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(true)
   const [filterSemesters, setFilterSemesters] = useState<SelectOption[]>([])
   const [filterSubjects, setFilterSubjects] = useState<SelectOption[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -117,10 +72,9 @@ export default function ResourcesPage() {
   // Get current user ID from localStorage
   useEffect(() => {
     const userId = localStorage.getItem('studentId')
-    const userName = localStorage.getItem('firstName') || localStorage.getItem('studentName') || 'Anonymous'
+    const userName = localStorage.getItem('studentName') || 'Anonymous'
     setCurrentUserId(userId)
     setCurrentUserName(userName)
-    console.log('👤 User loaded:', { userId, userName })
   }, [])
 
   // Fetch feedback stats
@@ -254,6 +208,7 @@ export default function ResourcesPage() {
     }
     
     setSubmitting(true)
+    toast.loading('Saving your resource...')
     
     const payload = {
       year: values.year,
@@ -332,32 +287,11 @@ export default function ResourcesPage() {
 
   // Handle open resource link
   const handleOpenLink = (shareableLink: string, resourceName: string) => {
-    // Validate link
-    if (!shareableLink || shareableLink.trim() === '') {
-      console.error('❌ No shareable link available')
-      toast.error('This resource does not have a shareable link')
-      return
-    }
-
     try {
-      // Ensure URL has protocol
-      let url = shareableLink.trim()
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url
-      }
-
-      console.log(`🔗 Opening link: ${url}`)
-      const newWindow = window.open(url, '_blank')
-      
-      if (!newWindow) {
-        console.error('❌ Failed to open window (popup might be blocked)')
-        toast.error('Could not open link - popup may be blocked')
-      } else {
-        console.log(`✅ Successfully opened ${resourceName}`)
-        toast.success(`Opening ${resourceName}...`)
-      }
+      window.open(shareableLink, '_blank')
+      toast.success(`Opening ${resourceName}...`)
     } catch (error) {
-      console.error('❌ Error opening link:', error)
+      console.error('Error opening link:', error)
       toast.error('Failed to open resource link')
     }
   }
@@ -416,12 +350,7 @@ export default function ResourcesPage() {
       (!filter.year || r.year === filter.year) &&
       (!filter.semester || r.semester === filter.semester) &&
       (!filter.module_name || r.module_name === filter.module_name) &&
-      (!filter.resourceType || r.resource_type === filter.resourceType) &&
-      (!searchQuery ||
-        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.module_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.uploader_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+      (!filter.resourceType || r.resource_type === filter.resourceType)
   );
 
   // Top resource (highest avg rating)
@@ -437,12 +366,11 @@ export default function ResourcesPage() {
 
   return (
     <AppLayout>
-      <div className="w-full">
-        <div className="px-4 md:px-6 lg:px-8 py-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-8 text-foreground">📚 My Resources</h1>
-          
-          {/* Refresh Button */}
-          <div className="flex gap-2 mb-8">
+      <div className="max-w-6xl mx-auto py-12 px-6">
+        <h1 className="text-3xl font-bold mb-8 tracking-tight text-primary">Resources</h1>
+        
+        {/* Refresh Button */}
+        <div className="flex gap-2 mb-8">
           <Button 
             onClick={() => {
               console.log('🔄 Manually refreshing resources...')
@@ -512,21 +440,20 @@ export default function ResourcesPage() {
         )}
 
         {showForm && (
-          <div className="mb-12">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card border border-border/50 rounded-xl p-8 shadow-lg">
-                <div className="flex items-center justify-between pb-6 border-b border-border/30">
-                  <h2 className="text-2xl font-bold text-foreground">Add New Resource</h2>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setShowForm(false)}
-                    disabled={submitting}
-                  >
-                    ✕
-                  </Button>
-                </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 bg-card border rounded-lg p-6 mb-8 relative z-10 animate-in fade-in">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Add Resource</h2>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowForm(false)}
+                  disabled={submitting}
+                >
+                  ✕ Close
+                </Button>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Year Dropdown */}
@@ -539,6 +466,7 @@ export default function ResourcesPage() {
                       <Select
                         onValueChange={handleFormYearChange}
                         value={field.value}
+                        defaultValue=""
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -546,6 +474,7 @@ export default function ResourcesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Select Year</SelectItem>
                           {(years || []).map((y) => (
                             <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
                           ))}
@@ -566,6 +495,7 @@ export default function ResourcesPage() {
                       <Select
                         onValueChange={handleFormSemesterChange}
                         value={field.value}
+                        defaultValue=""
                         disabled={!form.watch('year')}
                       >
                         <FormControl>
@@ -574,6 +504,7 @@ export default function ResourcesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Select Semester</SelectItem>
                           {(semesters || []).map((s) => (
                             <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                           ))}
@@ -594,6 +525,7 @@ export default function ResourcesPage() {
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
+                        defaultValue=""
                         disabled={!form.watch('year') || !form.watch('semester')}
                       >
                         <FormControl>
@@ -602,6 +534,7 @@ export default function ResourcesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="">Select Module</SelectItem>
                           {(subjects || []).map((sub) => (
                             <SelectItem key={sub.value} value={sub.value}>{sub.label}</SelectItem>
                           ))}
@@ -658,62 +591,13 @@ export default function ResourcesPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Shareable Link</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl className="flex-1">
-                          <Input 
-                            placeholder="https://drive.google.com/file/d/..." 
-                            type="url"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            field.onChange('')
-                            toast.success('Link cleared')
-                          }}
-                          disabled={!field.value}
-                          className="shrink-0"
-                          title="Clear field"
-                        >
-                          🗑️ Clear
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const text = await navigator.clipboard.readText()
-                              field.onChange(text)
-                              toast.success('Link pasted successfully')
-                            } catch (err) {
-                              console.error('Failed to read clipboard:', err)
-                              toast.error('Failed to paste from clipboard')
-                            }
-                          }}
-                          className="shrink-0"
-                          title="Paste from clipboard"
-                        >
-                          📋 Paste
-                        </Button>
-                      </div>
-                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Allowed platforms:</p>
-                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
-                          <li>✅ Google Drive (drive.google.com)</li>
-                          <li>✅ Microsoft OneDrive (onedrive.live.com)</li>
-                          <li>✅ SharePoint (sharepoint.com)</li>
-                          <li>✅ GitHub (github.com)</li>
-                        </ul>
-                      </div>
-                      {field.value && (
-                        <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                          <p className="text-xs font-semibold text-green-900 dark:text-green-100">
-                            ✅ Detected: {detectLinkPlatform(field.value) || 'Unknown platform'}
-                          </p>
-                        </div>
-                      )}
+                      <FormControl>
+                        <Input 
+                          placeholder="https://drive.google.com/file/d/..." 
+                          type="url"
+                          {...field} 
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -738,11 +622,11 @@ export default function ResourcesPage() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-6 border-t border-border/30">
+              <div className="flex gap-2 pt-4 border-t">
                 <Button 
                   type="submit" 
                   disabled={submitting}
-                  className="flex-1 h-11 text-base font-semibold"
+                  className="flex-1"
                 >
                   {submitting ? '⏳ Saving...' : '✓ Save Resource'}
                 </Button>
@@ -751,65 +635,26 @@ export default function ResourcesPage() {
                   variant="outline" 
                   onClick={() => setShowForm(false)} 
                   disabled={submitting}
-                  className="flex-1 h-11 text-base font-semibold"
+                  className="flex-1"
                 >
                   Cancel
                 </Button>
               </div>
             </form>
           </Form>
-          </div>
-        )}
-
-        {/* User's Recent Resources Section */}
-        {currentUserId && currentUserName && (
-          <div className="mb-12">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2 text-foreground">📤 Your Resources</h2>
-              <p className="text-muted-foreground">Resources you've uploaded to the community</p>
-            </div>
-            <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
-              <UserRecentResources 
-                uploaderId={currentUserId} 
-                uploaderName={currentUserName}
-              />
-            </div>
-          </div>
         )}
 
         {/* Filter Section */}
-        <div className="mb-12">
-          <div className="bg-card border border-border/50 rounded-xl p-8 shadow-sm">
-            <h2 className="text-2xl font-bold mb-6 text-foreground">🔍 Filter & Search</h2>
-            
-            {/* Search Bar */}
-            <div className="mb-8">
-              <Input
-                placeholder="Search by name, description, module, or uploader..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 text-base"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery('')}
-                  className="mt-3"
-                >
-                  ✕ Clear Search
-                </Button>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <Label className="mb-2 block text-sm font-semibold">Year</Label>
-                <select 
-                  className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
-                  value={filter.year} 
-                  onChange={(e) => handleFilterYearChange(e.target.value)}
-                >
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold mb-4">Filter Resources</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+              <Label className="mb-1 block">Year</Label>
+              <select 
+                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                value={filter.year} 
+                onChange={(e) => handleFilterYearChange(e.target.value)}
+              >
                 <option value="">Select Year</option>
                 {(years || []).map((y) => (
                   <option key={y.value} value={y.value}>{y.label}</option>
@@ -817,37 +662,37 @@ export default function ResourcesPage() {
               </select>
             </div>
             <div>
-              <Label className="mb-2 block text-sm font-semibold">Semester</Label>
+              <Label className="mb-1 block">Semester</Label>
               <select 
-                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
                 value={filter.semester} 
                 onChange={(e) => handleFilterSemesterChange(e.target.value)}
                 disabled={!filter.year}
               >
-                <option value="">All Semesters</option>
+                <option value="">Select Semester</option>
                 {(filterSemesters || []).map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <Label className="mb-2 block text-sm font-semibold">Module</Label>
+              <Label className="mb-1 block">Module</Label>
               <select 
-                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
                 value={filter.module_name} 
                 onChange={(e) => setFilter((f) => ({ ...f, module_name: e.target.value }))}
                 disabled={!filter.year || !filter.semester}
               >
-                <option value="">All Modules</option>
+                <option value="">Select Module</option>
                 {(filterSubjects || []).map((m) => (
                   <option key={m.value} value={m.value}>{m.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <Label className="mb-2 block text-sm font-semibold">Resource Type</Label>
+              <Label className="mb-1 block">Resource Type</Label>
               <select 
-                className="w-full h-10 border border-border rounded-lg px-3 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
+                className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition" 
                 value={filter.resourceType} 
                 onChange={(e) => setFilter((f) => ({ ...f, resourceType: e.target.value }))}
               >
@@ -858,80 +703,76 @@ export default function ResourcesPage() {
               </select>
             </div>
           </div>
-          </div>
         </div>
 
         {/* Top Resource */}
         {!loading && topResource && (
-          <div className="mb-8 flex justify-center">
-            <div className="w-full max-w-2xl border border-primary/30 rounded-lg p-5 bg-gradient-to-br from-primary/5 to-primary/2 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">⭐</span>
-                <div className="font-bold text-base text-primary">Top Resource</div>
+          <div className="border-2 border-primary rounded-xl p-6 mb-10 bg-card shadow-lg">
+            <div className="font-bold text-xl mb-2 text-primary">⭐ Top Resource: {topResource.name}</div>
+            <div className="text-sm mb-2 text-muted-foreground">
+              Year: {topResource.year} | Semester: {topResource.semester} | Module: {topResource.module_name} | Type: {topResource.resource_type}
+            </div>
+            <div className="text-sm text-muted-foreground mb-3">
+              Uploaded by: <span className="font-medium">{topResource.uploader_name || 'Anonymous'}</span>
+            </div>
+            
+            {topResource.description && (
+              <div className="mb-3 text-sm text-gray-700 italic">
+                {topResource.description}
               </div>
-              <h3 className="text-base font-semibold mb-2 text-foreground">{topResource.name}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground mb-3">
-                <div>Year: <span className="font-medium text-foreground">{topResource.year}</span> | Semester: <span className="font-medium text-foreground">{topResource.semester}</span></div>
-                <div>Module: <span className="font-medium text-foreground">{topResource.module_name}</span></div>
-                <div>Type: <span className="font-medium text-foreground">{topResource.resource_type}</span></div>
-                <div>By: <span className="font-medium text-foreground">{topResource.uploader_name || 'Anonymous'}</span></div>
-              </div>
-              
-              {topResource.description && (
-                <p className="text-xs text-gray-700 dark:text-gray-300 italic mb-3">
-                  "{topResource.description}"
-                </p>
-              )}
-              
-              {/* Top Resource Rating */}
-              <div className="mb-3 flex items-center gap-2">
-                <div className="flex gap-0.5">
+            )}
+            
+            {/* Top Resource Rating */}
+            <div className="mb-3 bg-secondary/30 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      size={14}
+                      size={16}
                       className={i < Math.round(feedbackStats[topResource.id]?.average_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
                     />
                   ))}
                 </div>
-                <div className="text-xs text-muted-foreground font-medium">
+                <div className="text-sm text-muted-foreground">
                   {feedbackStats[topResource.id]?.average_rating.toFixed(1) || 0}/5 ({feedbackStats[topResource.id]?.feedback_count || 0} reviews)
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => handleOpenLink(topResource.shareableLink, topResource.name)}
-                  className="gap-1 shadow-sm hover:shadow-md text-sm h-8"
-                  size="sm"
-                >
-                  <ExternalLink size={14} />
-                  Open Resource
-                </Button>
-                <Button
-                  onClick={() => setSelectedResource(topResource)}
-                  variant="outline"
-                  size="sm"
-                  className="text-sm h-8"
-                >
-                  � View Feedback
-                </Button>
+            {topResource.review && (
+              <div className="italic text-base mb-2 text-gray-700">
+                Review: {topResource.review}
               </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => handleOpenLink(topResource.shareableLink, topResource.name)}
+                className="gap-2"
+              >
+                <ExternalLink size={18} />
+                Open Resource
+              </Button>
+              <Button
+                onClick={() => setSelectedResource(topResource)}
+                variant="outline"
+              >
+                📊 View Feedback
+              </Button>
             </div>
           </div>
         )}
 
         {/* All Resources Grid */}
         <div>
-          <h2 className="text-3xl font-bold mb-8 text-foreground">📚 All Resources</h2>
+          <h2 className="text-2xl font-semibold mb-6">Resources List</h2>
           {loading ? (
-            <p className="text-muted-foreground text-center py-12 text-lg">Loading resources...</p>
+            <p className="text-muted-foreground text-center py-8">Loading resources...</p>
           ) : filtered.length === 0 ? (
-            <div className="bg-card border border-border/50 rounded-xl p-8 text-center">
-              <p className="text-muted-foreground text-lg">No resources found. Try adjusting your filters.</p>
-            </div>
+            <p className="text-muted-foreground">No resources found.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {filtered.map((res) => {
                 const stat = feedbackStats[res.id] || { feedback_count: 0, average_rating: 0 };
                 const avg = stat.average_rating || 0;
@@ -1062,14 +903,12 @@ export default function ResourcesPage() {
                 <ResourceFeedback 
                   resourceId={selectedResource.id} 
                   resourceName={selectedResource.name}
-                  onFeedbackAdded={fetchFeedbackStats}
                 />
               </div>
             </DialogContent>
           </Dialog>
         )}
-        </div>
-        </div>
+      </div>
     </AppLayout>
   );
 }

@@ -19,7 +19,7 @@ interface QuestionCardProps {
     answers: number
     category: string
     categoryName: string
-    createdAt: Date
+    createdAt: string | Date
   }
 }
 
@@ -63,7 +63,7 @@ export default function QuestionCard({ question }: QuestionCardProps) {
               <span>{question.author.name}</span>
             </div>
             <span>•</span>
-            <span>{formatDistanceToNow(question.createdAt, { addSuffix: true })}</span>
+            <span>{formatDistanceToNow(typeof question.createdAt === 'string' ? new Date(question.createdAt) : question.createdAt, { addSuffix: true })}</span>
             <span>•</span>
             <Link 
               href={`/qna/category/${question.category}`}

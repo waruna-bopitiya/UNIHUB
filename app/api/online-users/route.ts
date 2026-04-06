@@ -3,9 +3,7 @@ import { sql } from '@/lib/db'
 export async function GET() {
   try {
     // Fetch all users with last_login and logouttime
-    // Show users who logged in recently (within last 30 minutes)
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    
+    // Show users who have logged in AND NOT logged out (or logout time is before last login)
     const users = await sql`
       SELECT 
         id,
@@ -15,9 +13,12 @@ export async function GET() {
         logouttime
       FROM users
       WHERE last_login IS NOT NULL 
-        AND last_login > ${thirtyMinutesAgo}
+        AND (
+          logouttime IS NULL
+          OR logouttime < last_login
+        )
       ORDER BY last_login DESC
-      LIMIT 20
+      LIMIT 50
     `
 
     const formattedUsers = users.map((user: any) => ({

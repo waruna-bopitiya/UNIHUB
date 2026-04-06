@@ -5,6 +5,42 @@ export async function POST() {
   try {
     console.log('🔄 Starting database migration...')
 
+    // Check if bio column exists in users table
+    const bioCheck = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'bio'
+    `
+
+    if (bioCheck.length === 0) {
+      console.log('Adding bio column to users table...')
+      await sql`
+        ALTER TABLE users 
+        ADD COLUMN bio TEXT
+      `
+      console.log('✅ bio column added successfully')
+    } else {
+      console.log('✅ bio column already exists')
+    }
+
+    // Check if avatar column exists in users table
+    const avatarCheck = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'avatar'
+    `
+
+    if (avatarCheck.length === 0) {
+      console.log('Adding avatar column to users table...')
+      await sql`
+        ALTER TABLE users 
+        ADD COLUMN avatar VARCHAR(500)
+      `
+      console.log('✅ avatar column added successfully')
+    } else {
+      console.log('✅ avatar column already exists')
+    }
+
     // Check if file_path column exists
     const columnCheck = await sql`
       SELECT column_name 

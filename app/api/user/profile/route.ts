@@ -14,31 +14,64 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch user profile from database
-    const users = await sql`
-      SELECT 
-        id,
-        first_name,
-        second_name,
-        email,
-        phone_number,
-        address,
-        gender,
-        year_of_university,
-        semester,
-        created_at,
-        last_login
-      FROM users 
-      WHERE id = ${id}
-    `
-
-    if (users.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+    // Try to select bio and avatar, but handle if columns don't exist yet
+    let user: any
+    try {
+      const users = await sql`
+        SELECT 
+          id,
+          first_name,
+          second_name,
+          email,
+          phone_number,
+          address,
+          gender,
+          year_of_university,
+          semester,
+          bio,
+          avatar,
+          created_at,
+          last_login
+        FROM users 
+        WHERE id = ${id}
+      `
+      if (users.length === 0) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+      user = users[0]
+    } catch (err: any) {
+      // If bio/avatar columns don't exist, try without them
+      if (err.message?.includes('bio') || err.message?.includes('avatar')) {
+        const users = await sql`
+          SELECT 
+            id,
+            first_name,
+            second_name,
+            email,
+            phone_number,
+            address,
+            gender,
+            year_of_university,
+            semester,
+            created_at,
+            last_login
+          FROM users 
+          WHERE id = ${id}
+        `
+        if (users.length === 0) {
+          return NextResponse.json(
+            { error: 'User not found' },
+            { status: 404 }
+          )
+        }
+        user = users[0]
+      } else {
+        throw err
+      }
     }
-
-    const user = users[0] as any
 
     return NextResponse.json({
       id: user.id,
@@ -50,6 +83,8 @@ export async function GET(request: NextRequest) {
       gender: user.gender,
       year_of_university: user.year_of_university,
       semester: user.semester,
+      bio: user.bio || null,
+      avatar: user.avatar || null,
       created_at: user.created_at,
       last_login: user.last_login,
     })

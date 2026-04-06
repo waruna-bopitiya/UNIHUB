@@ -17,6 +17,8 @@ export async function ensureTablesExist() {
       gender               VARCHAR(50),
       year_of_university   INTEGER      NOT NULL CHECK (year_of_university BETWEEN 1 AND 4),
       semester             INTEGER      NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      bio                  TEXT,
+      avatar               VARCHAR(500),
       password             TEXT         NOT NULL,
       created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
       updated_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),

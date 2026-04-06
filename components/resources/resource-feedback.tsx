@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Star, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,11 +18,12 @@ interface Feedback {
 interface ResourceFeedbackProps {
   resourceId: number
   resourceName: string
+  onFeedbackAdded?: () => void
 }
 
 const COMMENT_MAX_LENGTH = 255
 
-export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackProps) {
+export function ResourceFeedback({ resourceId, resourceName, onFeedbackAdded }: ResourceFeedbackProps) {
   const [feedback, setFeedback] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -31,6 +32,8 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
   const [comment, setComment] = useState('')
   const [userName, setUserName] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [newFeedbackId, setNewFeedbackId] = useState<number | null>(null)
+  const feedbackListRef = useRef<HTMLDivElement>(null)
 
   // Fetch user data from localStorage
   useEffect(() => {
@@ -45,6 +48,16 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
   useEffect(() => {
     fetchFeedback()
   }, [resourceId])
+
+  // Clear highlight after 5 seconds
+  useEffect(() => {
+    if (newFeedbackId) {
+      const timer = setTimeout(() => {
+        setNewFeedbackId(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [newFeedbackId])
 
   const fetchFeedback = async () => {
     try {
@@ -100,12 +113,23 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
 
       const newFeedback = await response.json()
       setFeedback([newFeedback, ...feedback])
+      setNewFeedbackId(newFeedback.id)
       toast.success('Thank you for your feedback!')
 
       // Reset form
       setRating(0)
       setComment('')
       setShowForm(false)
+      
+      // Refresh feedback stats (e.g., average rating, count) on parent page
+      if (onFeedbackAdded) {
+        onFeedbackAdded()
+      }
+      
+      // Auto-scroll to show the new feedback
+      setTimeout(() => {
+        feedbackListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
     } catch (error) {
       console.error('Error submitting feedback:', error)
       toast.error('Failed to save feedback. Please try again.')
@@ -116,7 +140,7 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
 
   const averageRating =
     feedback.length > 0
-      ? (feedback.reduce((sum, f) => sum + f.rating, 0) / feedback.length).toFixed(1)
+      ? parseFloat((feedback.reduce((sum, f) => sum + f.rating, 0) / feedback.length).toFixed(1))
       : 0
 
   if (!isLoggedIn) {
@@ -251,7 +275,7 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
       </div>
 
       {/* Feedback List */}
-      <div className="space-y-4">
+      <div className="space-y-4" ref={feedbackListRef}>
         {loading ? (
           <p className="text-muted-foreground text-center py-8">Loading reviews...</p>
         ) : feedback.length === 0 ? (
@@ -262,11 +286,22 @@ export function ResourceFeedback({ resourceId, resourceName }: ResourceFeedbackP
           feedback.map((item) => (
             <div
               key={item.id}
-              className="bg-secondary/20 rounded-lg p-4 border border-border/50"
+              className={`rounded-lg p-4 border border-border/50 transition-all duration-500 ${
+                newFeedbackId === item.id
+                  ? 'bg-green-100/30 border-green-400/50 ring-2 ring-green-400/30'
+                  : 'bg-secondary/20'
+              }`}
             >
               <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="font-medium">{item.userName}</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{item.userName}</p>
+                    {newFeedbackId === item.id && (
+                      <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full">
+                        Just now
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {new Date(item.created_at).toLocaleDateString()}
                   </p>
