@@ -19,7 +19,7 @@ interface Question {
   upvotes: number
   downvotes: number
   answers: number
-  createdAt: string | Date
+  createdAt: Date
 }
 
 export default function QnaPage() {
