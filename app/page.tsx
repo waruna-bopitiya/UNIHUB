@@ -47,6 +47,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
+  const [allQuestions, setAllQuestions] = useState<any[]>([])
   const [filteredQuestions, setFilteredQuestions] = useState<any[]>([])
   const [selectedYear, setSelectedYear] = useState<string | number>(1)
   const [selectedSemester, setSelectedSemester] = useState<string | number>(1)
@@ -181,13 +182,16 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json()
         console.log('Fetched questions:', data)
+        setAllQuestions(data)
         setFilteredQuestions(data)
       } else {
         console.error('Failed to fetch questions')
+        setAllQuestions([])
         setFilteredQuestions([])
       }
     } catch (error) {
       console.error('Error fetching questions:', error)
+      setAllQuestions([])
       setFilteredQuestions([])
     } finally {
       setQuestionsLoading(false)
@@ -272,7 +276,7 @@ export default function Home() {
   useEffect(() => {
     // Note: Real questions don't have these calculated fields yet
     // In the future, we can add upvotes/downvotes to the questions table
-    let filtered = [...filteredQuestions]
+    let filtered = [...allQuestions]
     
     if (filterType === "unanswered") {
       filtered = filtered.filter(q => q.answers === 0)
@@ -288,7 +292,7 @@ export default function Home() {
     }
     
     setFilteredQuestions(filtered)
-  }, [filterType])
+  }, [filterType, allQuestions])
 
   const handlePostCreated = (newPost: Post) => {
     setPosts(prev => [newPost, ...prev])
@@ -438,11 +442,11 @@ export default function Home() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Questions</span>
-                  <span className="font-medium">47</span>
+                  <span className="font-medium">{allQuestions.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Answers</span>
-                  <span className="font-medium">132</span>
+                  <span className="font-medium">{allQuestions.reduce((sum, q) => sum + q.answers, 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Online Peers</span>

@@ -211,11 +211,11 @@ export default function HomePageContent() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Questions</span>
-                  <span className="font-medium">47</span>
+                  <span className="font-medium">{questions.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Answers</span>
-                  <span className="font-medium">132</span>
+                  <span className="font-medium">{questions.reduce((sum, q) => sum + q.answers, 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Online Peers</span>
