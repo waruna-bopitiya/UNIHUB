@@ -4,12 +4,13 @@ import { ensureTablesExist } from '@/lib/db-init'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureTablesExist()
 
-    const quizId = parseInt(params.id)
+    const { id } = await params
+    const quizId = parseInt(id)
 
     if (isNaN(quizId)) {
       return NextResponse.json(

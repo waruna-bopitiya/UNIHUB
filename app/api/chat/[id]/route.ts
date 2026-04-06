@@ -4,12 +4,13 @@ import { ensureTablesExist } from '@/lib/db-init'
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureTablesExist()
 
-    const idParam = params.id
+    const { id } = await params
+    const idParam = id
     console.log('🔍 Received chat ID param:', idParam, 'type:', typeof idParam)
     
     const chatId = parseInt(idParam, 10)
