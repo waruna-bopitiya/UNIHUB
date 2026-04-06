@@ -11,7 +11,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BookOpen, Download, Search, Star, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 
@@ -575,6 +575,110 @@ const mockQuizzes: Quiz[] = [
     semester: 2,
     course: 'Mobile Application Development',
   },
+  {
+    id: '27',
+    title: 'Business Management for IT - Strategic IT Management',
+    description: 'Understand IT management and strategic business alignment',
+    creator: 'Dr. Sarah Johnson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary goal of IT management in organizations?',
+        options: [
+          'To maximize hardware spending',
+          'To align IT strategy with business objectives',
+          'To eliminate all technology costs',
+          'To prevent all system updates',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 20,
+    participants: 198,
+    category: 'Business',
+    difficulty: 'Medium',
+    year: 3,
+    semester: 2,
+    course: 'Business Management for IT',
+  },
+  {
+    id: '28',
+    title: 'Data Science & Analytics - Advanced Analytics',
+    description: 'Explore data science techniques and analytics methodologies',
+    creator: 'Prof. Michael Zhang',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary purpose of exploratory data analysis?',
+        options: [
+          'To delete data',
+          'To understand data patterns and characteristics',
+          'To encrypt sensitive information',
+          'To increase data size',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 22,
+    participants: 215,
+    category: 'Data Science',
+    difficulty: 'Hard',
+    year: 3,
+    semester: 2,
+    course: 'Data Science & Analytics',
+  },
+  {
+    id: '29',
+    title: 'Information Assurance & Security - Security Fundamentals',
+    description: 'Master information security principles and assurance practices',
+    creator: 'Prof. James McCarthy',
+    questions: [
+      {
+        id: '1',
+        question: 'What are the three pillars of information security (CIA triad)?',
+        options: [
+          'Confidentiality, Integrity, Availability',
+          'Computer, Internet, Application',
+          'Centralized, Integrated, Automated',
+          'Capability, Implementation, Assessment',
+        ],
+        correctAnswer: 0,
+      },
+    ],
+    duration: 21,
+    participants: 187,
+    category: 'Security',
+    difficulty: 'Hard',
+    year: 3,
+    semester: 2,
+    course: 'Information Assurance & Security',
+  },
+  {
+    id: '30',
+    title: 'Human Computer Interaction - User Experience Design',
+    description: 'Learn HCI principles and user experience design methodologies',
+    creator: 'Dr. Emma Wilson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary focus of user-centered design?',
+        options: [
+          'Maximizing technical complexity',
+          'Understanding user needs and designing accordingly',
+          'Reducing design costs',
+          'Using the latest technologies only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 18,
+    participants: 172,
+    category: 'Design',
+    difficulty: 'Medium',
+    year: 3,
+    semester: 2,
+    course: 'Human Computer Interaction',
+  },
 ]
 
 const ensureThreeQuestions = (quiz: Quiz): Quiz => {
@@ -800,6 +904,12 @@ const scoreChartConfig = {
 } satisfies ChartConfig
 
 export default function QuizPage() {
+  // Current user state
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isNotLoggedIn, setIsNotLoggedIn] = useState(false)
+  const [loadingUser, setLoadingUser] = useState(true)
+
+  // Quiz page state
   const [activeTab, setActiveTab] = useState<'browse' | 'create' | 'results' | 'score'>('browse')
   const [scoreView, setScoreView] = useState<'courseByYear' | 'quizTakers'>('courseByYear')
   const [selectedScoreYear, setSelectedScoreYear] = useState<number | 'all'>('all')
@@ -817,6 +927,83 @@ export default function QuizPage() {
   const [resultsSearch, setResultsSearch] = useState('')
   const [scoreSearch, setScoreSearch] = useState('')
   const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
+
+  // Fetch current user info on mount
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const studentId = localStorage.getItem('studentId')
+        
+        if (!studentId) {
+          console.log('⚠️ No student ID found - user not logged in')
+          setIsNotLoggedIn(true)
+          setLoadingUser(false)
+          return
+        }
+
+        console.log('👤 Fetching user info for:', studentId)
+        const response = await fetch(`/api/user/current?id=${studentId}`)
+        const result = await response.json()
+
+        if (result.status === 'success') {
+          console.log('✅ Current user loaded:', result.data)
+          setCurrentUser(result.data)
+          setIsNotLoggedIn(false)
+        } else {
+          console.error('❌ Failed to fetch user:', result.message)
+          setIsNotLoggedIn(true)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching user:', error)
+        setIsNotLoggedIn(true)
+      } finally {
+        setLoadingUser(false)
+      }
+    }
+
+    fetchCurrentUser()
+  }, [])
+
+  // Fetch quizzes from database on page load
+  useEffect(() => {
+    const fetchQuizzesFromDatabase = async () => {
+      try {
+        console.log('📚 Fetching quizzes from database...')
+        const response = await fetch('/api/quiz')
+        const result = await response.json()
+
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          console.log('✅ Quizzes loaded from database:', result.data.length, 'quizzes')
+          // Map database quizzes to Quiz type and merge with mock data
+          const dbQuizzes = result.data.map((q: any) => ({
+            id: q.id.toString(),
+            title: q.title,
+            description: q.description,
+            creator: q.creator,
+            questions: [], // Questions will be loaded separately if needed
+            duration: q.duration,
+            participants: q.participants,
+            category: q.category,
+            difficulty: q.difficulty,
+            year: q.year,
+            semester: q.semester,
+            course: q.course,
+          }))
+          
+          // Set quizzes from database, then add mock data
+          setQuizzes([...dbQuizzes, ...normalizedQuizzes])
+        } else {
+          console.log('⚠️ No quizzes found in database, using mock data')
+          setQuizzes(normalizedQuizzes)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching quizzes from database:', error)
+        setQuizzes(normalizedQuizzes)
+      }
+    }
+
+    fetchQuizzesFromDatabase()
+  }, [])
 
   const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
     const escapeCsv = (value: string | number) => {
@@ -859,13 +1046,55 @@ export default function QuizPage() {
     downloadCsv(`quiz-results-${Date.now()}.csv`, rows)
   }
 
-  const handleCreateQuiz = (quizData: any) => {
-    const newQuiz: Quiz = {
-      id: Date.now().toString(),
-      ...quizData,
+  const handleCreateQuiz = async (quizData: any) => {
+    try {
+      console.log('🚀 Starting quiz creation...', quizData)
+      
+      const payload = {
+        ...quizData,
+        creator: quizData.creator || 'Student',
+        creatorId: currentUser?.id, // Add creator's user ID for validation
+        // Remove id field from questions if it exists
+        questions: quizData.questions.map((q: any) => ({
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+        })),
+      }
+      
+      console.log('📤 Sending to API:', JSON.stringify(payload, null, 2))
+      
+      const response = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      console.log('📥 Response status:', response.status)
+      const result = await response.json()
+      console.log('📥 Response data:', result)
+
+      if (!response.ok) {
+        console.error('❌ API error:', result.message)
+        alert('Error creating quiz: ' + result.message)
+        return
+      }
+
+      console.log('✅ Quiz created successfully in database!')
+      
+      // Add to frontend state
+      const newQuiz: Quiz = {
+        id: result.data.id.toString(),
+        ...quizData,
+        participants: 0,
+      }
+      setQuizzes([newQuiz, ...quizzes])
+      setActiveTab('browse')
+      alert('Quiz created successfully!')
+    } catch (error) {
+      console.error('❌ Failed to create quiz:', error)
+      alert('Failed to create quiz. Check console for details.')
     }
-    setQuizzes([newQuiz, ...quizzes])
-    setActiveTab('browse')
   }
 
   const handleTakeQuiz = (quizId: string) => {
@@ -1004,7 +1233,7 @@ export default function QuizPage() {
         return {
           course: entry.course,
           shortCourse:
-            entry.course.length > 22 ? `${entry.course.slice(0, 22)}...` : entry.course,
+            entry.course.length > 1 ? `${entry.course.slice(0, 1)}...` : entry.course,
           participants: entry.participants,
           attempts: attemptsForCourse.length,
           avgScore,
@@ -1091,8 +1320,8 @@ export default function QuizPage() {
   )
     .map((participant) => ({
       name: participant.name,
-      attempts: participant.attempts,
-      quizzesTaken: participant.quizzes.size,
+      attempts: 1,
+      quizzesTaken: 1,
       averageScore: Math.round((participant.totalPercentage / participant.attempts) * 10) / 10,
     }))
     .sort((a, b) => b.averageScore - a.averageScore)
@@ -1611,10 +1840,32 @@ export default function QuizPage() {
 
         {activeTab === 'create' && (
           <div className="max-w-4xl mx-auto">
-            <CreateQuizForm
-              onSubmit={handleCreateQuiz}
-              availableCourses={createQuizCourseOptions}
-            />
+            {loadingUser ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading user info...</p>
+              </div>
+            ) : isNotLoggedIn ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-8 text-center">
+                <h3 className="text-xl font-semibold text-amber-950 mb-2">
+                  Login Required
+                </h3>
+                <p className="text-amber-900 mb-6">
+                  You must be logged in to create quizzes. Please log in with your SLIIT account.
+                </p>
+                <button
+                  onClick={() => window.location.href = '/auth/login'}
+                  className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
+                >
+                  Go to Login
+                </button>
+              </div>
+            ) : (
+              <CreateQuizForm
+                onSubmit={handleCreateQuiz}
+                availableCourses={createQuizCourseOptions}
+                currentUser={currentUser}
+              />
+            )}
           </div>
         )}
 

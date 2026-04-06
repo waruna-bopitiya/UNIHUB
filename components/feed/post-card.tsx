@@ -34,6 +34,7 @@ export function PostCard({
 }: PostCardProps) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(initialLikes)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   const handleLike = async () => {
     const action = liked ? 'unlike' : 'like'
@@ -80,27 +81,52 @@ export function PostCard({
         </div>
       )}
 
-      {/* Stream embed */}
+      {/* Stream Embed */}
       {streamVideoId && (
-        <div className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative group" style={{ aspectRatio: '16/9' }}>
-          <img
-            src={`https://img.youtube.com/vi/${streamVideoId}/maxresdefault.jpg`}
-            alt={streamTitle ?? 'Live stream'}
-            className="w-full h-full object-cover"
-          />
-          <a
-            href={`https://youtube.com/watch?v=${streamVideoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm">
-              <Play className="w-4 h-4 fill-white" /> Watch Stream
+        <div 
+          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative" 
+          style={{ aspectRatio: '16/9' }}
+        >
+          {!isPlaying ? (
+            // Thumbnail - Click කළ විට Play වේ
+            <div 
+              className="w-full h-full relative group cursor-pointer" 
+              onClick={() => setIsPlaying(true)}
+            >
+              <img
+                src={`https://img.youtube.com/vi/${streamVideoId}/maxresdefault.jpg`}
+                alt={streamTitle ?? 'Live stream'}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/30 transition-colors">
+                <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg transform group-hover:scale-105 transition-transform">
+                  <Play className="w-4 h-4 fill-white" /> Watch Video
+                </div>
+              </div>
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600/90 text-white text-xs px-2.5 py-1 rounded-full font-bold">
+                <Radio className="w-3 h-3" /> LIVE
+              </div>
             </div>
-          </a>
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600/90 text-white text-xs px-2.5 py-1 rounded-full font-bold">
-            <Radio className="w-3 h-3" /> LIVE
-          </div>
+          ) : (
+            // ඔයාගේ අදහසට අනුව සකසන ලද ක්‍රමය
+            <div className="absolute inset-0 overflow-hidden bg-black">
+              <iframe
+                /* w-[300%] h-[300%] මගින් iframe එක අතිවිශාල කරයි.
+                  top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 මගින් එය හරියටම මැදට ගනී.
+                  scale-[0.35] මගින් නැවත කුඩා කර කන්ටේනරයට සරිලන සේ (105% ක් පමණ) සකසයි.
+                  එවිට කුඩා වූ බටන්ස් අයිනෙන් පිටතට යයි! 
+                */
+                className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-auto"
+                src={`https://www.youtube.com/embed/${streamVideoId}?autoplay=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1`}
+                title={streamTitle ?? 'Live stream'}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+              {/* Overlay - යූටියුබ් එකට redirect වීම වැළැක්වීමට */}
+              <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto"></div>
+            </div>
+          )}
         </div>
       )}
 

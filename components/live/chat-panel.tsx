@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Send } from 'lucide-react'
 
 interface ChatMessage {
@@ -12,24 +12,66 @@ interface ChatMessage {
 
 interface ChatPanelProps {
   messages: ChatMessage[]
+  streamId?: number | null
 }
 
-export function ChatPanel({ messages: initialMessages }: ChatPanelProps) {
+export function ChatPanel({ messages: initialMessages, streamId }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput] = useState('')
+  const [sendError, setSendError] = useState('')
 
-  const handleSendMessage = () => {
-    if (!input.trim()) return
+  useEffect(() => {
+    setMessages(initialMessages)
+  }, [initialMessages])
 
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
+  const handleSendMessage = async () => {
+    const trimmed = input.trim()
+    if (!trimmed) return
+
+    setSendError('')
+
+    const optimisticMessage: ChatMessage = {
+      id: `local-${Date.now()}`,
       author: 'You',
-      message: input,
+      message: trimmed,
       timestamp: 'now',
     }
 
-    setMessages([...messages, newMessage])
+    setMessages((current) => [...current, optimisticMessage])
     setInput('')
+
+    if (!streamId) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/live/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          streamId,
+          authorName: 'You',
+          message: trimmed,
+        }),
+      })
+
+      const savedMessage = await response.json()
+
+      if (!response.ok) {
+        throw new Error(savedMessage.error ?? 'Failed to send message')
+      }
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === optimisticMessage.id ? savedMessage : message
+        )
+      )
+    } catch (error) {
+      setMessages((current) => current.filter((message) => message.id !== optimisticMessage.id))
+      setSendError(error instanceof Error ? error.message : 'Failed to send message')
+    }
   }
 
   return (
@@ -86,6 +128,7 @@ export function ChatPanel({ messages: initialMessages }: ChatPanelProps) {
             <Send className="w-4 h-4" />
           </button>
         </div>
+        {sendError && <p className="mt-2 text-xs text-red-500">{sendError}</p>}
       </div>
     </div>
   )

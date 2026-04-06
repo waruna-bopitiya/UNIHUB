@@ -19,19 +19,52 @@ interface Question {
   upvotes: number
   downvotes: number
   answers: number
-  createdAt: string | Date
+  createdAt: Date
 }
 
 export default function QnaPage() {
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedYear, setSelectedYear] = useState("1")
+  const [selectedSemester, setSelectedSemester] = useState("1")
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [selectedSubject, setSelectedSubject] = useState("")
+  const [loadingSubjects, setLoadingSubjects] = useState(false)
+
+  // Fetch subjects when year or semester changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setLoadingSubjects(true)
+        const params = new URLSearchParams({
+          year: selectedYear,
+          semester: selectedSemester
+        })
+        const response = await fetch(`/api/ask-subjects?${params}`)
+        const data = await response.json()
+        setSubjects(data || [])
+        setSelectedSubject("")
+      } catch (error) {
+        console.error("Failed to fetch subjects:", error)
+        setSubjects([])
+      } finally {
+        setLoadingSubjects(false)
+      }
+    }
+    
+    fetchSubjects()
+  }, [selectedYear, selectedSemester])
 
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/qna/questions')
+        let url = '/api/qna/questions'
+        if (selectedSubject) {
+          url += `?subjectCode=${selectedSubject}`
+        }
+        const response = await fetch(url)
         
         if (!response.ok) {
           throw new Error('Failed to fetch questions')
@@ -51,7 +84,7 @@ export default function QnaPage() {
     }
 
     fetchQuestions()
-  }, [])
+  }, [selectedSubject])
 
   return (
     <div className="w-full py-6 px-4 md:px-6 lg:px-8">
@@ -76,44 +109,64 @@ export default function QnaPage() {
         </Link>
       </div>
 
-      {/* Categories quick filter */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        <Link 
-          href="/qna"
-          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm hover:bg-secondary/80 transition-colors"
-        >
-          All
-        </Link>
-        <Link 
-          href="/qna/category/it3030"
-          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm hover:bg-secondary/80 transition-colors"
-        >
-          IT3030
-        </Link>
-        <Link 
-          href="/qna/category/it3020"
-          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm hover:bg-secondary/80 transition-colors"
-        >
-          IT3020
-        </Link>
-        <Link 
-          href="/qna/category/it3010"
-          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm hover:bg-secondary/80 transition-colors"
-        >
-          IT3010
-        </Link>
-        <Link 
-          href="/qna/category/it3040"
-          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm hover:bg-secondary/80 transition-colors"
-        >
-          IT3040
-        </Link>
-        <Link 
-          href="/qna/category/it3050"
-          className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm hover:bg-secondary/80 transition-colors"
-        >
-          IT3050
-        </Link>
+      {/* Year, Semester, Subject Selection */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Year */}
+        <div className="space-y-2">
+          <label htmlFor="year" className="text-sm font-medium">
+            Year
+          </label>
+          <select
+            id="year"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="1">Year 1</option>
+            <option value="2">Year 2</option>
+            <option value="3">Year 3</option>
+            <option value="4">Year 4</option>
+          </select>
+        </div>
+
+        {/* Semester */}
+        <div className="space-y-2">
+          <label htmlFor="semester" className="text-sm font-medium">
+            Semester
+          </label>
+          <select
+            id="semester"
+            value={selectedSemester}
+            onChange={(e) => setSelectedSemester(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="1">Semester 1</option>
+            <option value="2">Semester 2</option>
+          </select>
+        </div>
+
+        {/* Subject */}
+        <div className="space-y-2">
+          <label htmlFor="subject" className="text-sm font-medium">
+            Subject
+          </label>
+          <select
+            id="subject"
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+            disabled={loadingSubjects || subjects.length === 0}
+            className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">
+              {loadingSubjects ? "Loading subjects..." : subjects.length === 0 ? "No subjects available" : "All Subjects"}
+            </option>
+            {subjects.map((subject) => (
+              <option key={subject.subject_code} value={subject.subject_code}>
+                {subject.subject_code} - {subject.subject_name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Questions list */}

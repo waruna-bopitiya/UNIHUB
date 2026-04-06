@@ -18,6 +18,13 @@ interface CreateQuizFormProps {
     course: string
     category: string
   }[]
+  currentUser?: {
+    id: string
+    firstName: string
+    email: string
+    year: number
+    semester: number
+  }
 }
 
 interface QuestionErrors {
@@ -37,7 +44,40 @@ interface FormErrors {
   questionErrors: Record<string, QuestionErrors>
 }
 
-export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormProps) {
+export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: CreateQuizFormProps) {
+  // Calculate allowed years and semesters based on current user's year/semester
+  const getAllowedYearsAndSemesters = () => {
+    if (!currentUser) return { years: [], semesters: [] }
+
+    const userYear = currentUser.year
+    const userSemester = currentUser.semester
+    const allowedYears: number[] = []
+    
+    // User can create quizzes for their own year and all lower years
+    for (let i = 1; i <= userYear; i++) {
+      allowedYears.push(i)
+    }
+    
+    // For semesters: all semesters up to user's semester
+    // Since there are only 2 semesters
+    const allowedSemesters = userSemester === 1 ? [1] : [1, 2]
+    
+    return { years: allowedYears, semesters: allowedSemesters }
+  }
+
+  const { years: allowedYears, semesters: allowedSemesters } = getAllowedYearsAndSemesters()
+  
+  // Filter available courses to only show allowed years/semesters
+  const filteredCourses = currentUser 
+    ? availableCourses.filter(
+        (c) => allowedYears.includes(c.year) && allowedSemesters.includes(c.semester)
+      )
+    : availableCourses
+
+  const userPermissionMessage = currentUser 
+    ? `You can create quizzes for: Year${allowedYears.length > 1 ? 's' : ''} ${allowedYears.join(', ')} and Semester${allowedSemesters.length > 1 ? 's' : ''} ${allowedSemesters.join(', ')}`
+    : ''
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [year, setYear] = useState<number | ''>('')
@@ -91,7 +131,7 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     const nextErrors: FormErrors = { questionErrors: {} }
@@ -191,57 +231,71 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
     const quizData = {
       title,
       description,
-      year,
-      semester,
+      year: typeof year === 'number' ? year : parseInt(year as string),
+      semester: typeof semester === 'number' ? semester : parseInt(semester as string),
       course,
       category: selectedCourse?.category || 'Computer Science',
       difficulty,
       duration,
       questions,
-      creator: 'Current User', // Replace with actual user
+      creator: currentUser?.firstName || 'Student',
       participants: 0,
     }
+    
+    console.log('📝 Quiz Data to submit:', {
+      title: quizData.title,
+      year: quizData.year,
+      semester: quizData.semester,
+      course: quizData.course,
+      category: quizData.category,
+      difficulty: quizData.difficulty,
+      questionsCount: quizData.questions.length,
+    })
 
-    onSubmit(quizData)
-    // Reset form
-    setTitle('')
-    setDescription('')
-    setYear('')
-    setSemester('')
-    setCourse('')
-    setDifficulty('Medium')
-    setDuration(30)
-    setErrors({ questionErrors: {} })
-    setFormError('')
-    setQuestions([
-      {
-        id: '1',
-        question: '',
-        options: ['', '', '', ''],
-        correctAnswer: 0,
-      },
-    ])
+    try {
+      await onSubmit(quizData)
+      // Reset form only after successful submission
+      setTitle('')
+      setDescription('')
+      setYear('')
+      setSemester('')
+      setCourse('')
+      setDifficulty('Medium')
+      setDuration(30)
+      setErrors({ questionErrors: {} })
+      setFormError('')
+      setQuestions([
+        {
+          id: '1',
+          question: '',
+          options: ['', '', '', ''],
+          correctAnswer: 0,
+        },
+      ])
+    } catch (error) {
+      console.error('Error submitting quiz:', error)
+      setFormError('Error creating quiz. Please try again.')
+    }
   }
 
-  const yearOptions = Array.from(new Set(availableCourses.map((item) => item.year))).sort((a, b) => a - b)
+  // Calculate options for year/semester/course dropdowns
+  const yearOptions = allowedYears
 
-  const semesterOptions =
-    year === ''
-      ? []
-      : Array.from(
-          new Set(
-            availableCourses
-              .filter((item) => item.year === year)
-              .map((item) => item.semester),
-          ),
-        ).sort((a, b) => a - b)
+  // For semester options: depends on which year is selected
+  // - For years below user's year: show both semesters (1 & 2)
+  // - For user's own year: show semesters up to their current semester
+  const semesterOptions = year === '' 
+    ? [] 
+    : currentUser && year < currentUser.year
+      ? [1, 2]  // Years below current year: all semesters
+      : allowedSemesters  // Current year: only up to user's semester
 
   const courseOptions =
     year === '' || semester === ''
       ? []
       : Array.from(
           new Set(
-            availableCourses
+            filteredCourses
               .filter((item) => item.year === year && item.semester === semester)
               .map((item) => item.course),
           ),
@@ -252,6 +306,12 @@ export function CreateQuizForm({ onSubmit, availableCourses }: CreateQuizFormPro
       {formError && (
         <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-500">
           {formError}
+        </div>
+      )}
+
+      {currentUser && userPermissionMessage && (
+        <div className="rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-3 text-sm text-blue-600">
+          <strong>Permission Level:</strong> {userPermissionMessage}
         </div>
       )}
 
