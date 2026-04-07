@@ -65,10 +65,14 @@ export function Sidebar({ onClose, onChatClick }: SidebarProps) {
           <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
           <span className="font-medium">Messages</span>
         </button>
-        <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+        <Link 
+          href="/settings"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+        >
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
-        </button>
+        </Link>
       </div>
     </aside>
   )

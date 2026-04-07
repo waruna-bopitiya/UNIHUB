@@ -11,59 +11,75 @@ function formatTimestamp(value: string | Date) {
 }
 
 export async function GET(request: NextRequest) {
-  await ensureTablesExist()
+  try {
+    await ensureTablesExist()
 
-  const { searchParams } = new URL(request.url)
-  const streamId = searchParams.get('streamId')
-  const limit = Number(searchParams.get('limit') ?? '50')
+    const { searchParams } = new URL(request.url)
+    const streamId = searchParams.get('streamId')
+    const limit = Number(searchParams.get('limit') ?? '50')
 
-  if (!streamId) {
-    return NextResponse.json([])
+    if (!streamId) {
+      return NextResponse.json([])
+    }
+
+    const messages = await sql`
+      SELECT id, stream_id, author_name, message, created_at
+      FROM live_chat_messages
+      WHERE stream_id = ${Number(streamId)}
+      ORDER BY created_at ASC
+      LIMIT ${Math.min(Math.max(limit, 1), 100)}
+    `
+
+    return NextResponse.json(
+      messages.map((message: any) => ({
+        id: String(message.id),
+        author: message.author_name,
+        message: message.message,
+        timestamp: formatTimestamp(message.created_at),
+      }))
+    )
+  } catch (error: any) {
+    console.error('[GET /api/live/messages] Error:', error)
+    return NextResponse.json(
+      { error: error?.message || 'Failed to fetch messages' },
+      { status: 500 }
+    )
   }
-
-  const messages = await sql`
-    SELECT id, stream_id, author_name, message, created_at
-    FROM live_chat_messages
-    WHERE stream_id = ${Number(streamId)}
-    ORDER BY created_at ASC
-    LIMIT ${Math.min(Math.max(limit, 1), 100)}
-  `
-
-  return NextResponse.json(
-    messages.map((message: any) => ({
-      id: String(message.id),
-      author: message.author_name,
-      message: message.message,
-      timestamp: formatTimestamp(message.created_at),
-    }))
-  )
 }
 
 export async function POST(req: NextRequest) {
-  await ensureTablesExist()
+  try {
+    await ensureTablesExist()
 
-  const body = await req.json()
-  const streamId = Number(body.streamId)
-  const authorName = typeof body.authorName === 'string' && body.authorName.trim() ? body.authorName.trim() : 'Anonymous'
-  const message = typeof body.message === 'string' ? body.message.trim() : ''
+    const body = await req.json()
+    const streamId = Number(body.streamId)
+    const authorName = typeof body.authorName === 'string' && body.authorName.trim() ? body.authorName.trim() : 'Anonymous'
+    const message = typeof body.message === 'string' ? body.message.trim() : ''
 
-  if (!streamId || !message) {
-    return NextResponse.json({ error: 'streamId and message are required' }, { status: 400 })
+    if (!streamId || !message) {
+      return NextResponse.json({ error: 'streamId and message are required' }, { status: 400 })
+    }
+
+    const [savedMessage] = await sql`
+      INSERT INTO live_chat_messages (stream_id, author_name, message)
+      VALUES (${streamId}, ${authorName}, ${message})
+      RETURNING id, stream_id, author_name, message, created_at
+    `
+
+    return NextResponse.json(
+      {
+        id: String(savedMessage.id),
+        author: savedMessage.author_name,
+        message: savedMessage.message,
+        timestamp: formatTimestamp(savedMessage.created_at),
+      },
+      { status: 201 }
+    )
+  } catch (error: any) {
+    console.error('[POST /api/live/messages] Error:', error)
+    return NextResponse.json(
+      { error: error?.message || 'Failed to save message' },
+      { status: 500 }
+    )
   }
-
-  const [savedMessage] = await sql`
-    INSERT INTO live_chat_messages (stream_id, author_name, message)
-    VALUES (${streamId}, ${authorName}, ${message})
-    RETURNING id, stream_id, author_name, message, created_at
-  `
-
-  return NextResponse.json(
-    {
-      id: String(savedMessage.id),
-      author: savedMessage.author_name,
-      message: savedMessage.message,
-      timestamp: formatTimestamp(savedMessage.created_at),
-    },
-    { status: 201 }
-  )
 }

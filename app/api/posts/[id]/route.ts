@@ -21,6 +21,7 @@ export async function GET(
     const [post] = await sql`
       SELECT 
         p.id,
+        p.creator_id,
         p.author_name,
         p.author_avatar,
         p.author_role,
@@ -31,7 +32,9 @@ export async function GET(
         p.shares_count,
         p.stream_video_id,
         p.stream_title,
+        p.is_private,
         p.created_at,
+        p.updated_at,
         COALESCE(SUM(CASE WHEN pl.user_id = ${userId || null} THEN 1 ELSE 0 END), 0)::INTEGER as user_liked
       FROM posts p
       LEFT JOIN post_likes pl ON p.id = pl.post_id
@@ -48,6 +51,100 @@ export async function GET(
     console.error('[GET /api/posts/[id]] Error:', error)
     return NextResponse.json(
       { error: error?.message || 'Failed to fetch post' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await ensureTablesExist()
+
+    const { id: postId } = await params
+    const id = Number(postId)
+    const body = await req.json()
+    const { creator_id, content, category, is_private } = body
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid post id' }, { status: 400 })
+    }
+
+    // Verify creator_id matches (only creator can edit)
+    const [existingPost] = await sql`
+      SELECT creator_id FROM posts WHERE id = ${id}
+    `
+
+    if (!existingPost) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
+
+    if (existingPost.creator_id !== creator_id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Update post
+    const [updated] = await sql`
+      UPDATE posts
+      SET 
+        content = COALESCE(${content?.trim() || null}, content),
+        category = COALESCE(${category?.trim() || null}, category),
+        is_private = COALESCE(${is_private !== undefined ? is_private : null}, is_private),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `
+
+    return NextResponse.json(updated)
+  } catch (error: any) {
+    console.error('[PUT /api/posts/[id]] Error:', error)
+    return NextResponse.json(
+      { error: error?.message || 'Failed to update post' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await ensureTablesExist()
+
+    const { id: postId } = await params
+    const id = Number(postId)
+    const { creator_id } = await req.json()
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid post id' }, { status: 400 })
+    }
+
+    // Verify creator_id matches (only creator can delete)
+    const [existingPost] = await sql`
+      SELECT creator_id FROM posts WHERE id = ${id}
+    `
+
+    if (!existingPost) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    }
+
+    if (existingPost.creator_id !== creator_id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Delete post (this will cascade delete comments and likes)
+    await sql`
+      DELETE FROM posts WHERE id = ${id}
+    `
+
+    return NextResponse.json({ message: 'Post deleted successfully' })
+  } catch (error: any) {
+    console.error('[DELETE /api/posts/[id]] Error:', error)
+    return NextResponse.json(
+      { error: error?.message || 'Failed to delete post' },
       { status: 500 }
     )
   }

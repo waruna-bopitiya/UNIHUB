@@ -8,11 +8,45 @@ export async function GET(req: NextRequest) {
 
     // Get current user ID from query params
     const userId = req.nextUrl.searchParams.get('userId')
+    const myPostsOnly = req.nextUrl.searchParams.get('myPosts') === 'true'
 
-    // Get all posts with real like counts from post_likes table
+    if (myPostsOnly && userId) {
+      // Get only user's own posts (including private ones)
+      const posts = await sql`
+        SELECT 
+          p.id,
+          p.creator_id,
+          p.author_name,
+          p.author_avatar,
+          p.author_role,
+          p.content,
+          p.category,
+          p.stream_video_id,
+          p.stream_title,
+          p.is_private,
+          p.likes_count,
+          p.comments_count,
+          p.created_at,
+          p.updated_at,
+          COALESCE(COUNT(DISTINCT pl.id), 0)::INTEGER as likes_count,
+          COALESCE(SUM(CASE WHEN pl.user_id = ${userId || null} THEN 1 ELSE 0 END), 0)::INTEGER as user_liked
+        FROM posts p
+        LEFT JOIN post_likes pl ON p.id = pl.post_id
+        WHERE p.creator_id = ${userId}
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+        LIMIT 100
+      `
+      
+      console.log('📊 User posts fetched. Count:', posts.length)
+      return NextResponse.json(posts)
+    }
+
+    // Get all public posts
     const posts = await sql`
       SELECT 
         p.id,
+        p.creator_id,
         p.author_name,
         p.author_avatar,
         p.author_role,
@@ -20,11 +54,15 @@ export async function GET(req: NextRequest) {
         p.category,
         p.stream_video_id,
         p.stream_title,
+        p.is_private,
+        p.likes_count,
+        p.comments_count,
         p.created_at,
         COALESCE(COUNT(DISTINCT pl.id), 0)::INTEGER as likes_count,
         COALESCE(SUM(CASE WHEN pl.user_id = ${userId || null} THEN 1 ELSE 0 END), 0)::INTEGER as user_liked
       FROM posts p
       LEFT JOIN post_likes pl ON p.id = pl.post_id
+      WHERE p.is_private = FALSE
       GROUP BY p.id
       ORDER BY p.created_at DESC
       LIMIT 50
@@ -47,6 +85,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     let {
+      creator_id,
       author_name,
       author_avatar,
       author_role,
@@ -67,9 +106,10 @@ export async function POST(req: NextRequest) {
 
     const [post] = await sql`
       INSERT INTO posts
-        (author_name, author_avatar, author_role, content, category, stream_video_id, stream_title, likes_count)
+        (creator_id, author_name, author_avatar, author_role, content, category, stream_video_id, stream_title, likes_count, is_private)
       VALUES
         (
+          ${creator_id ?? null},
           ${author_name?.trim() || 'Student'},
           ${finalAvatar},
           ${author_role?.trim() || 'Student'},
@@ -77,7 +117,8 @@ export async function POST(req: NextRequest) {
           ${category?.trim() || 'General'},
           ${stream_video_id ?? null},
           ${stream_title?.trim() ?? null},
-          0
+          0,
+          false
         )
       RETURNING *, 0 as user_liked
     `

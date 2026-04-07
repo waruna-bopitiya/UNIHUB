@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Clock, Eye, Loader2, Play, Radio, Share2, Users } from 'lucide-react'
+import { AlertCircle, Clock, Eye, Loader2, Play, Radio, Share2, Users, Edit2, Trash2 } from 'lucide-react'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { ChatPanel } from '@/components/live/chat-panel'
@@ -10,6 +10,7 @@ import { ChatPanel } from '@/components/live/chat-panel'
 interface LiveStream {
   id: number
   post_id: number | null
+  creator_id?: string
   title: string
   description: string | null
   year: string | null
@@ -157,6 +158,8 @@ export default function LivePage() {
   const [loadingStreams, setLoadingStreams] = useState(true)
   const [pageError, setPageError] = useState('')
   const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
@@ -167,17 +170,20 @@ export default function LivePage() {
 
       try {
         const response = await fetch('/api/live/streams', { cache: 'no-store' })
-        const data = await response.json()
-
+        
         if (!response.ok) {
-          throw new Error(data.error ?? 'Failed to load live streams')
+          const error = await response.json().catch(() => ({ error: 'Failed to load live streams' }))
+          throw new Error(error.error ?? 'Failed to load live streams')
         }
+
+        const data = await response.json()
 
         if (active) {
           setStreams(Array.isArray(data) ? data : [])
         }
       } catch (error) {
         if (active) {
+          console.error('Error loading streams:', error)
           setPageError(error instanceof Error ? error.message : 'Failed to load live streams')
         }
       } finally {
@@ -186,6 +192,10 @@ export default function LivePage() {
         }
       }
     }
+
+    // Get current user ID
+    const userId = localStorage.getItem('studentId')
+    setCurrentUserId(userId)
 
     loadStreams()
 
@@ -268,17 +278,20 @@ export default function LivePage() {
         const response = await fetch(`/api/live/messages?streamId=${featuredStream.id}&limit=50`, {
           cache: 'no-store',
         })
-        const data = await response.json()
-
+        
         if (!response.ok) {
-          throw new Error(data.error ?? 'Failed to load live chat')
+          const error = await response.json().catch(() => ({ error: 'Failed to load live chat' }))
+          throw new Error(error.error ?? 'Failed to load live chat')
         }
+
+        const data = await response.json()
 
         if (active) {
           setChatMessages(Array.isArray(data) ? data : [])
         }
       } catch (error) {
         if (active) {
+          console.error('Error loading messages:', error)
           setPageError(error instanceof Error ? error.message : 'Failed to load live chat')
           setChatMessages([])
         }
@@ -291,6 +304,47 @@ export default function LivePage() {
       active = false
     }
   }, [featuredStream?.id])
+
+  const handleDeleteStream = async (streamId: number) => {
+    if (!currentUserId) {
+      setPageError('You must be logged in to delete streams')
+      return
+    }
+
+    if (!confirm('Are you sure you want to delete this stream?')) {
+      return
+    }
+
+    setDeleteLoading(streamId)
+    try {
+      const res = await fetch(`/api/live/streams/${streamId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creator_id: currentUserId }),
+      })
+
+      if (res.ok) {
+        setStreams(streams.filter(s => s.id !== streamId))
+        console.log(`🗑️ Stream ${streamId} deleted`)
+        if (selectedStreamId === streamId) {
+          setSelectedStreamId(null)
+        }
+      } else {
+        const data = await res.json()
+        setPageError(data.error || 'Failed to delete stream')
+      }
+    } catch (error) {
+      console.error('Error deleting stream:', error)
+      setPageError('Failed to delete stream')
+    } finally {
+      setDeleteLoading(null)
+    }
+  }
+
+  const userStreams = useMemo(
+    () => streams.filter(stream => stream.creator_id === currentUserId),
+    [streams, currentUserId]
+  )
 
   const sessionList = upcomingStreams.length > 0 ? upcomingStreams : []
   const previousSessionList = previousStreams.length > 0 ? previousStreams : []
@@ -314,6 +368,55 @@ export default function LivePage() {
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">
             <AlertCircle className="w-4 h-4" />
             {pageError}
+          </div>
+        )}
+
+        {/* My Live Streams Section */}
+        {currentUserId && userStreams.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-foreground mb-6">My Live Streams</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {userStreams.map((stream) => (
+                <div key={stream.id} className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-foreground">{stream.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {stream.module_name ?? 'Live stream'}
+                      </p>
+                    </div>
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                      stream.status === 'live' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
+                      {stream.status === 'live' ? 'LIVE' : 'SCHEDULED'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2 pt-3 border-t border-border">
+                    <button
+                      onClick={() => router.push(`/live/edit/${stream.id}`)}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-secondary text-secondary-foreground rounded hover:opacity-80 transition-opacity text-sm font-medium"
+                      title="Edit stream"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStream(stream.id)}
+                      disabled={deleteLoading === stream.id}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors text-sm font-medium disabled:opacity-50"
+                      title="Delete stream"
+                    >
+                      {deleteLoading === stream.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
