@@ -59,21 +59,37 @@ export default function Home() {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
   const [onlineUsersSearch, setOnlineUsersSearch] = useState('')
 
-  // Get real-time status based on last_login and logouttime
+  // Get real-time status based on last_login, logouttime, and current time
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
     if (!lastLogin) return 'away'
     
-    // If no logout time, user is still online
+    const lastLoginTime = new Date(lastLogin).getTime()
+    const currentTime = Date.now()
+    
+    // Check if login time is before current time (user logged in in the past)
+    if (lastLoginTime > currentTime) return 'away'
+    
+    // If no logout time, user is still online (never logged out)
     if (!logoutTime) return 'online'
     
-    // Compare timestamps - whichever is more recent determines status
-    const lastLoginTime = new Date(lastLogin).getTime()
     const logoutTimeStamp = new Date(logoutTime).getTime()
     
-    // If last_login is after logouttime, user is online
-    if (lastLoginTime > logoutTimeStamp) return 'online'
+    // If logout time is before login time, user is online (logged out before, but haven't logged out again)
+    // This means the logout was from a previous session
+    if (logoutTimeStamp < lastLoginTime) {
+      // User logged in AFTER they logged out, so they're currently in an active session
+      // Check if session is still active (within 30 minutes of last login)
+      const sessionTimeout = 30 * 60 * 1000 // 30 minutes in milliseconds
+      const timeSinceLogin = currentTime - lastLoginTime
+      
+      if (timeSinceLogin < sessionTimeout) {
+        return 'online'
+      } else {
+        return 'away' // Session expired (more than 30 minutes since login)
+      }
+    }
     
-    // If logouttime is after or equal to last_login, user is away
+    // If logout time is after or equal to login time, user is away (logged out after logging in)
     return 'away'
   }
 
