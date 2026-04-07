@@ -174,8 +174,8 @@ export function ResourceFeedback({ resourceId, resourceName, onFeedbackAdded }: 
                       size={20}
                       className={
                         averageRating >= star
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300'
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-muted-foreground'
                       }
                     />
                   ))}
@@ -222,8 +222,8 @@ export function ResourceFeedback({ resourceId, resourceName, onFeedbackAdded }: 
                       size={28}
                       className={
                         rating >= star
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300 hover:text-yellow-300'
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-muted-foreground hover:text-amber-400/70'
                       }
                     />
                   </button>
@@ -288,7 +288,7 @@ export function ResourceFeedback({ resourceId, resourceName, onFeedbackAdded }: 
               key={item.id}
               className={`rounded-lg p-4 border border-border/50 transition-all duration-500 ${
                 newFeedbackId === item.id
-                  ? 'bg-green-100/30 border-green-400/50 ring-2 ring-green-400/30'
+                  ? 'bg-green-500/20 border-green-500/40 ring-2 ring-green-500/30'
                   : 'bg-secondary/20'
               }`}
             >
@@ -297,7 +297,7 @@ export function ResourceFeedback({ resourceId, resourceName, onFeedbackAdded }: 
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{item.userName}</p>
                     {newFeedbackId === item.id && (
-                      <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full">
+                      <span className="text-xs bg-green-500/30 text-green-400 px-2 py-1 rounded-full border border-green-500/40">
                         Just now
                       </span>
                     )}
@@ -313,8 +313,8 @@ export function ResourceFeedback({ resourceId, resourceName, onFeedbackAdded }: 
                       size={16}
                       className={
                         item.rating >= star
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300'
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-muted-foreground'
                       }
                     />
                   ))}
