@@ -146,6 +146,10 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
   
+  // Profile display state
+  const [showRecipientProfile, setShowRecipientProfile] = useState(false)
+  const [recipientProfiles, setRecipientProfiles] = useState<any[]>([])
+  
   // Resizable state
   const [width, setWidth] = useState(800) // increased default width
   const [height, setHeight] = useState(600)
@@ -315,38 +319,34 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !userId) return
 
+    const messageContent = newMessage.trim()
+    const messageId = `temp-${Date.now()}`
+    const timestamp = new Date().toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+
+    // Create optimistic message object
+    const optimisticMessage = {
+      id: messageId,
+      sender: 'You',
+      senderAvatar: 'Y',
+      content: messageContent,
+      timestamp: timestamp,
+      isOwn: true,
+      isRead: true,
+    }
+
     try {
-      console.log('💬 Sending message to chat:', selectedConversation.id)
+      // UPDATE UI IMMEDIATELY (Optimistic Update)
+      console.log('💬 Displaying message immediately')
 
-      // Save message to backend
-      const response = await fetch('/api/chat/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chatId: parseInt(selectedConversation.id),
-          sender: 'You',
-          senderAvatar: 'Y',
-          content: newMessage,
-          isOwn: true,
-        })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        console.error('❌ Failed to send message:', result.message)
-        return
-      }
-
-      console.log('✅ Message sent successfully')
-
-      // Update frontend state
-      const updatedConversations = conversations.map((conv) => {
+      let updatedConversations = conversations.map((conv) => {
         if (conv.id === selectedConversation.id) {
           return {
             ...conv,
-            messages: [...conv.messages, result.data],
-            lastMessage: newMessage,
+            messages: [...conv.messages, optimisticMessage],
+            lastMessage: messageContent,
           }
         }
         return conv
@@ -355,8 +355,81 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       setConversations(updatedConversations)
       setSelectedConversation(updatedConversations.find((c) => c.id === selectedConversation.id) || null)
       setNewMessage('')
+
+      // SEND TO BACKEND IN BACKGROUND
+      console.log('📤 Sending message to backend')
+      const response = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: parseInt(selectedConversation.id),
+          sender: 'You',
+          senderAvatar: 'Y',
+          content: messageContent,
+          isOwn: true,
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ Failed to send message:', result.message)
+        // Remove optimistic message if failed - use updatedConversations
+        const rollbackConversations = updatedConversations.map((conv) => {
+          if (conv.id === selectedConversation.id) {
+            return {
+              ...conv,
+              messages: conv.messages.filter((msg) => msg.id !== messageId),
+            }
+          }
+          return conv
+        })
+        setConversations(rollbackConversations)
+        alert('Failed to send message. Please try again.')
+        return
+      }
+
+      console.log('✅ Message sent successfully to backend')
+
+      // Update with real message ID and show profile
+      if (result.recipientProfiles && result.recipientProfiles.length > 0) {
+        console.log('📋 Displaying recipient profile')
+        setRecipientProfiles(result.recipientProfiles)
+        setShowRecipientProfile(true)
+        setTimeout(() => {
+          setShowRecipientProfile(false)
+        }, 5000)
+      }
+
+      // Replace optimistic message with real one - use updatedConversations
+      const finalConversations = updatedConversations.map((conv) => {
+        if (conv.id === selectedConversation.id) {
+          return {
+            ...conv,
+            messages: conv.messages.map((msg) =>
+              msg.id === messageId ? result.data[0] : msg
+            ),
+          }
+        }
+        return conv
+      })
+
+      setConversations(finalConversations)
+      setSelectedConversation(finalConversations.find((c) => c.id === selectedConversation.id) || null)
     } catch (error) {
       console.error('❌ Error sending message:', error)
+      // Remove optimistic message on error - use updatedConversations which includes optimistic message
+      const rollbackConversations = updatedConversations.map((conv) => {
+        if (conv.id === selectedConversation.id) {
+          return {
+            ...conv,
+            messages: conv.messages.filter((msg) => msg.id !== messageId),
+          }
+        }
+        return conv
+      })
+      setConversations(rollbackConversations)
+      alert('Network error. Please try again.')
     }
   }
 
@@ -728,7 +801,9 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
                 key={conv.id}
                 onClick={() => handleSelectConversation(conv)}
                 className={`w-full px-4 py-3 border-b border-border text-left transition-colors hover:bg-secondary ${
-                  selectedConversation?.id === conv.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''
+                  selectedConversation?.id === conv.id
+                    ? 'bg-primary/10 border-l-2 border-l-primary'
+                    : ''
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -829,6 +904,40 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
                 </div>
               ))}
             </div>
+
+            {/* Recipient Profile Display */}
+            {showRecipientProfile && recipientProfiles.length > 0 && (
+              <div className="p-4 border-t border-border bg-green-50 dark:bg-green-950/20 animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-48 overflow-y-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-sm text-foreground">
+                    ✓ Message sent to {recipientProfiles.length} {recipientProfiles.length === 1 ? 'person' : 'people'}
+                  </p>
+                  <button
+                    onClick={() => setShowRecipientProfile(false)}
+                    className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {recipientProfiles.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded">
+                      <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-600 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                        {item.profile.avatar || (item.profile.firstName || '').charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {item.profile.firstName} {item.profile.secondName}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {item.profile.email}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Message Input */}
             <div className="
