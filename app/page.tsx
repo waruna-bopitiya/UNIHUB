@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useCallback } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { CreatePost } from '@/components/feed/create-post'
 import { PostCard } from '@/components/feed/post-card'
@@ -181,9 +181,15 @@ export default function Home() {
       const res = await fetch('/api/qna/questions')
       if (res.ok) {
         const data = await res.json()
-        console.log('Fetched questions:', data)
-        setAllQuestions(data)
-        setFilteredQuestions(data)
+        // Sanitize data - ensure votes are never negative
+        const sanitizedData = data.map((q: any) => ({
+          ...q,
+          upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+          downvotes: Math.max(0, parseInt(q.downvotes) || 0)
+        }))
+        console.log('Fetched questions:', sanitizedData)
+        setAllQuestions(sanitizedData)
+        setFilteredQuestions(sanitizedData)
       } else {
         console.error('Failed to fetch questions')
         setAllQuestions([])
@@ -197,6 +203,48 @@ export default function Home() {
       setQuestionsLoading(false)
     }
   }
+
+  const refreshFilteredQuestions = useCallback(async (filter: string) => {
+    try {
+      setQuestionsLoading(true)
+      const res = await fetch('/api/qna/questions')
+      if (res.ok) {
+        const rawData = await res.json()
+        // Sanitize data - ensure votes are never negative
+        const data = rawData.map((q: any) => ({
+          ...q,
+          upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+          downvotes: Math.max(0, parseInt(q.downvotes) || 0)
+        }))
+        console.log(`📊 Fetching ${filter} questions:`, data)
+        let filtered = [...data]
+        
+        if (filter === "unanswered") {
+          filtered = filtered.filter(q => q.answers === 0)
+        } else if (filter === "trending") {
+          filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+        } else {
+          // Recent - sort by newest first
+          filtered = [...filtered].sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime()
+            const dateB = new Date(b.createdAt).getTime()
+            return dateB - dateA
+          })
+        }
+        
+        setAllQuestions(data)
+        setFilteredQuestions(filtered)
+      } else {
+        console.error('Failed to fetch questions')
+        setFilteredQuestions([])
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error)
+      setFilteredQuestions([])
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }, [])
 
   const fetchYears = async () => {
     try {
@@ -272,27 +320,10 @@ export default function Home() {
     }
   }, [selectedYear, selectedSemester])
 
-  // Filter questions based on selected filter
+  // Auto-refresh when filter changes
   useEffect(() => {
-    // Note: Real questions don't have these calculated fields yet
-    // In the future, we can add upvotes/downvotes to the questions table
-    let filtered = [...allQuestions]
-    
-    if (filterType === "unanswered") {
-      filtered = filtered.filter(q => q.answers === 0)
-    } else if (filterType === "trending") {
-      filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
-    } else {
-      // Recent - sort by newest first
-      filtered = [...filtered].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime()
-        const dateB = new Date(b.createdAt).getTime()
-        return dateB - dateA
-      })
-    }
-    
-    setFilteredQuestions(filtered)
-  }, [filterType, allQuestions])
+    refreshFilteredQuestions(filterType)
+  }, [filterType, refreshFilteredQuestions])
 
   const handlePostCreated = (newPost: Post) => {
     setPosts(prev => [newPost, ...prev])

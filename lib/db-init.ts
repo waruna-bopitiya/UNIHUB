@@ -1,13 +1,15 @@
 import { sql } from './db'
 
 let initialized = false
+let initializationStarted = false
 
 export async function ensureTablesExist() {
-  if (initialized) {
-    console.log('✅ Database tables already initialized')
+  // If already initialized or in progress, skip silently
+  if (initialized || initializationStarted) {
     return
   }
 
+  initializationStarted = true
   console.log('🔧 Initializing database tables...')
 
   await sql`
@@ -349,4 +351,5 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_quiz_ratings_created_at ON quiz_ratings(created_at DESC)`
 
   initialized = true
+  console.log('✅ Database tables initialized successfully')
 }
