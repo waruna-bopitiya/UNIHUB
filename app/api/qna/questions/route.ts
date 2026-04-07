@@ -131,6 +131,7 @@ export async function GET(request: NextRequest) {
       id: q.id.toString(),
       title: q.title,
       content: q.content,
+      user_id: q.user_id,
       author: {
         id: q.user_id,
         name: `${q.first_name}${q.second_name ? ' ' + q.second_name : ''}`,
@@ -141,7 +142,8 @@ export async function GET(request: NextRequest) {
       upvotes: q.upvotes || 0,
       downvotes: q.downvotes || 0,
       answers: parseInt(q.answer_count) || 0,
-      createdAt: q.created_at
+      createdAt: q.created_at,
+      updatedAt: q.updated_at
     }))
 
     return Response.json(formattedQuestions)
