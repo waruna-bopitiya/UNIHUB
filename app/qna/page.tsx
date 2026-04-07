@@ -119,6 +119,12 @@ export default function QnaPage() {
     fetchQuestions(filterType)
   }
 
+  const handleDeleteQuestion = (questionId: string) => {
+    // Remove the question from filtered and all questions
+    setFilteredQuestions(prev => prev.filter(q => q.id !== questionId))
+    setAllQuestions(prev => prev.filter(q => q.id !== questionId))
+  }
+
   const refreshFilteredQuestions = useCallback(async (filter: string) => {
     try {
       setLoading(true)
@@ -343,7 +349,12 @@ export default function QnaPage() {
           </div>
         ) : (
           filteredQuestions.map((question) => (
-            <QuestionCard key={question.id} question={question} onVoteComplete={handleVoteComplete} />
+            <QuestionCard 
+              key={question.id} 
+              question={question} 
+              onVoteComplete={handleVoteComplete}
+              onDelete={() => handleDeleteQuestion(question.id)}
+            />
           ))
         )}
       </div>

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { MessageCircle, Edit2, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import VoteButtons from "./VoteButtons"
 
 interface QuestionCardProps {
@@ -78,6 +79,7 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
       }
 
       console.log('✅ Question deleted successfully')
+      toast.success('Question deleted successfully')
       if (onDelete) {
         onDelete()
       }
