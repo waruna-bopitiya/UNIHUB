@@ -4,18 +4,22 @@ import { useState } from "react"
 import { ArrowBigUp, ArrowBigDown } from "lucide-react"
 
 interface VoteButtonsProps {
+  questionId: string
   upvotes: number
   downvotes: number
   onVote?: (type: "up" | "down") => void
+  onVoteComplete?: () => void
   size?: "sm" | "md" | "lg"
   orientation?: "vertical" | "horizontal"
   initialVote?: "up" | "down" | null
 }
 
 export default function VoteButtons({ 
+  questionId,
   upvotes, 
   downvotes, 
   onVote,
+  onVoteComplete,
   size = "md",
   orientation = "vertical",
   initialVote = null
@@ -23,45 +27,64 @@ export default function VoteButtons({
   const [vote, setVote] = useState<"up" | "down" | null>(initialVote)
   const [currentUpvotes, setCurrentUpvotes] = useState(upvotes)
   const [currentDownvotes, setCurrentDownvotes] = useState(downvotes)
+  const [isLoading, setIsLoading] = useState(false)
 
   const netVotes = currentUpvotes - currentDownvotes
 
-  const handleVote = (type: "up" | "down") => {
-    let newVote: "up" | "down" | null = type
-    let upvoteChange = 0
-    let downvoteChange = 0
-
-    // Handle vote logic
-    if (vote === type) {
-      // Remove vote
-      newVote = null
-      if (type === "up") {
-        upvoteChange = -1
-      } else {
-        downvoteChange = -1
-      }
-    } else {
-      // Change or add vote
-      if (vote === "up") {
-        upvoteChange = -1
-      } else if (vote === "down") {
-        downvoteChange = -1
-      }
-      
-      if (type === "up") {
-        upvoteChange += 1
-      } else {
-        downvoteChange += 1
-      }
+  const handleVote = async (type: "up" | "down") => {
+    const userId = localStorage.getItem('studentId')
+    if (!userId) {
+      alert('Please log in to vote')
+      return
     }
 
-    // Update local state
-    setVote(newVote)
-    setCurrentUpvotes(currentUpvotes + upvoteChange)
-    setCurrentDownvotes(currentDownvotes + downvoteChange)
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/qna/votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: parseInt(questionId),
+          userId,
+          voteType: type === 'up' ? 'upvote' : 'downvote'
+        })
+      })
 
-    // Call parent handler
-    onVote?.(type)
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error)
+
+      // Update local state based on response
+      let newVote: "up" | "down" | null = type
+      let upvoteChange = 0
+      let downvoteChange = 0
+
+      if (data.status === 'removed') {
+        newVote = null
+        if (vote === 'up') upvoteChange = -1
+        else if (vote === 'down') downvoteChange = -1
+      } else if (data.status === 'updated') {
+        if (vote === 'up') upvoteChange = -1
+        else if (vote === 'down') downvoteChange = -1
+        if (type === 'up') upvoteChange += 1
+        else downvoteChange += 1
+      } else {
+        if (vote === 'up') upvoteChange = -1
+        else if (vote === 'down') downvoteChange = -1
+        if (type === 'up') upvoteChange += 1
+        else downvoteChange += 1
+      }
+
+      setVote(newVote)
+      setCurrentUpvotes(currentUpvotes + upvoteChange)
+      setCurrentDownvotes(currentDownvotes + downvoteChange)
+      onVote?.(type)
+      onVoteComplete?.()
+    } catch (error) {
+      console.error('Vote error:', error)
+      alert('Failed to vote')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Size classes

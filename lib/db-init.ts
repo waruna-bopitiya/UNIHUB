@@ -207,6 +207,24 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_created_at ON answers(created_at DESC)`
 
+  // Table for Q&A Question Votes
+  await sql`
+    CREATE TABLE IF NOT EXISTS question_votes (
+      id              SERIAL PRIMARY KEY,
+      question_id     INTEGER       NOT NULL,
+      user_id         VARCHAR(50)   NOT NULL,
+      vote_type       VARCHAR(50)   NOT NULL CHECK (vote_type IN ('upvote', 'downvote')),
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(question_id, user_id)
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_question_votes_question_id ON question_votes(question_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_question_votes_user_id ON question_votes(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_question_votes_created_at ON question_votes(created_at DESC)`
+
   // Quiz tables
   await sql`
     CREATE TABLE IF NOT EXISTS quizzes (

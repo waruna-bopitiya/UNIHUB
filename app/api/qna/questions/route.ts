@@ -29,10 +29,13 @@ export async function GET(request: NextRequest) {
           q.updated_at,
           u.first_name,
           u.second_name,
-          COUNT(a.id) as answer_count
+          COUNT(a.id) as answer_count,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'upvote' THEN 1 ELSE 0 END), 0) as upvotes,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'downvote' THEN 1 ELSE 0 END), 0) as downvotes
         FROM questions q
         JOIN users u ON q.user_id = u.id
         LEFT JOIN answers a ON q.id = a.question_id
+        LEFT JOIN question_votes qv ON q.id = qv.question_id
         WHERE q.subject_code = ${subjectCode} 
           AND q.year = ${yearNum}
           AND q.semester = ${semesterNum}
@@ -54,10 +57,13 @@ export async function GET(request: NextRequest) {
           q.updated_at,
           u.first_name,
           u.second_name,
-          COUNT(a.id) as answer_count
+          COUNT(a.id) as answer_count,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'upvote' THEN 1 ELSE 0 END), 0) as upvotes,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'downvote' THEN 1 ELSE 0 END), 0) as downvotes
         FROM questions q
         JOIN users u ON q.user_id = u.id
         LEFT JOIN answers a ON q.id = a.question_id
+        LEFT JOIN question_votes qv ON q.id = qv.question_id
         WHERE q.subject_code = ${subjectCode}
         GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
@@ -79,10 +85,13 @@ export async function GET(request: NextRequest) {
           q.updated_at,
           u.first_name,
           u.second_name,
-          COUNT(a.id) as answer_count
+          COUNT(a.id) as answer_count,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'upvote' THEN 1 ELSE 0 END), 0) as upvotes,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'downvote' THEN 1 ELSE 0 END), 0) as downvotes
         FROM questions q
         JOIN users u ON q.user_id = u.id
         LEFT JOIN answers a ON q.id = a.question_id
+        LEFT JOIN question_votes qv ON q.id = qv.question_id
         WHERE q.year = ${yearNum} AND q.semester = ${semesterNum}
         GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
@@ -103,10 +112,13 @@ export async function GET(request: NextRequest) {
           q.updated_at,
           u.first_name,
           u.second_name,
-          COUNT(a.id) as answer_count
+          COUNT(a.id) as answer_count,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'upvote' THEN 1 ELSE 0 END), 0) as upvotes,
+          COALESCE(SUM(CASE WHEN qv.vote_type = 'downvote' THEN 1 ELSE 0 END), 0) as downvotes
         FROM questions q
         JOIN users u ON q.user_id = u.id
         LEFT JOIN answers a ON q.id = a.question_id
+        LEFT JOIN question_votes qv ON q.id = qv.question_id
         GROUP BY q.id, u.id
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
@@ -124,8 +136,8 @@ export async function GET(request: NextRequest) {
       },
       category: q.subject_code,
       categoryName: q.subject_code,
-      upvotes: 0,
-      downvotes: 0,
+      upvotes: parseInt(q.upvotes) || 0,
+      downvotes: parseInt(q.downvotes) || 0,
       answers: parseInt(q.answer_count) || 0,
       createdAt: q.created_at
     }))

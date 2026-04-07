@@ -298,6 +298,11 @@ export default function Home() {
     setPosts(prev => [newPost, ...prev])
   }
 
+  const handleVoteComplete = () => {
+    // Refresh questions to get updated vote counts
+    fetchQuestions()
+  }
+
   return (
     <AppLayout>
       <div className="w-full py-6 px-4 md:px-6 lg:px-8">
@@ -604,7 +609,7 @@ export default function Home() {
                     </div>
                   ) : (
                     filteredQuestions.map((question) => (
-                      <QuestionCard key={question.id} question={question} />
+                      <QuestionCard key={question.id} question={question} onVoteComplete={handleVoteComplete} />
                     ))
                   )}
                 </div>

@@ -21,9 +21,10 @@ interface QuestionCardProps {
     categoryName: string
     createdAt: string | Date
   }
+  onVoteComplete?: () => void
 }
 
-export default function QuestionCard({ question }: QuestionCardProps) {
+export default function QuestionCard({ question, onVoteComplete }: QuestionCardProps) {
   const handleVote = (type: "up" | "down") => {
     // TODO: API call to vote
     console.log("Vote on question:", question.id, type)
@@ -34,9 +35,11 @@ export default function QuestionCard({ question }: QuestionCardProps) {
       <div className="flex gap-4">
         {/* Vote buttons - using reusable component */}
         <VoteButtons
+          questionId={question.id}
           upvotes={question.upvotes}
           downvotes={question.downvotes}
           onVote={handleVote}
+          onVoteComplete={onVoteComplete}
           size="md"
           orientation="vertical"
         />

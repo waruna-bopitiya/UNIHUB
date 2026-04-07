@@ -56,33 +56,38 @@ export default function QnaPage() {
     fetchSubjects()
   }, [selectedYear, selectedSemester])
 
-  useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        setLoading(true)
-        let url = '/api/qna/questions'
-        if (selectedSubject) {
-          url += `?subjectCode=${selectedSubject}`
-        }
-        const response = await fetch(url)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch questions')
-        }
-
-        const questions = await response.json()
-        setAllQuestions(questions)
-        setError(null)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load questions'
-        console.error('Error fetching questions:', errorMessage)
-        setError(errorMessage)
-        setAllQuestions([])
-      } finally {
-        setLoading(false)
+  const fetchQuestions = async () => {
+    try {
+      setLoading(true)
+      let url = '/api/qna/questions'
+      if (selectedSubject) {
+        url += `?subjectCode=${selectedSubject}`
       }
-    }
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch questions')
+      }
 
+      const questions = await response.json()
+      setAllQuestions(questions)
+      setError(null)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load questions'
+      console.error('Error fetching questions:', errorMessage)
+      setError(errorMessage)
+      setAllQuestions([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVoteComplete = () => {
+    // Refresh questions to get updated vote counts
+    fetchQuestions()
+  }
+
+  useEffect(() => {
     fetchQuestions()
   }, [selectedSubject])
 
@@ -188,7 +193,7 @@ export default function QnaPage() {
           </div>
         ) : (
           allQuestions.map((question) => (
-            <QuestionCard key={question.id} question={question} />
+            <QuestionCard key={question.id} question={question} onVoteComplete={handleVoteComplete} />
           ))
         )}
       </div>
