@@ -191,31 +191,6 @@ export async function ensureTablesExist() {
     )
   `
 
-  // Migration: Add upvotes and downvotes columns if they don't exist
-  try {
-    await sql`
-      ALTER TABLE questions
-      ADD COLUMN IF NOT EXISTS upvotes INTEGER NOT NULL DEFAULT 0 CHECK (upvotes >= 0)
-    `
-    console.log('✅ upvotes column added to questions table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('⚠️ Could not add upvotes column:', error.message)
-    }
-  }
-
-  try {
-    await sql`
-      ALTER TABLE questions
-      ADD COLUMN IF NOT EXISTS downvotes INTEGER NOT NULL DEFAULT 0 CHECK (downvotes >= 0)
-    `
-    console.log('✅ downvotes column added to questions table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('⚠️ Could not add downvotes column:', error.message)
-    }
-  }
-
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_subject_code ON questions(subject_code)`
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_created_at ON questions(created_at DESC)`
@@ -332,6 +307,7 @@ export async function ensureTablesExist() {
       user_id         VARCHAR(50)   NOT NULL,
       chat_name       VARCHAR(255)  NOT NULL,
       participant_name VARCHAR(255) NOT NULL,
+      participant_id  VARCHAR(50),
       avatar          VARCHAR(10)   NOT NULL DEFAULT 'U',
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -354,30 +330,6 @@ export async function ensureTablesExist() {
   `
 
   // Chat table indexes
-  // Migration: Add is_read column to chat_messages if it doesn't exist
-  try {
-    await sql`
-      ALTER TABLE chat_messages
-      ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false
-    `
-    console.log('✅ is_read column added to chat_messages table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('⚠️ Could not add is_read column:', error.message)
-    }
-  }
-  // Migration: Add participant_id column to chats table
-  try {
-    await sql`
-      ALTER TABLE chats
-      ADD COLUMN IF NOT EXISTS participant_id VARCHAR(50)
-    `
-    console.log('✅ participant_id column added to chats table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('Could not add participant_id column:', error.message)
-    }
-  }
   await sql`CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chats_created_at ON chats(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id ON chat_messages(chat_id)`
