@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
+import { AppLayout } from "@/components/layout/app-layout"
 import AnswerCard from "@/components/qna/AnswerCard"
 
 export default function QuestionDetailPage() {
@@ -248,68 +249,78 @@ export default function QuestionDetailPage() {
 
   if (loading) {
     return (
-      <div className="container max-w-3xl mx-auto py-6 px-4">
-        <Link 
-          href="/qna"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to questions
-        </Link>
-        
-        {/* Loading skeleton */}
-        <div className="border border-border rounded-lg bg-card p-6 animate-pulse">
-          <div className="flex gap-4">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-6 h-6 bg-muted rounded" />
-              <div className="w-6 h-4 bg-muted rounded" />
-              <div className="w-6 h-6 bg-muted rounded" />
-            </div>
-            <div className="flex-1">
-              <div className="h-8 bg-muted rounded mb-4 w-3/4" />
-              <div className="h-4 bg-muted rounded mb-2 w-full" />
-              <div className="h-4 bg-muted rounded mb-6 w-5/6" />
-              <div className="h-20 bg-muted rounded" />
+      <AppLayout>
+        <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <Link 
+              href="/qna"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to questions
+            </Link>
+            
+            {/* Loading skeleton */}
+            <div className="border border-border rounded-lg bg-card p-6 animate-pulse">
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 bg-muted rounded" />
+                  <div className="w-6 h-4 bg-muted rounded" />
+                  <div className="w-6 h-6 bg-muted rounded" />
+                </div>
+                <div className="flex-1">
+                  <div className="h-8 bg-muted rounded mb-4 w-3/4" />
+                  <div className="h-4 bg-muted rounded mb-2 w-full" />
+                  <div className="h-4 bg-muted rounded mb-6 w-5/6" />
+                  <div className="h-20 bg-muted rounded" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   if (!question || error) {
     return (
-      <div className="container max-w-3xl mx-auto py-6 px-4">
-        <Link 
-          href="/qna"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to questions
-        </Link>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">{error || 'Question not found'}</p>
+      <AppLayout>
+        <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <Link 
+              href="/qna"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to questions
+            </Link>
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">{error || 'Question not found'}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="container max-w-3xl mx-auto py-6 px-4">
-      {/* Back button */}
-      <Link 
-        href="/qna"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to questions
-      </Link>
+    <AppLayout>
+      <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Back button */}
+          <Link 
+            href="/qna"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to questions
+          </Link>
 
-      {/* Question */}
-      <div className="border border-border rounded-lg bg-card p-6">
-        <div className="flex gap-4">
-          {/* Vote buttons */}
-          <div className="flex flex-col items-center gap-1">
+          {/* Question */}
+          <div className="border border-border rounded-lg bg-card p-6">
+            <div className="flex gap-4">
+              {/* Vote buttons */}
+              <div className="flex flex-col items-center gap-1">
             <button 
               onClick={() => handleVote("up")}
               disabled={isVoting}
@@ -450,6 +461,8 @@ export default function QuestionDetailPage() {
           )}
         </div>
       </div>
-    </div>
+        </div>
+      </div>
+    </AppLayout>
   )
 }
