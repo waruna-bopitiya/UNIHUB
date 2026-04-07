@@ -138,8 +138,8 @@ export async function GET(request: NextRequest) {
       },
       category: q.subject_code,
       categoryName: q.subject_code,
-      upvotes: q.upvotes || 0,
-      downvotes: q.downvotes || 0,
+      upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+      downvotes: Math.max(0, parseInt(q.downvotes) || 0),
       answers: parseInt(q.answer_count) || 0,
       createdAt: q.created_at
     }))

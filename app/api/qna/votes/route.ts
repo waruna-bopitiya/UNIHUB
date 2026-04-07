@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
         if (voteType === 'upvote') {
           await sql`
             UPDATE questions 
-            SET upvotes = CASE WHEN upvotes > 0 THEN upvotes - 1 ELSE 0 END
+            SET upvotes = GREATEST(0, upvotes - 1)
             WHERE id = ${questionId}
           `
         } else {
           await sql`
             UPDATE questions 
-            SET downvotes = CASE WHEN downvotes > 0 THEN downvotes - 1 ELSE 0 END
+            SET downvotes = GREATEST(0, downvotes - 1)
             WHERE id = ${questionId}
           `
         }
@@ -67,13 +67,13 @@ export async function POST(request: NextRequest) {
         if (currentVoteType === 'upvote') {
           await sql`
             UPDATE questions 
-            SET upvotes = CASE WHEN upvotes > 0 THEN upvotes - 1 ELSE 0 END
+            SET upvotes = GREATEST(0, upvotes - 1)
             WHERE id = ${questionId}
           `
         } else {
           await sql`
             UPDATE questions 
-            SET downvotes = CASE WHEN downvotes > 0 THEN downvotes - 1 ELSE 0 END
+            SET downvotes = GREATEST(0, downvotes - 1)
             WHERE id = ${questionId}
           `
         }
@@ -137,10 +137,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to get updated vote counts
+// Helper function to get updated vote counts with safety check
 async function getUpdatedVotes(questionId: number) {
   const result = await sql`
     SELECT upvotes, downvotes FROM questions WHERE id = ${questionId}
   `
-  return result?.[0] || { upvotes: 0, downvotes: 0 }
+  const votes = result?.[0] || { upvotes: 0, downvotes: 0 }
+  
+  // Ensure votes are never negative
+  return {
+    upvotes: Math.max(0, parseInt(votes.upvotes) || 0),
+    downvotes: Math.max(0, parseInt(votes.downvotes) || 0)
+  }
 }
