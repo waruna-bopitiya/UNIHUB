@@ -8,7 +8,7 @@ async function init() {
   await sql`CREATE TABLE IF NOT EXISTS posts (
     id SERIAL PRIMARY KEY,
     author_name VARCHAR(255) NOT NULL DEFAULT 'Student',
-    author_avatar VARCHAR(10) NOT NULL DEFAULT 'S',
+    author_avatar VARCHAR(500) NOT NULL DEFAULT 'S',
     author_role VARCHAR(255) NOT NULL DEFAULT 'Student',
     content TEXT NOT NULL,
     category VARCHAR(100) NOT NULL DEFAULT 'General',

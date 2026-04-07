@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
+import { AppLayout } from "@/components/layout/app-layout"
 import AnswerCard from "@/components/qna/AnswerCard"
 
 export default function QuestionDetailPage() {
@@ -21,6 +22,8 @@ export default function QuestionDetailPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string | null>(null)
+  const [isVoting, setIsVoting] = useState(false)
+  const [userVote, setUserVote] = useState<"up" | "down" | null>(null)
 
   // Check if user is logged in
   useEffect(() => {
@@ -41,7 +44,10 @@ export default function QuestionDetailPage() {
       
       try {
         setLoading(true)
-        const response = await fetch(`/api/qna/questions`)
+        const queryParams = new URLSearchParams()
+        if (userId) queryParams.append('userId', userId)
+        
+        const response = await fetch(`/api/qna/questions?${queryParams.toString()}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch questions')
@@ -51,7 +57,17 @@ export default function QuestionDetailPage() {
         const foundQuestion = allQuestions.find((q: any) => q.id === params.id || q.id.toString() === params.id)
         
         if (foundQuestion) {
-          setQuestion(foundQuestion)
+          // Sanitize votes
+          const sanitized = {
+            ...foundQuestion,
+            upvotes: Math.max(0, parseInt(foundQuestion.upvotes) || 0),
+            downvotes: Math.max(0, parseInt(foundQuestion.downvotes) || 0)
+          }
+          setQuestion(sanitized)
+          // Set user's current vote if exists
+          if (sanitized.userVote) {
+            setUserVote(sanitized.userVote === 'upvote' ? 'up' : 'down')
+          }
           setError(null)
         } else {
           setQuestion(null)
@@ -68,7 +84,7 @@ export default function QuestionDetailPage() {
     }
 
     fetchQuestion()
-  }, [params.id])
+  }, [params.id, userId])
 
   // Fetch answers for the question
   useEffect(() => {
@@ -77,7 +93,10 @@ export default function QuestionDetailPage() {
       
       try {
         setAnswersLoading(true)
-        const response = await fetch(`/api/qna/answers?questionId=${params.id}`)
+        const queryParams = new URLSearchParams({ questionId: params.id })
+        if (userId) queryParams.append('userId', userId)
+        
+        const response = await fetch(`/api/qna/answers?${queryParams.toString()}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch answers')
@@ -94,11 +113,61 @@ export default function QuestionDetailPage() {
     }
 
     fetchAnswers()
-  }, [params.id])
+  }, [params.id, userId])
 
-  const handleVote = (type: "up" | "down") => {
-    // TODO: API call to vote
-    console.log("Vote:", type)
+  const handleVote = async (type: "up" | "down") => {
+    if (!isLoggedIn) {
+      toast.error("Please sign in to vote")
+      return
+    }
+
+    if (!question || !userId) return
+
+    setIsVoting(true)
+    try {
+      const response = await fetch('/api/qna/votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: parseInt(question.id),
+          userId,
+          voteType: type === 'up' ? 'upvote' : 'downvote'
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Vote failed')
+      }
+
+      // Update question with new vote counts
+      const upvotes = Math.max(0, parseInt(data.upvotes) || 0)
+      const downvotes = Math.max(0, parseInt(data.downvotes) || 0)
+      
+      setQuestion({
+        ...question,
+        upvotes,
+        downvotes
+      })
+
+      // Update user's vote state
+      if (data.status === 'removed') {
+        setUserVote(null)
+        toast.success(`Your ${type === 'up' ? 'upvote' : 'downvote'} has been removed`)
+      } else if (data.status === 'created') {
+        setUserVote(type)
+        toast.success(`Your ${type === 'up' ? 'upvote' : 'downvote'} has been saved`)
+      } else if (data.status === 'updated') {
+        setUserVote(type)
+        toast.success(`Changed to ${type === 'up' ? 'upvote' : 'downvote'}`)
+      }
+    } catch (error) {
+      console.error('❌ Vote error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to vote. Please try again.')
+    } finally {
+      setIsVoting(false)
+    }
   }
 
   const handlePostAnswer = async () => {
@@ -180,69 +249,114 @@ export default function QuestionDetailPage() {
 
   if (loading) {
     return (
-      <div className="container max-w-3xl mx-auto py-6 px-4">
-        <Link 
-          href="/qna"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to questions
-        </Link>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading question...</p>
+      <AppLayout>
+        <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <Link 
+              href="/qna"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to questions
+            </Link>
+            
+            {/* Loading skeleton */}
+            <div className="border border-border rounded-lg bg-card p-6 animate-pulse">
+              <div className="flex gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 bg-muted rounded" />
+                  <div className="w-6 h-4 bg-muted rounded" />
+                  <div className="w-6 h-6 bg-muted rounded" />
+                </div>
+                <div className="flex-1">
+                  <div className="h-8 bg-muted rounded mb-4 w-3/4" />
+                  <div className="h-4 bg-muted rounded mb-2 w-full" />
+                  <div className="h-4 bg-muted rounded mb-6 w-5/6" />
+                  <div className="h-20 bg-muted rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   if (!question || error) {
     return (
-      <div className="container max-w-3xl mx-auto py-6 px-4">
-        <Link 
-          href="/qna"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to questions
-        </Link>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">{error || 'Question not found'}</p>
+      <AppLayout>
+        <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <Link 
+              href="/qna"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to questions
+            </Link>
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">{error || 'Question not found'}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     )
   }
 
   return (
-    <div className="container max-w-3xl mx-auto py-6 px-4">
-      {/* Back button */}
-      <Link 
-        href="/qna"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to questions
-      </Link>
+    <AppLayout>
+      <div className="w-full py-6 px-4 md:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Back button */}
+          <Link 
+            href="/qna"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to questions
+          </Link>
 
-      {/* Question */}
-      <div className="border border-border rounded-lg bg-card p-6">
-        <div className="flex gap-4">
-          {/* Vote buttons */}
-          <div className="flex flex-col items-center gap-1">
+          {/* Question */}
+          <div className="border border-border rounded-lg bg-card p-6">
+            <div className="flex gap-4">
+              {/* Vote buttons */}
+              <div className="flex flex-col items-center gap-1">
             <button 
               onClick={() => handleVote("up")}
-              className="hover:text-primary transition-colors"
+              disabled={isVoting}
+              className={`transition-colors rounded-md p-1 ${
+                userVote === "up" 
+                  ? "text-primary bg-primary/10" 
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+              } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <ArrowBigUp className="w-6 h-6" />
             </button>
-            <span className="text-lg font-medium">
-              {netQuestionVotes}
+            <span className={`text-lg font-medium ${Math.max(0, netQuestionVotes) > 0 ? 'text-primary' : Math.max(0, netQuestionVotes) < 0 ? 'text-destructive' : ''}`}>
+              {Math.max(0, netQuestionVotes)}
             </span>
             <button 
               onClick={() => handleVote("down")}
-              className="hover:text-destructive transition-colors"
+              disabled={isVoting}
+              className={`transition-colors rounded-md p-1 ${
+                userVote === "down" 
+                  ? "text-destructive bg-destructive/10" 
+                  : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <ArrowBigDown className="w-6 h-6" />
             </button>
+
+            {/* User vote badge */}
+            {userVote && (
+              <div className={`mt-2 px-2 py-0.5 rounded text-xs font-medium text-center transition-all ${
+                userVote === 'up' 
+                  ? 'bg-primary/20 text-primary border border-primary/40' 
+                  : 'bg-destructive/20 text-destructive border border-destructive/40'
+              }`}>
+                {userVote === 'up' ? 'You ⬆️' : 'You ⬇️'}
+              </div>
+            )}
           </div>
 
           {/* Question content */}
@@ -347,6 +461,8 @@ export default function QuestionDetailPage() {
           )}
         </div>
       </div>
-    </div>
+        </div>
+      </div>
+    </AppLayout>
   )
 }

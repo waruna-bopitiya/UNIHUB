@@ -1,9 +1,10 @@
 'use client'
 
-import { Search, Bell, User, Menu, LogOut } from 'lucide-react'
+import { Search, User, Menu, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import {
   Dialog,
   DialogContent,
@@ -260,10 +261,7 @@ export function TopBar({ onMenuClick }: TopBarProps) {
           <div className="flex items-center gap-3">
             {/* Notifications - only show if logged in */}
             {isLoggedIn && (
-              <button className="relative p-2 text-foreground hover:bg-secondary rounded-lg transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full"></span>
-              </button>
+              <NotificationBell />
             )}
 
             {/* Login/Signup Buttons - show if NOT logged in */}

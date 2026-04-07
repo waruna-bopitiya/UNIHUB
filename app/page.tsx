@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useCallback } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { CreatePost } from '@/components/feed/create-post'
 import { PostCard } from '@/components/feed/post-card'
@@ -21,6 +21,7 @@ interface Post {
   stream_video_id: string | null
   stream_title: string | null
   created_at: string
+  user_liked?: number
 }
 
 interface OnlineUser {
@@ -59,21 +60,25 @@ export default function Home() {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
   const [onlineUsersSearch, setOnlineUsersSearch] = useState('')
 
-  // Get real-time status based on last_login and logouttime
+  // Get real-time status based on last_login and logouttime (Facebook-style)
+  // User is ONLINE if they haven't logged out, or if they logged in after logging out
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
     if (!lastLogin) return 'away'
     
-    // If no logout time, user is still online
+    const lastLoginTime = new Date(lastLogin).getTime()
+    
+    // If no logout time, user is still online (logged in and never logged out)
     if (!logoutTime) return 'online'
     
-    // Compare timestamps - whichever is more recent determines status
-    const lastLoginTime = new Date(lastLogin).getTime()
     const logoutTimeStamp = new Date(logoutTime).getTime()
     
-    // If last_login is after logouttime, user is online
-    if (lastLoginTime > logoutTimeStamp) return 'online'
+    // If last login is after logout, user logged back in - they're online
+    // This is real-time like Facebook: once logged in, stay online until logout
+    if (lastLoginTime > logoutTimeStamp) {
+      return 'online'
+    }
     
-    // If logouttime is after or equal to last_login, user is away
+    // If logout is after login, user is away
     return 'away'
   }
 
@@ -103,9 +108,25 @@ export default function Home() {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch('/api/posts')
-      if (res.ok) setPosts(await res.json())
-    } catch {}
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      
+      const res = await fetch(`/api/posts?${params.toString()}`)
+      if (res.ok) {
+        const postsData = await res.json()
+        console.log(`📝 Posts loaded: ${postsData.length} posts | userId: ${userId || 'none'}`)
+        
+        // Verify data quality
+        postsData.forEach((post: any, idx: number) => {
+          console.log(`Post ${idx + 1}: likes=${post.likes_count}, user_liked=${post.user_liked}`)
+        })
+        
+        setPosts(postsData)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching posts:', error)
+    }
     setLoading(false)
   }
 
@@ -178,12 +199,22 @@ export default function Home() {
   const fetchQuestions = async () => {
     try {
       setQuestionsLoading(true)
-      const res = await fetch('/api/qna/questions')
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      
+      const res = await fetch(`/api/qna/questions?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
-        console.log('Fetched questions:', data)
-        setAllQuestions(data)
-        setFilteredQuestions(data)
+        // Sanitize data - ensure votes are never negative
+        const sanitizedData = data.map((q: any) => ({
+          ...q,
+          upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+          downvotes: Math.max(0, parseInt(q.downvotes) || 0)
+        }))
+        console.log('Fetched questions:', sanitizedData)
+        setAllQuestions(sanitizedData)
+        setFilteredQuestions(sanitizedData)
       } else {
         console.error('Failed to fetch questions')
         setAllQuestions([])
@@ -197,6 +228,52 @@ export default function Home() {
       setQuestionsLoading(false)
     }
   }
+
+  const refreshFilteredQuestions = useCallback(async (filter: string) => {
+    try {
+      setQuestionsLoading(true)
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      
+      const res = await fetch(`/api/qna/questions?${params.toString()}`)
+      if (res.ok) {
+        const rawData = await res.json()
+        // Sanitize data - ensure votes are never negative
+        const data = rawData.map((q: any) => ({
+          ...q,
+          upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+          downvotes: Math.max(0, parseInt(q.downvotes) || 0)
+        }))
+        console.log(`📊 Fetching ${filter} questions:`, data)
+        let filtered = [...data]
+        
+        if (filter === "unanswered") {
+          filtered = filtered.filter(q => q.answers === 0)
+        } else if (filter === "trending") {
+          filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+        } else {
+          // Recent - sort by newest first
+          filtered = [...filtered].sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime()
+            const dateB = new Date(b.createdAt).getTime()
+            return dateB - dateA
+          })
+        }
+        
+        setAllQuestions(data)
+        setFilteredQuestions(filtered)
+      } else {
+        console.error('Failed to fetch questions')
+        setFilteredQuestions([])
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error)
+      setFilteredQuestions([])
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }, [])
 
   const fetchYears = async () => {
     try {
@@ -272,27 +349,10 @@ export default function Home() {
     }
   }, [selectedYear, selectedSemester])
 
-  // Filter questions based on selected filter
+  // Auto-refresh when filter changes
   useEffect(() => {
-    // Note: Real questions don't have these calculated fields yet
-    // In the future, we can add upvotes/downvotes to the questions table
-    let filtered = [...allQuestions]
-    
-    if (filterType === "unanswered") {
-      filtered = filtered.filter(q => q.answers === 0)
-    } else if (filterType === "trending") {
-      filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
-    } else {
-      // Recent - sort by newest first
-      filtered = [...filtered].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime()
-        const dateB = new Date(b.createdAt).getTime()
-        return dateB - dateA
-      })
-    }
-    
-    setFilteredQuestions(filtered)
-  }, [filterType, allQuestions])
+    refreshFilteredQuestions(filterType)
+  }, [filterType, refreshFilteredQuestions])
 
   const handlePostCreated = (newPost: Post) => {
     setPosts(prev => [newPost, ...prev])
@@ -486,7 +546,7 @@ export default function Home() {
             {activeTab === "feed" ? (
               /* FEED TAB - Real Feed Data */
               <>
-                <CreatePost onPostCreated={handlePostCreated} />
+                <CreatePost onPostCreated={handlePostCreated} currentUser={currentUser || undefined} />
 
                 <div>
                   <h2 className="text-lg font-semibold text-foreground mb-4">Latest in Your Network</h2>
@@ -531,6 +591,8 @@ export default function Home() {
                       shares={post.shares_count}
                       streamVideoId={post.stream_video_id ?? undefined}
                       streamTitle={post.stream_title ?? undefined}
+                      userId={currentUser?.id}
+                      userLiked={Boolean(post.user_liked)}
                     />
                   ))}
                 </div>
@@ -593,7 +655,31 @@ export default function Home() {
 
                 {/* Questions List - Filtered */}
                 <div className="space-y-4">
-                  {filteredQuestions.length === 0 ? (
+                  {questionsLoading ? (
+                    // Loading skeleton
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-card border border-border rounded-lg p-4 animate-pulse">
+                          <div className="flex gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-6 h-6 bg-muted rounded" />
+                              <div className="w-6 h-4 bg-muted rounded" />
+                              <div className="w-6 h-6 bg-muted rounded" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="h-5 bg-muted rounded mb-2 w-3/4" />
+                              <div className="h-3 bg-muted rounded mb-2 w-full" />
+                              <div className="h-3 bg-muted rounded w-5/6" />
+                              <div className="flex gap-2 mt-3">
+                                <div className="h-3 bg-muted rounded w-20" />
+                                <div className="h-3 bg-muted rounded w-20" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredQuestions.length === 0 ? (
                     <div className="text-center py-12 bg-card border border-border rounded-lg">
                       <p className="text-muted-foreground">
                         {filterType === "unanswered" 

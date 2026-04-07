@@ -74,6 +74,41 @@ export default function CreateLiveStreamPage() {
   const [postContent, setPostContent] = useState('');
   const [postCategory, setPostCategory] = useState('Live Stream');
   const [postLoading, setPostLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar: string } | null>(null);
+
+  // Fetch current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userId = localStorage.getItem('studentId');
+        const email = localStorage.getItem('email');
+        
+        console.log('📍 Fetching current user - userId:', userId, 'email:', email);
+        
+        if (!userId && !email) {
+          console.warn('⚠️ No user ID or email in localStorage');
+          return;
+        }
+
+        const params = new URLSearchParams();
+        if (userId) params.append('userId', userId);
+        if (email) params.append('email', email);
+
+        const res = await fetch(`/api/user/me?${params.toString()}`);
+        if (res.ok) {
+          const user = await res.json();
+          console.log('✅ Current user fetched:', user);
+          setCurrentUser(user);
+        } else {
+          console.warn('❌ Failed to fetch current user:', res.status);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching current user:', error);
+      }
+    };
+    
+    fetchCurrentUser();
+  }, []);
 
   // Sync camera stream → video element
   useEffect(() => {
@@ -185,7 +220,7 @@ export default function CreateLiveStreamPage() {
       setStreamInfo(info);
 
       // Save stream to DB
-      await fetch('/api/live/streams', {
+      const dbRes = await fetch('/api/live/streams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,11 +236,21 @@ export default function CreateLiveStreamPage() {
           scheduled_start_time: new Date(formData.scheduledStartTime).toISOString(),
         }),
       });
+      
+      if (!dbRes.ok) {
+        console.error('Failed to save stream to DB');
+      }
 
       setPhase('streaming');
-      setPostContent(`🎓 Watch my live class: "${formData.title}"\n\n${formData.description}\n\n📚 ${academicData.module_name} | Year ${academicData.year} · Sem ${academicData.semester}`);
+      const generatedPostContent = `🎓 Watch my live class: "${formData.title}"\n\n${formData.description}\n\n📚 ${academicData.module_name} | Year ${academicData.year} · Sem ${academicData.semester}`;
+      setPostContent(generatedPostContent);
+      console.log('📝 Post content set:', generatedPostContent);
+      console.log('🎥 Stream info:', info);
+      console.log('👤 Current user:', currentUser);
       setShowPostModal(true);
+      console.log('✅ Post modal should now be visible');
     } catch (err: any) {
+      console.error('❌ Stream creation error:', err);
       setCreateError(err.message);
     } finally {
       setLoading(false);
@@ -336,22 +381,48 @@ export default function CreateLiveStreamPage() {
     if (!postContent.trim()) return;
     setPostLoading(true);
     try {
-      await fetch('/api/posts', {
+      const postData = {
+        author_name: currentUser?.name || 'Student',
+        author_avatar: currentUser?.avatar || 'S',
+        author_role: 'Student',
+        content: postContent,
+        category: postCategory,
+        stream_video_id: streamInfo.videoId,
+        stream_title: formData.title,
+      };
+      
+      console.log('📤 Sharing post with data:', postData);
+      
+      const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          author_name: 'You',
-          author_avatar: 'Y',
-          author_role: 'Student',
-          content: postContent,
-          category: postCategory,
-          stream_video_id: streamInfo.videoId,
-          stream_title: formData.title,
-        }),
+        body: JSON.stringify(postData),
       });
+      
+      let responseData;
+      const contentType = res.headers.get('content-type');
+      
+      if (contentType?.includes('application/json')) {
+        responseData = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('❌ Received non-JSON response:', text);
+        responseData = { error: 'Invalid response from server' };
+      }
+      
+      if (!res.ok) {
+        console.error('❌ Post share failed:', responseData);
+        alert(`Failed to share post: ${responseData.error || 'Unknown error'}`);
+        return;
+      }
+      
+      console.log('✅ Post shared successfully:', responseData);
       setShowPostModal(false);
+      setPostContent('');
+      alert('✅ Post shared to feed successfully!');
     } catch (err: any) {
-      console.error('Post share error', err);
+      console.error('❌ Post share error:', err);
+      alert(`Error sharing post: ${err.message}`);
     } finally {
       setPostLoading(false);
     }

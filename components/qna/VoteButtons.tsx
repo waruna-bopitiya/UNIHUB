@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { ArrowBigUp, ArrowBigDown } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface VoteButtonsProps {
   questionId: string
@@ -25,7 +25,6 @@ export default function VoteButtons({
   orientation = "vertical",
   initialVote = null
 }: VoteButtonsProps) {
-  const { toast } = useToast()
   const [vote, setVote] = useState<"up" | "down" | null>(initialVote)
   const [currentUpvotes, setCurrentUpvotes] = useState(upvotes)
   const [currentDownvotes, setCurrentDownvotes] = useState(downvotes)
@@ -36,11 +35,7 @@ export default function VoteButtons({
   const handleVote = async (type: "up" | "down") => {
     const userId = localStorage.getItem('studentId')
     if (!userId) {
-      toast({
-        title: "Not Logged In",
-        description: "Please log in to vote",
-        variant: "destructive"
-      })
+      toast.error("Please log in to vote")
       return
     }
 
@@ -65,43 +60,31 @@ export default function VoteButtons({
         throw new Error(data.error || 'Vote failed')
       }
 
-      // Simple approach: trust the server response for the correct counts
-      setCurrentUpvotes(data.upvotes || currentUpvotes)
-      setCurrentDownvotes(data.downvotes || currentDownvotes)
+      // Ensure votes are never negative - strict protection
+      const upvotes = Math.max(0, parseInt(data.upvotes) || 0)
+      const downvotes = Math.max(0, parseInt(data.downvotes) || 0)
+      
+      console.log('✅ Protected votes:', { upvotes, downvotes })
+      setCurrentUpvotes(upvotes)
+      setCurrentDownvotes(downvotes)
       
       // Update user's vote type and show confirmation message
       if (data.status === 'removed') {
         setVote(null)
-        toast({
-          title: "✅ Vote Removed",
-          description: `Your ${type === 'up' ? 'upvote' : 'downvote'} has been removed`,
-          variant: "default"
-        })
+        toast.success(`Your ${type === 'up' ? 'upvote' : 'downvote'} has been removed`)
       } else if (data.status === 'created') {
         setVote(type)
-        toast({
-          title: "✅ Vote Recorded",
-          description: `Your ${type === 'up' ? 'upvote' : 'downvote'} has been saved`,
-          variant: "default"
-        })
+        toast.success(`Your ${type === 'up' ? 'upvote' : 'downvote'} has been saved`)
       } else if (data.status === 'updated') {
         setVote(type)
-        toast({
-          title: "✅ Vote Changed",
-          description: `Changed to ${type === 'up' ? 'upvote' : 'downvote'}`,
-          variant: "default"
-        })
+        toast.success(`Changed to ${type === 'up' ? 'upvote' : 'downvote'}`)
       }
       
       onVote?.(type)
       onVoteComplete?.()
     } catch (error) {
       console.error('❌ Vote error:', error)
-      toast({
-        title: "❌ Vote Failed",
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: "destructive"
-      })
+      toast.error(error instanceof Error ? error.message : 'Failed to vote. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -113,7 +96,6 @@ export default function VoteButtons({
     md: { icon: "w-5 h-5", text: "text-sm", button: "p-1" },
     lg: { icon: "w-6 h-6", text: "text-lg", button: "p-1.5" }
   }
-
   const sizes = sizeClasses[size]
 
   // Orientation classes
@@ -139,27 +121,45 @@ export default function VoteButtons({
     return ""
   }
 
+  // Ensure votes are always non-negative for display
+  const displayUpvotes = Math.max(0, currentUpvotes)
+  const displayDownvotes = Math.max(0, currentDownvotes)
+  const displayNetVotes = displayUpvotes - displayDownvotes
+
   return (
     <div className={orientationClasses[orientation]}>
       <button
         onClick={() => handleVote("up")}
-        className={`rounded-md transition-all duration-200 ${getUpvoteClass()} ${sizes.button}`}
+        disabled={isLoading}
+        className={`rounded-md transition-all duration-200 ${getUpvoteClass()} ${sizes.button} ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         aria-label="Upvote"
       >
         <ArrowBigUp className={sizes.icon} />
       </button>
       
       <span className={`font-medium ${sizes.text} ${getVoteTextClass()}`}>
-        {netVotes}
+        {Math.max(0, displayNetVotes)}
       </span>
       
       <button
         onClick={() => handleVote("down")}
-        className={`rounded-md transition-all duration-200 ${getDownvoteClass()} ${sizes.button}`}
+        disabled={isLoading}
+        className={`rounded-md transition-all duration-200 ${getDownvoteClass()} ${sizes.button} ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         aria-label="Downvote"
       >
         <ArrowBigDown className={sizes.icon} />
       </button>
+
+      {/* User Vote Badge - Shows what the current user voted */}
+      {vote && (
+        <div className={`mt-1 px-2 py-0.5 rounded text-xs font-medium w-full text-center transition-all ${
+          vote === 'up' 
+            ? 'bg-primary/20 text-primary border border-primary/40' 
+            : 'bg-destructive/20 text-destructive border border-destructive/40'
+        }`}>
+          {vote === 'up' ? 'You ⬆️' : 'You ⬇️'}
+        </div>
+      )}
     </div>
   )
 }

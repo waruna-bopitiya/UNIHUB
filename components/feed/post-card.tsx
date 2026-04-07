@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio, Maximize, Check } from 'lucide-react'
+import { Comments } from './comments'
+import { useToast } from '@/hooks/use-toast'
 
 interface PostCardProps {
   id: string
@@ -18,6 +20,8 @@ interface PostCardProps {
   shares: number
   streamVideoId?: string
   streamTitle?: string
+  userId?: string
+  userLiked?: boolean
 }
 
 export function PostCard({
@@ -27,30 +31,116 @@ export function PostCard({
   content,
   category,
   likes: initialLikes,
-  comments,
+  comments: initialComments,
   shares,
   streamVideoId,
   streamTitle,
+  userId,
+  userLiked: initialUserLiked = false,
 }: PostCardProps) {
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(initialLikes)
+  // Ensure initial values are correct types
+  const normalizedInitialLikes = Math.max(0, Number(initialLikes) || 0)
+  const normalizedInitialComments = Math.max(0, Number(initialComments) || 0)
+  const normalizedInitialLiked = Boolean(initialUserLiked)
+  
+  const [liked, setLiked] = useState(normalizedInitialLiked)
+  const [likeCount, setLikeCount] = useState(normalizedInitialLikes)
+  const [commentCount, setCommentCount] = useState(normalizedInitialComments)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [shareClicked, setShareClicked] = useState(false)
+  const { toast } = useToast()
+
+  // වීඩියෝ කන්ටේනරය සඳහා Reference එක (Full Screen කිරීම සඳහා)
+  const videoContainerRef = useRef<HTMLDivElement>(null)
 
   const handleLike = async () => {
+    if (!userId) {
+      alert('Please log in to like posts')
+      return
+    }
+
     const action = liked ? 'unlike' : 'like'
-    setLiked(!liked)
-    setLikeCount(prev => liked ? prev - 1 : prev + 1)
+    
+    // Optimistic update
+    const newLiked = !liked
+    const newCount = newLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
+    
+    setLiked(newLiked)
+    setLikeCount(newCount)
+    
+    console.log(`👆 Like clicked: action=${action}, userId=${userId}, postId=${id}`)
+    
     try {
       const res = await fetch(`/api/posts/${id}/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, userId }),
       })
+      
       if (res.ok) {
         const data = await res.json()
-        setLikeCount(data.likes_count)
+        console.log(`✅ Like response:`, data)
+        
+        // Use server response as source of truth
+        setLikeCount(Math.max(0, Number(data.likes_count) || 0))
+        setLiked(Boolean(data.user_liked))
+      } else {
+        // Revert on error
+        console.error('❌ Like failed:', res.status)
+        setLiked(liked)
+        setLikeCount(likeCount)
       }
-    } catch {}
+    } catch (error) {
+      // Revert on error
+      console.error('❌ Like error:', error)
+      setLiked(liked)
+      setLikeCount(likeCount)
+    }
+  }
+
+  const handleCommentAdded = () => {
+    setCommentCount(prev => prev + 1)
+    console.log(`💬 Comment added, new count: ${commentCount + 1}`)
+  }
+
+  const handleShare = async () => {
+    const shareLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/community?post=${id}`
+    
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      console.log(`✅ Link copied to clipboard: ${shareLink}`)
+      
+      setShareClicked(true)
+      toast({
+        title: '✅ Link copied!',
+        description: shareLink,
+        duration: 3000,
+      })
+      
+      // Reset button state after 2 seconds
+      setTimeout(() => setShareClicked(false), 2000)
+    } catch (error) {
+      console.error('❌ Failed to copy link:', error)
+      toast({
+        title: '❌ Failed to copy',
+        description: 'Could not copy link to clipboard',
+        duration: 3000,
+      })
+    }
+  }
+
+  // Full Screen කිරීමේ Function එක
+  const toggleFullScreen = async () => {
+    if (!document.fullscreenElement) {
+      if (videoContainerRef.current?.requestFullscreen) {
+        await videoContainerRef.current.requestFullscreen()
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      }
+    }
   }
 
   return (
@@ -84,7 +174,8 @@ export function PostCard({
       {/* Stream Embed */}
       {streamVideoId && (
         <div 
-          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative" 
+          ref={videoContainerRef} // Ref එක මෙතනට ලබා දී ඇත
+          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative group/video" 
           style={{ aspectRatio: '16/9' }}
         >
           {!isPlaying ? (
@@ -110,21 +201,34 @@ export function PostCard({
           ) : (
             // ඔයාගේ අදහසට අනුව සකසන ලද ක්‍රමය
             <div className="absolute inset-0 overflow-hidden bg-black">
-              <iframe
-                /* w-[300%] h-[300%] මගින් iframe එක අතිවිශාල කරයි.
-                  top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 මගින් එය හරියටම මැදට ගනී.
-                  scale-[0.35] මගින් නැවත කුඩා කර කන්ටේනරයට සරිලන සේ (105% ක් පමණ) සකසයි.
-                  එවිට කුඩා වූ බටන්ස් අයිනෙන් පිටතට යයි! 
-                */
-                className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-auto"
-                src={`https://www.youtube.com/embed/${streamVideoId}?autoplay=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1`}
-                title={streamTitle ?? 'Live stream'}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+              
+              {/* Crop Effect Wrapper: උඩින් සහ යටින් වීඩියෝව crop කිරීමට */}
+              <div className="absolute top-[5%] bottom-[5%] left-0 right-0 overflow-hidden">
+                <iframe
+                  className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-auto"
+                  src={`https://www.youtube.com/embed/${streamVideoId}?autoplay=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1`}
+                  title={streamTitle ?? 'Live stream'}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+
+              {/* MASKING LAYERS (යූටියුබ් පාලකයන් වසා දැමීමට) */}
+              <div className="absolute top-0 left-0 right-0 h-[10%] bg-black z-10"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-black z-10"></div>
+
               {/* Overlay - යූටියුබ් එකට redirect වීම වැළැක්වීමට */}
-              <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto"></div>
+              <div className="absolute inset-0 z-20 bg-transparent pointer-events-auto"></div>
+
+              {/* Custom Full Screen බොත්තම (Overlay එකට උඩින් z-30 ලෙස ඇත) */}
+              <button 
+                onClick={toggleFullScreen}
+                className="absolute bottom-4 right-4 z-30 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover/video:opacity-100"
+                title="Full Screen"
+              >
+                <Maximize className="w-5 h-5" />
+              </button>
             </div>
           )}
         </div>
@@ -136,7 +240,7 @@ export function PostCard({
       {/* Interaction Stats */}
       <div className="flex items-center justify-between text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
         <span>{likeCount} likes</span>
-        <span>{comments} comments · {shares} shares</span>
+        <span>{commentCount} comments · {shares} shares</span>
       </div>
 
       {/* Interaction Buttons */}
@@ -152,15 +256,32 @@ export function PostCard({
           <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
           <span>Like</span>
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors">
+        <button 
+          onClick={() => setShowComments(!showComments)}
+          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
+        >
           <MessageCircle className="w-5 h-5" />
           <span>Comment</span>
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors">
-          <Share2 className="w-5 h-5" />
-          <span>Share</span>
+        <button 
+          onClick={handleShare}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${
+            shareClicked
+              ? 'text-green-600 bg-green-50'
+              : 'text-muted-foreground hover:bg-secondary'
+          }`}
+        >
+          {shareClicked ? (
+            <Check className="w-5 h-5" />
+          ) : (
+            <Share2 className="w-5 h-5" />
+          )}
+          <span>{shareClicked ? 'Copied!' : 'Share'}</span>
         </button>
       </div>
+
+      {/* Comments Section */}
+      {showComments && <Comments postId={id} currentUserId={userId} onCommentAdded={handleCommentAdded} />}
     </div>
   )
 }

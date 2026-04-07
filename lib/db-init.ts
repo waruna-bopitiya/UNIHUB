@@ -1,13 +1,15 @@
 import { sql } from './db'
 
 let initialized = false
+let initializationStarted = false
 
 export async function ensureTablesExist() {
-  if (initialized) {
-    console.log('✅ Database tables already initialized')
+  // If already initialized or in progress, skip silently
+  if (initialized || initializationStarted) {
     return
   }
 
+  initializationStarted = true
   console.log('🔧 Initializing database tables...')
 
   await sql`
@@ -70,7 +72,7 @@ export async function ensureTablesExist() {
     CREATE TABLE IF NOT EXISTS posts (
       id            SERIAL PRIMARY KEY,
       author_name   VARCHAR(255)  NOT NULL DEFAULT 'Student',
-      author_avatar VARCHAR(10)   NOT NULL DEFAULT 'S',
+      author_avatar VARCHAR(500)  NOT NULL DEFAULT 'S',
       author_role   VARCHAR(255)  NOT NULL DEFAULT 'Student',
       content       TEXT          NOT NULL,
       category      VARCHAR(100)  NOT NULL DEFAULT 'General',
@@ -82,6 +84,35 @@ export async function ensureTablesExist() {
       created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
     )
   `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS post_likes (
+      id              SERIAL PRIMARY KEY,
+      post_id         INTEGER       NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      user_id         VARCHAR(50)   NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      UNIQUE(post_id, user_id)
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_likes_user_id ON post_likes(user_id)`
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS post_comments (
+      id              SERIAL PRIMARY KEY,
+      post_id         INTEGER       NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      user_id         VARCHAR(50)   NOT NULL,
+      user_name       VARCHAR(255)  NOT NULL,
+      user_avatar     VARCHAR(500)  NOT NULL DEFAULT 'S',
+      content         TEXT          NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_comments_user_id ON post_comments(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_comments_created_at ON post_comments(created_at DESC)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS live_streams (
@@ -190,31 +221,6 @@ export async function ensureTablesExist() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `
-
-  // Migration: Add upvotes and downvotes columns if they don't exist
-  try {
-    await sql`
-      ALTER TABLE questions
-      ADD COLUMN IF NOT EXISTS upvotes INTEGER NOT NULL DEFAULT 0 CHECK (upvotes >= 0)
-    `
-    console.log('✅ upvotes column added to questions table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('⚠️ Could not add upvotes column:', error.message)
-    }
-  }
-
-  try {
-    await sql`
-      ALTER TABLE questions
-      ADD COLUMN IF NOT EXISTS downvotes INTEGER NOT NULL DEFAULT 0 CHECK (downvotes >= 0)
-    `
-    console.log('✅ downvotes column added to questions table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('⚠️ Could not add downvotes column:', error.message)
-    }
-  }
 
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_subject_code ON questions(subject_code)`
@@ -332,6 +338,7 @@ export async function ensureTablesExist() {
       user_id         VARCHAR(50)   NOT NULL,
       chat_name       VARCHAR(255)  NOT NULL,
       participant_name VARCHAR(255) NOT NULL,
+      participant_id  VARCHAR(50),
       avatar          VARCHAR(10)   NOT NULL DEFAULT 'U',
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -354,30 +361,6 @@ export async function ensureTablesExist() {
   `
 
   // Chat table indexes
-  // Migration: Add is_read column to chat_messages if it doesn't exist
-  try {
-    await sql`
-      ALTER TABLE chat_messages
-      ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false
-    `
-    console.log('✅ is_read column added to chat_messages table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('⚠️ Could not add is_read column:', error.message)
-    }
-  }
-  // Migration: Add participant_id column to chats table
-  try {
-    await sql`
-      ALTER TABLE chats
-      ADD COLUMN IF NOT EXISTS participant_id VARCHAR(50)
-    `
-    console.log('✅ participant_id column added to chats table')
-  } catch (error: any) {
-    if (!error.message.includes('already exists')) {
-      console.warn('Could not add participant_id column:', error.message)
-    }
-  }
   await sql`CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chats_created_at ON chats(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id ON chat_messages(chat_id)`
@@ -396,5 +379,41 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_quiz_ratings_quiz_id ON quiz_ratings(quiz_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_quiz_ratings_created_at ON quiz_ratings(created_at DESC)`
 
+  // Notifications table
+  await sql`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id              SERIAL PRIMARY KEY,
+      user_id         VARCHAR(50)   NOT NULL,
+      type            VARCHAR(50)   NOT NULL DEFAULT 'live_stream_reminder',
+      title           VARCHAR(500)  NOT NULL,
+      message         TEXT          NOT NULL,
+      related_stream_id INTEGER REFERENCES live_streams(id) ON DELETE CASCADE,
+      is_read         BOOLEAN       NOT NULL DEFAULT false,
+      read_at         TIMESTAMPTZ,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_notifications_stream_id ON notifications(related_stream_id)`
+
+  // Notification status tracking for 15-minute reminders
+  await sql`
+    CREATE TABLE IF NOT EXISTS live_stream_notification_status (
+      id              SERIAL PRIMARY KEY,
+      stream_id       INTEGER       NOT NULL UNIQUE,
+      reminder_sent   BOOLEAN       NOT NULL DEFAULT false,
+      reminder_sent_at TIMESTAMPTZ,
+      FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_stream_notification_status_stream_id ON live_stream_notification_status(stream_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_stream_notification_status_reminder_sent ON live_stream_notification_status(reminder_sent)`
+
   initialized = true
+  console.log('✅ Database tables initialized successfully')
 }

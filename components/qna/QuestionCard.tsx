@@ -23,6 +23,7 @@ interface QuestionCardProps {
     categoryName: string
     createdAt: string | Date
     user_id?: string
+    userVote?: string | null  // 'upvote', 'downvote', or null
   }
   onVoteComplete?: () => void
   onDelete?: () => void
@@ -105,6 +106,7 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
           onVoteComplete={onVoteComplete}
           size="md"
           orientation="vertical"
+          initialVote={question.userVote === 'upvote' ? 'up' : question.userVote === 'downvote' ? 'down' : null}
         />
 
         {/* Question content */}
