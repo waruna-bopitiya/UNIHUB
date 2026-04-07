@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio, Maximize } from 'lucide-react'
+import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio, Maximize, Check } from 'lucide-react'
 import { Comments } from './comments'
+import { useToast } from '@/hooks/use-toast'
 
 interface PostCardProps {
   id: string
@@ -39,12 +40,16 @@ export function PostCard({
 }: PostCardProps) {
   // Ensure initial values are correct types
   const normalizedInitialLikes = Math.max(0, Number(initialLikes) || 0)
+  const normalizedInitialComments = Math.max(0, Number(initialComments) || 0)
   const normalizedInitialLiked = Boolean(initialUserLiked)
   
   const [liked, setLiked] = useState(normalizedInitialLiked)
   const [likeCount, setLikeCount] = useState(normalizedInitialLikes)
+  const [commentCount, setCommentCount] = useState(normalizedInitialComments)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const [shareClicked, setShareClicked] = useState(false)
+  const { toast } = useToast()
 
   // වීඩියෝ කන්ටේනරය සඳහා Reference එක (Full Screen කිරීම සඳහා)
   const videoContainerRef = useRef<HTMLDivElement>(null)
@@ -91,6 +96,37 @@ export function PostCard({
       console.error('❌ Like error:', error)
       setLiked(liked)
       setLikeCount(likeCount)
+    }
+  }
+
+  const handleCommentAdded = () => {
+    setCommentCount(prev => prev + 1)
+    console.log(`💬 Comment added, new count: ${commentCount + 1}`)
+  }
+
+  const handleShare = async () => {
+    const shareLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/community?post=${id}`
+    
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      console.log(`✅ Link copied to clipboard: ${shareLink}`)
+      
+      setShareClicked(true)
+      toast({
+        title: '✅ Link copied!',
+        description: shareLink,
+        duration: 3000,
+      })
+      
+      // Reset button state after 2 seconds
+      setTimeout(() => setShareClicked(false), 2000)
+    } catch (error) {
+      console.error('❌ Failed to copy link:', error)
+      toast({
+        title: '❌ Failed to copy',
+        description: 'Could not copy link to clipboard',
+        duration: 3000,
+      })
     }
   }
 
@@ -204,7 +240,7 @@ export function PostCard({
       {/* Interaction Stats */}
       <div className="flex items-center justify-between text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
         <span>{likeCount} likes</span>
-        <span>{initialComments} comments · {shares} shares</span>
+        <span>{commentCount} comments · {shares} shares</span>
       </div>
 
       {/* Interaction Buttons */}
@@ -227,14 +263,25 @@ export function PostCard({
           <MessageCircle className="w-5 h-5" />
           <span>Comment</span>
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors">
-          <Share2 className="w-5 h-5" />
-          <span>Share</span>
+        <button 
+          onClick={handleShare}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${
+            shareClicked
+              ? 'text-green-600 bg-green-50'
+              : 'text-muted-foreground hover:bg-secondary'
+          }`}
+        >
+          {shareClicked ? (
+            <Check className="w-5 h-5" />
+          ) : (
+            <Share2 className="w-5 h-5" />
+          )}
+          <span>{shareClicked ? 'Copied!' : 'Share'}</span>
         </button>
       </div>
 
       {/* Comments Section */}
-      {showComments && <Comments postId={id} currentUserId={userId} />}
+      {showComments && <Comments postId={id} currentUserId={userId} onCommentAdded={handleCommentAdded} />}
     </div>
   )
 }

@@ -23,7 +23,7 @@ export async function DELETE(
 
     // Verify comment exists and belongs to user
     const [comment] = await sql`
-      SELECT id, user_id FROM post_comments WHERE id = ${id}
+      SELECT id, user_id, post_id FROM post_comments WHERE id = ${id}
     `
 
     if (!comment) {
@@ -39,6 +39,9 @@ export async function DELETE(
 
     // Delete the comment
     await sql`DELETE FROM post_comments WHERE id = ${id}`
+
+    // Decrement comment count in posts table
+    await sql`UPDATE posts SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = ${comment.post_id}`
 
     console.log(`🗑️ Comment ${id} deleted by user ${userId}`)
 

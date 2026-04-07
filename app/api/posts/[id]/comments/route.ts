@@ -80,6 +80,9 @@ export async function POST(
       RETURNING *
     `
 
+    // Increment comment count in posts table
+    await sql`UPDATE posts SET comments_count = comments_count + 1 WHERE id = ${id}`
+
     console.log(`💬 Comment added by ${userName} on post ${id}`)
 
     return NextResponse.json(comment, { status: 201 })
