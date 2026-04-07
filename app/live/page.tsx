@@ -200,14 +200,40 @@ export default function LivePage() {
   )
 
   const upcomingStreams = useMemo(
-    () =>
-      streams
-        .filter((stream) => stream.status !== 'live')
+    () => {
+      const now = new Date().getTime()
+      return streams
+        .filter((stream) => {
+          if (stream.status === 'live') return false
+          if (!stream.scheduled_start_time) return false
+          const scheduledTime = new Date(stream.scheduled_start_time).getTime()
+          return scheduledTime > now
+        })
         .sort((a, b) => {
           const aTime = a.scheduled_start_time ? new Date(a.scheduled_start_time).getTime() : Number.MAX_SAFE_INTEGER
           const bTime = b.scheduled_start_time ? new Date(b.scheduled_start_time).getTime() : Number.MAX_SAFE_INTEGER
           return aTime - bTime
-        }),
+        })
+    },
+    [streams]
+  )
+
+  const previousStreams = useMemo(
+    () => {
+      const now = new Date().getTime()
+      return streams
+        .filter((stream) => {
+          if (stream.status === 'live') return false
+          if (!stream.scheduled_start_time) return false
+          const scheduledTime = new Date(stream.scheduled_start_time).getTime()
+          return scheduledTime <= now
+        })
+        .sort((a, b) => {
+          const aTime = a.scheduled_start_time ? new Date(a.scheduled_start_time).getTime() : 0
+          const bTime = b.scheduled_start_time ? new Date(b.scheduled_start_time).getTime() : 0
+          return bTime - aTime
+        })
+    },
     [streams]
   )
 
@@ -267,6 +293,7 @@ export default function LivePage() {
   }, [featuredStream?.id])
 
   const sessionList = upcomingStreams.length > 0 ? upcomingStreams : []
+  const previousSessionList = previousStreams.length > 0 ? previousStreams : []
 
   return (
     <AppLayout>
@@ -396,6 +423,51 @@ export default function LivePage() {
           ) : (
             <div className="rounded-lg border border-border bg-card p-6 text-muted-foreground">
               No upcoming live sessions have been scheduled yet.
+            </div>
+          )}
+        </div>
+
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-foreground mb-6">Previous Live Sessions</h2>
+          {previousSessionList.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {previousSessionList.map((session) => (
+                <div
+                  key={session.id}
+                  className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow opacity-75"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-foreground">{session.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {session.module_name ?? 'Previous session'}
+                      </p>
+                    </div>
+                    <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      Previous
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 border-t border-border pt-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      {formatScheduledTime(session.scheduled_start_time)}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="w-4 h-4" />
+                      Session completed
+                    </div>
+                  </div>
+
+                  <button className="w-full mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium">
+                    Watch Replay
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border bg-card p-6 text-muted-foreground">
+              No previous live sessions.
             </div>
           )}
         </div>
