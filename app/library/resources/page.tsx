@@ -914,7 +914,7 @@ export default function ResourcesPage() {
                   size="sm"
                   className="text-sm h-8"
                 >
-                  � View Feedback
+                   View Feedback
                 </Button>
               </div>
             </div>
@@ -931,36 +931,36 @@ export default function ResourcesPage() {
               <p className="text-muted-foreground text-lg">No resources found. Try adjusting your filters.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-hidden">
               {filtered.map((res) => {
                 const stat = feedbackStats[res.id] || { feedback_count: 0, average_rating: 0 };
                 const avg = stat.average_rating || 0;
                 const isOwner = currentUserId === res.uploader_id;
 
                 return (
-                  <div key={res.id} className="border rounded-xl p-6 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow">
-                    <div>
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-lg line-clamp-2">{res.name}</h3>
-                        <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded whitespace-nowrap ml-2">
+                  <div key={res.id} className="border rounded-xl p-6 bg-card flex flex-col justify-between h-full shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-lg line-clamp-2 flex-1">{res.name}</h3>
+                        <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded whitespace-nowrap flex-shrink-0">
                           {res.resource_type}
                         </span>
                       </div>
                       
-                      <div className="text-sm text-muted-foreground mb-3">
-                        <div>Year: {res.year} | Sem: {res.semester}</div>
-                        <div>{res.module_name}</div>
-                        <div className="text-xs mt-1">By: {res.uploader_name || 'Anonymous'}</div>
+                      <div className="text-sm text-muted-foreground mb-3 overflow-hidden">
+                        <div className="truncate">Year: {res.year} | Sem: {res.semester}</div>
+                        <div className="truncate">{res.module_name}</div>
+                        <div className="text-xs mt-1 truncate">By: {res.uploader_name || 'Anonymous'}</div>
                       </div>
 
                       {res.description && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{res.description}</p>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2 overflow-hidden">{res.description}</p>
                       )}
 
                       {/* Rating Section */}
-                      <div className="mb-3">
+                      <div className="mb-3 overflow-hidden">
                         <div className="flex items-center gap-2 mb-1">
-                          <div className="flex gap-0.5">
+                          <div className="flex gap-0.5 flex-shrink-0">
                             {[...Array(5)].map((_, i) => (
                               <Star
                                 key={i}
@@ -969,18 +969,18 @@ export default function ResourcesPage() {
                               />
                             ))}
                           </div>
-                          <span className="text-xs font-semibold">{avg.toFixed(1)}</span>
+                          <span className="text-xs font-semibold flex-shrink-0">{avg.toFixed(1)}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">{stat.feedback_count} reviews</span>
+                        <span className="text-xs text-muted-foreground truncate">{stat.feedback_count} reviews</span>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 mt-4 pt-4 border-t">
+                    <div className="flex gap-2 mt-4 pt-4 border-t flex-wrap">
                       <Button
                         onClick={() => handleOpenLink(res.shareableLink, res.name)}
                         size="sm"
-                        className="flex-1 gap-2"
+                        className="flex-1 gap-2 min-w-0"
                       >
                         <ExternalLink size={16} />
                         Open
@@ -989,9 +989,9 @@ export default function ResourcesPage() {
                         onClick={() => setSelectedResource(res)}
                         size="sm"
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 min-w-0"
                       >
-                        💬 Feedback
+                        Feedback
                       </Button>
                       {isOwner && (
                         <Button
@@ -999,7 +999,7 @@ export default function ResourcesPage() {
                           size="sm"
                           variant="destructive"
                           disabled={deleting === res.id}
-                          className="gap-1"
+                          className="gap-1 flex-shrink-0"
                         >
                           <Trash2 size={16} />
                         </Button>
