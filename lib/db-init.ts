@@ -497,5 +497,22 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_stream_notification_status_stream_id ON live_stream_notification_status(stream_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_stream_notification_status_reminder_sent ON live_stream_notification_status(reminder_sent)`
 
+  // Table for tracking user reminders on live streams
+  await sql`
+    CREATE TABLE IF NOT EXISTS live_stream_reminders (
+      id              SERIAL PRIMARY KEY,
+      user_id         VARCHAR(50)   NOT NULL,
+      stream_id       INTEGER       NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      UNIQUE(user_id, stream_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (stream_id) REFERENCES live_streams(id) ON DELETE CASCADE
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_live_stream_reminders_user_id ON live_stream_reminders(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_live_stream_reminders_stream_id ON live_stream_reminders(stream_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_live_stream_reminders_created_at ON live_stream_reminders(created_at DESC)`
+
   initialized = true
 }

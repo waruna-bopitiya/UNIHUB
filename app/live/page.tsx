@@ -6,6 +6,8 @@ import { AlertCircle, Clock, Eye, Loader2, Play, Radio, Share2, Users, Edit2, Tr
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { ChatPanel } from '@/components/live/chat-panel'
+import { SetReminder } from '@/components/live/set-reminder'
+import { WatchReplay } from '@/components/live/watch-replay'
 
 interface LiveStream {
   id: number
@@ -425,25 +427,39 @@ export default function LivePage() {
             <MainStreamPlayer stream={featuredStream} />
 
             {featuredStream && (
-              <div className="mt-4 flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-2xl font-bold text-foreground">{featuredStream.title}</h3>
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <p className="text-muted-foreground font-medium">
-                      {featuredStream.module_name ?? 'Live session'}
-                    </p>
-                    <span className="flex items-center gap-1 text-red-500 text-sm font-semibold">
-                      <Eye className="w-4 h-4" />
-                      {featuredStream.status === 'live'
-                        ? 'Live now'
-                        : formatScheduledTime(featuredStream.scheduled_start_time)}
-                    </span>
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground">{featuredStream.title}</h3>
+                    <div className="flex items-center gap-4 mt-2 flex-wrap">
+                      <p className="text-muted-foreground font-medium">
+                        {featuredStream.module_name ?? 'Live session'}
+                      </p>
+                      <span className="flex items-center gap-1 text-red-500 text-sm font-semibold">
+                        <Eye className="w-4 h-4" />
+                        {featuredStream.status === 'live'
+                          ? 'Live now'
+                          : formatScheduledTime(featuredStream.scheduled_start_time)}
+                      </span>
+                    </div>
                   </div>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity">
+                    <Share2 className="w-4 h-4" />
+                    Share
+                  </button>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity">
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </button>
+                
+                {featuredStream.status !== 'live' && (
+                  <div>
+                    <SetReminder
+                      streamId={featuredStream.id}
+                      streamTitle={featuredStream.title}
+                      size="md"
+                      variant="outline"
+                      showLabel={true}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -517,9 +533,14 @@ export default function LivePage() {
                     </div>
                   </div>
 
-                  <button className="w-full mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium">
-                    Set Reminder
-                  </button>
+                  <SetReminder
+                    streamId={session.id}
+                    streamTitle={session.title}
+                    size="md"
+                    variant="outline"
+                    showLabel={true}
+                    className="w-full"
+                  />
                 </div>
               ))}
             </div>
@@ -562,9 +583,15 @@ export default function LivePage() {
                     </div>
                   </div>
 
-                  <button className="w-full mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium">
-                    Watch Replay
-                  </button>
+                  <WatchReplay
+                    streamId={session.id}
+                    postId={session.post_id}
+                    streamTitle={session.title}
+                    size="md"
+                    variant="secondary"
+                    showLabel={true}
+                    className="w-full mt-4"
+                  />
                 </div>
               ))}
             </div>
