@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio, Maximize } from 'lucide-react'
 import { Comments } from './comments'
 
 interface PostCardProps {
@@ -45,6 +45,9 @@ export function PostCard({
   const [likeCount, setLikeCount] = useState(normalizedInitialLikes)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showComments, setShowComments] = useState(false)
+
+  // වීඩියෝ කන්ටේනරය සඳහා Reference එක (Full Screen කිරීම සඳහා)
+  const videoContainerRef = useRef<HTMLDivElement>(null)
 
   const handleLike = async () => {
     if (!userId) {
@@ -91,6 +94,19 @@ export function PostCard({
     }
   }
 
+  // Full Screen කිරීමේ Function එක
+  const toggleFullScreen = async () => {
+    if (!document.fullscreenElement) {
+      if (videoContainerRef.current?.requestFullscreen) {
+        await videoContainerRef.current.requestFullscreen()
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      }
+    }
+  }
+
   return (
     <div className="bg-card border border-border rounded-lg p-6 mb-4">
       {/* Header */}
@@ -122,7 +138,8 @@ export function PostCard({
       {/* Stream Embed */}
       {streamVideoId && (
         <div 
-          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative" 
+          ref={videoContainerRef} // Ref එක මෙතනට ලබා දී ඇත
+          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative group/video" 
           style={{ aspectRatio: '16/9' }}
         >
           {!isPlaying ? (
@@ -148,21 +165,34 @@ export function PostCard({
           ) : (
             // ඔයාගේ අදහසට අනුව සකසන ලද ක්‍රමය
             <div className="absolute inset-0 overflow-hidden bg-black">
-              <iframe
-                /* w-[300%] h-[300%] මගින් iframe එක අතිවිශාල කරයි.
-                  top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 මගින් එය හරියටම මැදට ගනී.
-                  scale-[0.35] මගින් නැවත කුඩා කර කන්ටේනරයට සරිලන සේ (105% ක් පමණ) සකසයි.
-                  එවිට කුඩා වූ බටන්ස් අයිනෙන් පිටතට යයි! 
-                */
-                className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-auto"
-                src={`https://www.youtube.com/embed/${streamVideoId}?autoplay=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1`}
-                title={streamTitle ?? 'Live stream'}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+              
+              {/* Crop Effect Wrapper: උඩින් සහ යටින් වීඩියෝව crop කිරීමට */}
+              <div className="absolute top-[5%] bottom-[5%] left-0 right-0 overflow-hidden">
+                <iframe
+                  className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-auto"
+                  src={`https://www.youtube.com/embed/${streamVideoId}?autoplay=1&controls=0&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&disablekb=1`}
+                  title={streamTitle ?? 'Live stream'}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+
+              {/* MASKING LAYERS (යූටියුබ් පාලකයන් වසා දැමීමට) */}
+              <div className="absolute top-0 left-0 right-0 h-[10%] bg-black z-10"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-black z-10"></div>
+
               {/* Overlay - යූටියුබ් එකට redirect වීම වැළැක්වීමට */}
-              <div className="absolute inset-0 z-10 bg-transparent pointer-events-auto"></div>
+              <div className="absolute inset-0 z-20 bg-transparent pointer-events-auto"></div>
+
+              {/* Custom Full Screen බොත්තම (Overlay එකට උඩින් z-30 ලෙස ඇත) */}
+              <button 
+                onClick={toggleFullScreen}
+                className="absolute bottom-4 right-4 z-30 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover/video:opacity-100"
+                title="Full Screen"
+              >
+                <Maximize className="w-5 h-5" />
+              </button>
             </div>
           )}
         </div>
