@@ -65,7 +65,7 @@ export async function ensureTablesExist() {
     CREATE TABLE IF NOT EXISTS posts (
       id            SERIAL PRIMARY KEY,
       author_name   VARCHAR(255)  NOT NULL DEFAULT 'Student',
-      author_avatar VARCHAR(10)   NOT NULL DEFAULT 'S',
+      author_avatar VARCHAR(500)  NOT NULL DEFAULT 'S',
       author_role   VARCHAR(255)  NOT NULL DEFAULT 'Student',
       content       TEXT          NOT NULL,
       category      VARCHAR(100)  NOT NULL DEFAULT 'General',
@@ -77,6 +77,35 @@ export async function ensureTablesExist() {
       created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
     )
   `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS post_likes (
+      id              SERIAL PRIMARY KEY,
+      post_id         INTEGER       NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      user_id         VARCHAR(50)   NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      UNIQUE(post_id, user_id)
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_likes_user_id ON post_likes(user_id)`
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS post_comments (
+      id              SERIAL PRIMARY KEY,
+      post_id         INTEGER       NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      user_id         VARCHAR(50)   NOT NULL,
+      user_name       VARCHAR(255)  NOT NULL,
+      user_avatar     VARCHAR(500)  NOT NULL DEFAULT 'S',
+      content         TEXT          NOT NULL,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_comments_user_id ON post_comments(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_post_comments_created_at ON post_comments(created_at DESC)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS live_streams (

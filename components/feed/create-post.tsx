@@ -5,9 +5,14 @@ import { Send, Image, FileText, Loader2 } from 'lucide-react'
 
 interface CreatePostProps {
   onPostCreated?: (post: any) => void
+  currentUser?: {
+    id: string
+    name: string
+    avatar: string
+  }
 }
 
-export function CreatePost({ onPostCreated }: CreatePostProps) {
+export function CreatePost({ onPostCreated, currentUser }: CreatePostProps) {
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,8 +28,8 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          author_name: 'You',
-          author_avatar: 'Y',
+          author_name: currentUser?.name || 'Student',
+          author_avatar: currentUser?.avatar || 'S',
           author_role: 'Student',
           content: content.trim(),
           category: category || 'General',
@@ -50,7 +55,7 @@ export function CreatePost({ onPostCreated }: CreatePostProps) {
       {/* User Profile Section */}
       <div className="flex gap-4 mb-4">
         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-card-foreground font-bold">
-          Y
+          {currentUser?.avatar || 'S'}
         </div>
         <div className="flex-1">
           <textarea

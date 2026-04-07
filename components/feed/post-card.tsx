@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio } from 'lucide-react'
+import { Comments } from './comments'
 
 interface PostCardProps {
   id: string
@@ -18,6 +19,8 @@ interface PostCardProps {
   shares: number
   streamVideoId?: string
   streamTitle?: string
+  userId?: string
+  userLiked?: boolean
 }
 
 export function PostCard({
@@ -27,30 +30,65 @@ export function PostCard({
   content,
   category,
   likes: initialLikes,
-  comments,
+  comments: initialComments,
   shares,
   streamVideoId,
   streamTitle,
+  userId,
+  userLiked: initialUserLiked = false,
 }: PostCardProps) {
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(initialLikes)
+  // Ensure initial values are correct types
+  const normalizedInitialLikes = Math.max(0, Number(initialLikes) || 0)
+  const normalizedInitialLiked = Boolean(initialUserLiked)
+  
+  const [liked, setLiked] = useState(normalizedInitialLiked)
+  const [likeCount, setLikeCount] = useState(normalizedInitialLikes)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showComments, setShowComments] = useState(false)
 
   const handleLike = async () => {
+    if (!userId) {
+      alert('Please log in to like posts')
+      return
+    }
+
     const action = liked ? 'unlike' : 'like'
-    setLiked(!liked)
-    setLikeCount(prev => liked ? prev - 1 : prev + 1)
+    
+    // Optimistic update
+    const newLiked = !liked
+    const newCount = newLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
+    
+    setLiked(newLiked)
+    setLikeCount(newCount)
+    
+    console.log(`👆 Like clicked: action=${action}, userId=${userId}, postId=${id}`)
+    
     try {
       const res = await fetch(`/api/posts/${id}/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, userId }),
       })
+      
       if (res.ok) {
         const data = await res.json()
-        setLikeCount(data.likes_count)
+        console.log(`✅ Like response:`, data)
+        
+        // Use server response as source of truth
+        setLikeCount(Math.max(0, Number(data.likes_count) || 0))
+        setLiked(Boolean(data.user_liked))
+      } else {
+        // Revert on error
+        console.error('❌ Like failed:', res.status)
+        setLiked(liked)
+        setLikeCount(likeCount)
       }
-    } catch {}
+    } catch (error) {
+      // Revert on error
+      console.error('❌ Like error:', error)
+      setLiked(liked)
+      setLikeCount(likeCount)
+    }
   }
 
   return (
@@ -136,7 +174,7 @@ export function PostCard({
       {/* Interaction Stats */}
       <div className="flex items-center justify-between text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
         <span>{likeCount} likes</span>
-        <span>{comments} comments · {shares} shares</span>
+        <span>{initialComments} comments · {shares} shares</span>
       </div>
 
       {/* Interaction Buttons */}
@@ -152,7 +190,10 @@ export function PostCard({
           <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
           <span>Like</span>
         </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors">
+        <button 
+          onClick={() => setShowComments(!showComments)}
+          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors"
+        >
           <MessageCircle className="w-5 h-5" />
           <span>Comment</span>
         </button>
@@ -161,6 +202,9 @@ export function PostCard({
           <span>Share</span>
         </button>
       </div>
+
+      {/* Comments Section */}
+      {showComments && <Comments postId={id} currentUserId={userId} />}
     </div>
   )
 }

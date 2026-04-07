@@ -21,6 +21,7 @@ interface Post {
   stream_video_id: string | null
   stream_title: string | null
   created_at: string
+  user_liked?: number
 }
 
 interface OnlineUser {
@@ -102,9 +103,25 @@ export default function Home() {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch('/api/posts')
-      if (res.ok) setPosts(await res.json())
-    } catch {}
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      
+      const res = await fetch(`/api/posts?${params.toString()}`)
+      if (res.ok) {
+        const postsData = await res.json()
+        console.log(`📝 Posts loaded: ${postsData.length} posts | userId: ${userId || 'none'}`)
+        
+        // Verify data quality
+        postsData.forEach((post: any, idx: number) => {
+          console.log(`Post ${idx + 1}: likes=${post.likes_count}, user_liked=${post.user_liked}`)
+        })
+        
+        setPosts(postsData)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching posts:', error)
+    }
     setLoading(false)
   }
 
@@ -477,7 +494,7 @@ export default function Home() {
             {activeTab === "feed" ? (
               /* FEED TAB - Real Feed Data */
               <>
-                <CreatePost onPostCreated={handlePostCreated} />
+                <CreatePost onPostCreated={handlePostCreated} currentUser={currentUser || undefined} />
 
                 <div>
                   <h2 className="text-lg font-semibold text-foreground mb-4">Latest in Your Network</h2>
@@ -522,6 +539,8 @@ export default function Home() {
                       shares={post.shares_count}
                       streamVideoId={post.stream_video_id ?? undefined}
                       streamTitle={post.stream_title ?? undefined}
+                      userId={currentUser?.id}
+                      userLiked={Boolean(post.user_liked)}
                     />
                   ))}
                 </div>
