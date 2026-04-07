@@ -3,7 +3,7 @@
 import QuestionCard from "@/components/qna/QuestionCard"
 import Link from "next/link"
 import { PlusCircle, ArrowLeft } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 interface Question {
   id: string
@@ -20,10 +20,12 @@ interface Question {
   downvotes: number
   answers: number
   createdAt: Date
+  userVote?: string | null
 }
 
 export default function QnaPage() {
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState("1")
@@ -31,6 +33,7 @@ export default function QnaPage() {
   const [subjects, setSubjects] = useState<any[]>([])
   const [selectedSubject, setSelectedSubject] = useState("")
   const [loadingSubjects, setLoadingSubjects] = useState(false)
+  const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
 
   // Fetch subjects when year or semester changes
   useEffect(() => {
@@ -56,27 +59,56 @@ export default function QnaPage() {
     fetchSubjects()
   }, [selectedYear, selectedSemester])
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = async (applyFilter: string = "recent") => {
     try {
       setLoading(true)
-      let url = '/api/qna/questions'
-      if (selectedSubject) {
-        url += `?subjectCode=${selectedSubject}`
-      }
-      const response = await fetch(url)
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      
+      if (userId) params.append('userId', userId)
+      if (selectedSubject) params.append('subjectCode', selectedSubject)
+      
+      const response = await fetch(`/api/qna/questions?${params.toString()}`)
       
       if (!response.ok) {
         throw new Error('Failed to fetch questions')
       }
 
-      const questions = await response.json()
+      const rawQuestions = await response.json()
+      
+      // Sanitize data - ensure votes are never negative
+      const questions = rawQuestions.map((q: any) => ({
+        ...q,
+        upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+        downvotes: Math.max(0, parseInt(q.downvotes) || 0)
+      }))
+      
       setAllQuestions(questions)
+      
+      // Apply filter
+      let filtered = [...questions]
+      
+      if (applyFilter === "unanswered") {
+        filtered = filtered.filter(q => q.answers === 0)
+      } else if (applyFilter === "trending") {
+        filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+      } else {
+        // Recent - sort by newest first
+        filtered = [...filtered].sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime()
+          const dateB = new Date(b.createdAt).getTime()
+          return dateB - dateA
+        })
+      }
+      
+      setFilteredQuestions(filtered)
       setError(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load questions'
       console.error('Error fetching questions:', errorMessage)
       setError(errorMessage)
       setAllQuestions([])
+      setFilteredQuestions([])
     } finally {
       setLoading(false)
     }
@@ -84,12 +116,72 @@ export default function QnaPage() {
 
   const handleVoteComplete = () => {
     // Refresh questions to get updated vote counts
-    fetchQuestions()
+    fetchQuestions(filterType)
   }
 
-  useEffect(() => {
-    fetchQuestions()
+  const refreshFilteredQuestions = useCallback(async (filter: string) => {
+    try {
+      setLoading(true)
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      
+      if (userId) params.append('userId', userId)
+      if (selectedSubject) params.append('subjectCode', selectedSubject)
+      
+      const response = await fetch(`/api/qna/questions?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch questions')
+      }
+
+      const rawQuestions = await response.json()
+      
+      // Sanitize data - ensure votes are never negative
+      const questions = rawQuestions.map((q: any) => ({
+        ...q,
+        upvotes: Math.max(0, parseInt(q.upvotes) || 0),
+        downvotes: Math.max(0, parseInt(q.downvotes) || 0)
+      }))
+      
+      setAllQuestions(questions)
+      
+      // Apply filter
+      let filtered = [...questions]
+      
+      if (filter === "unanswered") {
+        filtered = filtered.filter(q => q.answers === 0)
+      } else if (filter === "trending") {
+        filtered = [...filtered].sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes))
+      } else {
+        // Recent - sort by newest first
+        filtered = [...filtered].sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime()
+          const dateB = new Date(b.createdAt).getTime()
+          return dateB - dateA
+        })
+      }
+      
+      setFilteredQuestions(filtered)
+      setError(null)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load questions'
+      console.error('Error fetching questions:', errorMessage)
+      setError(errorMessage)
+      setFilteredQuestions([])
+    } finally {
+      setLoading(false)
+    }
   }, [selectedSubject])
+
+  // Fetch questions when subject changes
+  useEffect(() => {
+    fetchQuestions(filterType)
+  }, [selectedSubject])
+
+  // Auto-refresh when filter changes
+  useEffect(() => {
+    refreshFilteredQuestions(filterType)
+  }, [filterType, refreshFilteredQuestions])
 
   return (
     <div className="w-full py-6 px-4 md:px-6 lg:px-8">
@@ -174,25 +266,83 @@ export default function QnaPage() {
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex gap-4 border-b border-border mb-4">
+        <button
+          onClick={() => setFilterType("recent")}
+          className={`pb-2 px-1 transition-colors ${
+            filterType === "recent" 
+              ? "border-b-2 border-primary text-primary font-medium" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Recent
+        </button>
+        <button
+          onClick={() => setFilterType("unanswered")}
+          className={`pb-2 px-1 transition-colors ${
+            filterType === "unanswered" 
+              ? "border-b-2 border-primary text-primary font-medium" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Unanswered
+        </button>
+        <button
+          onClick={() => setFilterType("trending")}
+          className={`pb-2 px-1 transition-colors ${
+            filterType === "trending" 
+              ? "border-b-2 border-primary text-primary font-medium" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Trending
+        </button>
+      </div>
+
       {/* Questions list */}
       <div className="space-y-4">
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading questions...</p>
+          // Loading skeleton
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-card border border-border rounded-lg p-4 animate-pulse">
+                <div className="flex gap-4">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 bg-muted rounded" />
+                    <div className="w-6 h-4 bg-muted rounded" />
+                    <div className="w-6 h-6 bg-muted rounded" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-5 bg-muted rounded mb-2 w-3/4" />
+                    <div className="h-3 bg-muted rounded mb-2 w-full" />
+                    <div className="h-3 bg-muted rounded w-5/6" />
+                    <div className="flex gap-2 mt-3">
+                      <div className="h-3 bg-muted rounded w-20" />
+                      <div className="h-3 bg-muted rounded w-20" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="bg-destructive/10 border border-destructive rounded-lg p-4">
             <p className="text-destructive">Error: {error}</p>
           </div>
-        ) : allQuestions.length === 0 ? (
+        ) : filteredQuestions.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No questions found</p>
+            <p className="text-muted-foreground mb-4">
+              {filterType === "unanswered" 
+                ? "🎉 No unanswered questions! All questions have answers!" 
+                : "No questions found"}
+            </p>
             <p className="text-sm text-muted-foreground">
               Be the first to ask a question!
             </p>
           </div>
         ) : (
-          allQuestions.map((question) => (
+          filteredQuestions.map((question) => (
             <QuestionCard key={question.id} question={question} onVoteComplete={handleVoteComplete} />
           ))
         )}
