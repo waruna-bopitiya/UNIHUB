@@ -178,7 +178,11 @@ export default function Home() {
   const fetchQuestions = async () => {
     try {
       setQuestionsLoading(true)
-      const res = await fetch('/api/qna/questions')
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      
+      const res = await fetch(`/api/qna/questions?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
         // Sanitize data - ensure votes are never negative
@@ -207,7 +211,11 @@ export default function Home() {
   const refreshFilteredQuestions = useCallback(async (filter: string) => {
     try {
       setQuestionsLoading(true)
-      const res = await fetch('/api/qna/questions')
+      const userId = localStorage.getItem('studentId')
+      const params = new URLSearchParams()
+      if (userId) params.append('userId', userId)
+      
+      const res = await fetch(`/api/qna/questions?${params.toString()}`)
       if (res.ok) {
         const rawData = await res.json()
         // Sanitize data - ensure votes are never negative

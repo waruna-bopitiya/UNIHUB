@@ -149,6 +149,17 @@ export default function VoteButtons({
       >
         <ArrowBigDown className={sizes.icon} />
       </button>
+
+      {/* User Vote Badge - Shows what the current user voted */}
+      {vote && (
+        <div className={`mt-1 px-2 py-0.5 rounded text-xs font-medium w-full text-center transition-all ${
+          vote === 'up' 
+            ? 'bg-primary/20 text-primary border border-primary/40' 
+            : 'bg-destructive/20 text-destructive border border-destructive/40'
+        }`}>
+          {vote === 'up' ? 'You ⬆️' : 'You ⬇️'}
+        </div>
+      )}
     </div>
   )
 }
