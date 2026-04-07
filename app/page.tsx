@@ -60,37 +60,25 @@ export default function Home() {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
   const [onlineUsersSearch, setOnlineUsersSearch] = useState('')
 
-  // Get real-time status based on last_login, logouttime, and current time
+  // Get real-time status based on last_login and logouttime (Facebook-style)
+  // User is ONLINE if they haven't logged out, or if they logged in after logging out
   const getOnlineStatus = (lastLogin: string | null, logoutTime: string | null) => {
     if (!lastLogin) return 'away'
     
     const lastLoginTime = new Date(lastLogin).getTime()
-    const currentTime = Date.now()
     
-    // Check if login time is before current time (user logged in in the past)
-    if (lastLoginTime > currentTime) return 'away'
-    
-    // If no logout time, user is still online (never logged out)
+    // If no logout time, user is still online (logged in and never logged out)
     if (!logoutTime) return 'online'
     
     const logoutTimeStamp = new Date(logoutTime).getTime()
     
-    // If logout time is before login time, user is online (logged out before, but haven't logged out again)
-    // This means the logout was from a previous session
-    if (logoutTimeStamp < lastLoginTime) {
-      // User logged in AFTER they logged out, so they're currently in an active session
-      // Check if session is still active (within 30 minutes of last login)
-      const sessionTimeout = 30 * 60 * 1000 // 30 minutes in milliseconds
-      const timeSinceLogin = currentTime - lastLoginTime
-      
-      if (timeSinceLogin < sessionTimeout) {
-        return 'online'
-      } else {
-        return 'away' // Session expired (more than 30 minutes since login)
-      }
+    // If last login is after logout, user logged back in - they're online
+    // This is real-time like Facebook: once logged in, stay online until logout
+    if (lastLoginTime > logoutTimeStamp) {
+      return 'online'
     }
     
-    // If logout time is after or equal to login time, user is away (logged out after logging in)
+    // If logout is after login, user is away
     return 'away'
   }
 
