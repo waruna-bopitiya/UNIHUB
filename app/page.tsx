@@ -624,7 +624,31 @@ export default function Home() {
 
                 {/* Questions List - Filtered */}
                 <div className="space-y-4">
-                  {filteredQuestions.length === 0 ? (
+                  {questionsLoading ? (
+                    // Loading skeleton
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-card border border-border rounded-lg p-4 animate-pulse">
+                          <div className="flex gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-6 h-6 bg-muted rounded" />
+                              <div className="w-6 h-4 bg-muted rounded" />
+                              <div className="w-6 h-6 bg-muted rounded" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="h-5 bg-muted rounded mb-2 w-3/4" />
+                              <div className="h-3 bg-muted rounded mb-2 w-full" />
+                              <div className="h-3 bg-muted rounded w-5/6" />
+                              <div className="flex gap-2 mt-3">
+                                <div className="h-3 bg-muted rounded w-20" />
+                                <div className="h-3 bg-muted rounded w-20" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredQuestions.length === 0 ? (
                     <div className="text-center py-12 bg-card border border-border rounded-lg">
                       <p className="text-muted-foreground">
                         {filterType === "unanswered" 
