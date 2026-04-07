@@ -41,7 +41,7 @@ export async function PUT(
 
     const { id: streamId } = await params
     const id = Number(streamId)
-    const { creator_id, title, description, year, semester, module_name, scheduled_start_time } = await req.json()
+    const { creator_id, title, description, year, semester, module_name, scheduled_start_time, thumbnail_url } = await req.json()
 
     if (isNaN(id)) {
       return NextResponse.json({ error: 'Invalid stream id' }, { status: 400 })
@@ -52,7 +52,7 @@ export async function PUT(
     }
 
     // Verify stream exists
-    const [existingStream] = await sql`SELECT creator_id FROM live_streams WHERE id = ${id}`
+    const [existingStream] = await sql`SELECT creator_id, post_id FROM live_streams WHERE id = ${id}`
 
     if (!existingStream) {
       return NextResponse.json({ error: 'Stream not found' }, { status: 404 })
@@ -76,6 +76,7 @@ export async function PUT(
         semester = ${semester ?? null},
         module_name = ${module_name ?? null},
         scheduled_start_time = ${scheduled_start_time ?? null},
+        thumbnail_url = ${thumbnail_url ?? null},
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
@@ -112,7 +113,7 @@ export async function DELETE(
     }
 
     // Verify stream exists
-    const [stream] = await sql`SELECT creator_id FROM live_streams WHERE id = ${id}`
+    const [stream] = await sql`SELECT creator_id, post_id FROM live_streams WHERE id = ${id}`
 
     if (!stream) {
       return NextResponse.json({ error: 'Stream not found' }, { status: 404 })
@@ -126,6 +127,15 @@ export async function DELETE(
       )
     }
 
+    // Fetch the stream to get post_id
+    const [fullStream] = await sql`SELECT post_id FROM live_streams WHERE id = ${id}`
+
+    // Delete associated post from feed if exists
+    if (fullStream?.post_id) {
+      await sql`DELETE FROM posts WHERE id = ${fullStream.post_id}`
+      console.log(`🗑️ Deleted associated post ${fullStream.post_id}`)
+    }
+
     // Delete stream
     await sql`DELETE FROM live_streams WHERE id = ${id}`
 
@@ -135,6 +145,47 @@ export async function DELETE(
     console.error('[DELETE /api/live/streams/[id]] Error:', error)
     return NextResponse.json(
       { error: error?.message || 'Failed to delete stream' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await ensureTablesExist()
+
+    const { id: streamId } = await params
+    const id = Number(streamId)
+    const { post_id } = await req.json()
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid stream id' }, { status: 400 })
+    }
+
+    if (post_id === undefined || post_id === null) {
+      return NextResponse.json({ error: 'post_id is required' }, { status: 400 })
+    }
+
+    const [stream] = await sql`
+      UPDATE live_streams
+      SET post_id = ${post_id}
+      WHERE id = ${id}
+      RETURNING *
+    `
+
+    if (!stream) {
+      return NextResponse.json({ error: 'Stream not found' }, { status: 404 })
+    }
+
+    console.log(`🔗 Stream ${id} linked to post ${post_id}`)
+    return NextResponse.json(stream)
+  } catch (error: any) {
+    console.error('[PATCH /api/live/streams/[id]] Error:', error)
+    return NextResponse.json(
+      { error: error?.message || 'Failed to link post to stream' },
       { status: 500 }
     )
   }

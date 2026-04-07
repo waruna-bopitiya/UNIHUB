@@ -64,6 +64,7 @@ export async function ensureTablesExist() {
   await sql`
     CREATE TABLE IF NOT EXISTS posts (
       id            SERIAL PRIMARY KEY,
+      creator_id    VARCHAR(50),
       author_name   VARCHAR(255)  NOT NULL DEFAULT 'Student',
       author_avatar VARCHAR(500)  NOT NULL DEFAULT 'S',
       author_role   VARCHAR(255)  NOT NULL DEFAULT 'Student',
@@ -74,9 +75,58 @@ export async function ensureTablesExist() {
       shares_count  INTEGER       NOT NULL DEFAULT 0,
       stream_video_id VARCHAR(100),
       stream_title  VARCHAR(500),
-      created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      is_private    BOOLEAN       NOT NULL DEFAULT FALSE,
+      created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `
+
+  // Add missing columns if they don't exist (for existing databases)
+  try {
+    await sql`
+      ALTER TABLE posts
+      ADD COLUMN IF NOT EXISTS creator_id VARCHAR(50)
+    `
+    console.log('✅ Added creator_id column to posts')
+  } catch (e: any) {
+    console.log('ℹ️ creator_id column already exists:', e?.message)
+  }
+
+  try {
+    await sql`
+      ALTER TABLE posts
+      ADD COLUMN IF NOT EXISTS is_private BOOLEAN DEFAULT FALSE
+    `
+    console.log('✅ Added is_private column to posts')
+  } catch (e: any) {
+    console.log('ℹ️ is_private column already exists:', e?.message)
+  }
+
+  try {
+    await sql`
+      ALTER TABLE posts
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
+    `
+    console.log('✅ Added updated_at column to posts')
+  } catch (e: any) {
+    console.log('ℹ️ updated_at column already exists:', e?.message)
+  }
+
+  // Add foreign key constraint if it doesn't exist
+  try {
+    await sql`
+      ALTER TABLE posts
+      ADD CONSTRAINT fk_posts_creator_id FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
+    `
+    console.log('✅ Added foreign key constraint to posts')
+  } catch (e: any) {
+    console.log('ℹ️ Foreign key constraint already exists:', e?.message)
+  }
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_posts_creator_id ON posts(creator_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_posts_is_private ON posts(is_private)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS post_likes (
@@ -111,6 +161,7 @@ export async function ensureTablesExist() {
     CREATE TABLE IF NOT EXISTS live_streams (
       id                   SERIAL PRIMARY KEY,
       post_id              INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+      creator_id           VARCHAR(50),
       title                VARCHAR(500)  NOT NULL,
       description          TEXT,
       year                 VARCHAR(50),
@@ -122,9 +173,45 @@ export async function ensureTablesExist() {
       thumbnail_url        TEXT,
       status               VARCHAR(50)   NOT NULL DEFAULT 'scheduled',
       scheduled_start_time TIMESTAMPTZ,
-      created_at           TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      created_at           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `
+
+  // Add missing columns if they don't exist (for existing databases)
+  try {
+    await sql`
+      ALTER TABLE live_streams
+      ADD COLUMN IF NOT EXISTS creator_id VARCHAR(50)
+    `
+    console.log('✅ Added creator_id column to live_streams')
+  } catch (e: any) {
+    console.log('ℹ️ creator_id column already exists or cannot be added:', e?.message)
+  }
+
+  try {
+    await sql`
+      ALTER TABLE live_streams
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
+    `
+    console.log('✅ Added updated_at column to live_streams')
+  } catch (e: any) {
+    console.log('ℹ️ updated_at column already exists or cannot be added:', e?.message)
+  }
+
+  // Add foreign key constraint if it doesn't exist
+  try {
+    await sql`
+      ALTER TABLE live_streams
+      ADD CONSTRAINT fk_live_streams_creator_id FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
+    `
+    console.log('✅ Added foreign key constraint')
+  } catch (e: any) {
+    console.log('ℹ️ Foreign key constraint already exists:', e?.message)
+  }
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_live_streams_creator_id ON live_streams(creator_id)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS live_chat_messages (

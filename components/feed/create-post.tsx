@@ -24,10 +24,12 @@ export function CreatePost({ onPostCreated, currentUser }: CreatePostProps) {
     setLoading(true)
     setError('')
     try {
+      const userId = localStorage.getItem('studentId')
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          creator_id: userId,
           author_name: currentUser?.name || 'Student',
           author_avatar: currentUser?.avatar || 'S',
           author_role: 'Student',

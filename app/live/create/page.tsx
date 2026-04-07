@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout } from '@/components/layout/app-layout';
 import { AcademicSelector, type AcademicData } from '@/components/shared/academic-selector';
 import {
   Settings, Copy, Eye, EyeOff, Radio, Loader2, ImagePlus, X,
   UploadCloud, MonitorPlay, Wifi, WifiOff, RefreshCw, Camera,
   CameraOff, Mic, MicOff, Video, VideoOff, ExternalLink, Send,
-  Play, Square, AlertCircle
+  Play, Square, AlertCircle, Edit3, Trash2, ChevronRight
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ interface StreamInfo {
   streamKey: string;
   streamUrl: string;
   thumbnailUrl: string | null;
+  streamIdInDb?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -36,6 +38,10 @@ function toBase64(file: File): Promise<string> {
 }
 
 export default function CreateLiveStreamPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editStreamId = searchParams.get('id');
+  
   // ── Form state ──────────────────────────────────────────────────────────────
   const [academicData, setAcademicData] = useState<AcademicData>({ year: '', semester: '', module_name: '' });
   const [formData, setFormData] = useState({
@@ -55,6 +61,24 @@ export default function CreateLiveStreamPage() {
   const [streamInfo, setStreamInfo] = useState<StreamInfo>({
     videoId: '', streamKey: '', streamUrl: 'rtmp://a.rtmp.youtube.com/live2', thumbnailUrl: null,
   });
+
+  // ── Edit mode state ──────────────────────────────────────────────────────────
+  const [isEditMode, setIsEditMode] = useState(!!editStreamId);
+  const [editFormVisible, setEditFormVisible] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editSuccess, setEditSuccess] = useState('');
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    year: '',
+    semester: '',
+    module_name: '',
+    scheduled_start_time: '',
+  });
+  const [editThumbnailFile, setEditThumbnailFile] = useState<File | null>(null);
+  const [editThumbnailPreview, setEditThumbnailPreview] = useState<string | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Streaming dashboard state ────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<StreamTab>('browser');
@@ -109,6 +133,49 @@ export default function CreateLiveStreamPage() {
     
     fetchCurrentUser();
   }, []);
+
+  // Load edit stream data if in edit mode
+  useEffect(() => {
+    if (editStreamId) {
+      const loadStreamForEdit = async () => {
+        try {
+          const res = await fetch(`/api/live/streams/${editStreamId}`);
+          if (!res.ok) throw new Error('Failed to load stream');
+          
+          const stream = await res.json();
+          setStreamInfo({
+            videoId: stream.video_id || '',
+            streamKey: stream.stream_key || '',
+            streamUrl: stream.stream_url || 'rtmp://a.rtmp.youtube.com/live2',
+            thumbnailUrl: stream.thumbnail_url || null,
+            streamIdInDb: stream.id,
+          } as any);
+
+          setEditFormData({
+            title: stream.title || '',
+            description: stream.description || '',
+            year: stream.year || '',
+            semester: stream.semester || '',
+            module_name: stream.module_name || '',
+            scheduled_start_time: stream.scheduled_start_time 
+              ? new Date(stream.scheduled_start_time).toISOString().slice(0, 16)
+              : '',
+          });
+
+          if (stream.thumbnail_url) {
+            setEditThumbnailPreview(stream.thumbnail_url);
+          }
+
+          setPhase('streaming');
+          setEditFormVisible(false);
+        } catch (err: any) {
+          console.error('❌ Error loading stream:', err);
+          setEditError(err.message);
+        }
+      };
+      loadStreamForEdit();
+    }
+  }, [editStreamId]);
 
   // Sync camera stream → video element
   useEffect(() => {
@@ -175,6 +242,102 @@ export default function CreateLiveStreamPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // ── Edit handlers ────────────────────────────────────────────────────────────
+  const handleEditThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditThumbnailFile(file);
+    setEditThumbnailPreview(URL.createObjectURL(file));
+  };
+
+  const removeEditThumbnail = () => {
+    setEditThumbnailFile(null);
+    setEditThumbnailPreview(null);
+    if (editFileInputRef.current) editFileInputRef.current.value = '';
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditAcademicChange = (field: keyof AcademicData, value: string) => {
+    setEditFormData(prev => {
+      if (field === 'year') return { ...prev, year: value, semester: '', module_name: '' };
+      if (field === 'semester') return { ...prev, semester: value, module_name: '' };
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const handleSaveStreamEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditLoading(true);
+    setEditError('');
+    setEditSuccess('');
+
+    try {
+      let thumbnailUrl = editThumbnailPreview;
+      if (editThumbnailFile) {
+        const base64 = await toBase64(editThumbnailFile);
+        thumbnailUrl = `data:${editThumbnailFile.type};base64,${base64}`;
+      }
+
+      const updateData: any = {
+        title: editFormData.title,
+        description: editFormData.description,
+        year: editFormData.year,
+        semester: editFormData.semester,
+        module_name: editFormData.module_name,
+        scheduled_start_time: new Date(editFormData.scheduled_start_time).toISOString(),
+      };
+
+      if (thumbnailUrl) {
+        updateData.thumbnail_url = thumbnailUrl;
+      }
+
+      const res = await fetch(`/api/live/streams/${streamInfo.streamIdInDb}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!res.ok) throw new Error('Failed to update stream');
+
+      setEditSuccess('✅ Stream updated successfully!');
+      setEditFormVisible(false);
+      setEditThumbnailFile(null);
+      
+      // Update UI with new data
+      setStreamInfo(prev => ({
+        ...prev,
+        thumbnailUrl: thumbnailUrl || prev.thumbnailUrl,
+      }));
+    } catch (err: any) {
+      setEditError(err.message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteStream = async () => {
+    if (!confirm('Are you sure you want to delete this stream? This action cannot be undone.')) return;
+    
+    setEditLoading(true);
+    try {
+      const res = await fetch(`/api/live/streams/${streamInfo.streamIdInDb}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete stream');
+      
+      alert('✅ Stream deleted successfully');
+      router.push('/live');
+    } catch (err: any) {
+      setEditError(err.message);
+      setEditLoading(false);
+    }
+  };
+
   // ── Stream creation ──────────────────────────────────────────────────────────
   const handleCreateStream = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,6 +387,7 @@ export default function CreateLiveStreamPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          creator_id: currentUser?.id,
           title: formData.title,
           description: formData.description,
           year: academicData.year,
@@ -237,9 +401,18 @@ export default function CreateLiveStreamPage() {
         }),
       });
       
+      let streamIdInDb = null;
       if (!dbRes.ok) {
-        console.error('Failed to save stream to DB');
+        const dbError = await dbRes.json().catch(() => ({ error: 'Failed to save stream to DB' }))
+        console.error('❌ Failed to save stream to DB:', dbError)
+      } else {
+        const dbData = await dbRes.json()
+        streamIdInDb = dbData.id
+        console.log('✅ Stream saved to DB:', dbData)
       }
+
+      // Store streamIdInDb in state for later use
+      setStreamInfo({ ...info, streamIdInDb } as any)
 
       setPhase('streaming');
       const generatedPostContent = `🎓 Watch my live class: "${formData.title}"\n\n${formData.description}\n\n📚 ${academicData.module_name} | Year ${academicData.year} · Sem ${academicData.semester}`;
@@ -381,7 +554,9 @@ export default function CreateLiveStreamPage() {
     if (!postContent.trim()) return;
     setPostLoading(true);
     try {
+      const userId = localStorage.getItem('studentId');
       const postData = {
+        creator_id: userId,
         author_name: currentUser?.name || 'Student',
         author_avatar: currentUser?.avatar || 'S',
         author_role: 'Student',
@@ -415,8 +590,28 @@ export default function CreateLiveStreamPage() {
         alert(`Failed to share post: ${responseData.error || 'Unknown error'}`);
         return;
       }
-      
+
       console.log('✅ Post shared successfully:', responseData);
+
+      // Link post to stream by updating stream's post_id
+      if (responseData.id && streamInfo.streamIdInDb) {
+        try {
+          const linkRes = await fetch(`/api/live/streams/${streamInfo.streamIdInDb}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ post_id: responseData.id }),
+          });
+
+          if (linkRes.ok) {
+            console.log('✅ Linked post to stream');
+          } else {
+            console.warn('⚠️ Failed to link post to stream');
+          }
+        } catch (err) {
+          console.warn('⚠️ Error linking post to stream:', err);
+        }
+      }
+
       setShowPostModal(false);
       setPostContent('');
       alert('✅ Post shared to feed successfully!');
@@ -680,6 +875,23 @@ export default function CreateLiveStreamPage() {
                     )}
                   </div>
 
+                  {/* Stream Key Display for Browser Tab */}
+                  <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Stream Key (for backup)</p>
+                    <div className="flex bg-background rounded-lg border border-input overflow-hidden relative">
+                      <input type={keyVisible ? 'text' : 'password'} readOnly value={streamInfo.streamKey}
+                        className="flex-1 bg-transparent p-3 text-sm text-foreground font-mono outline-none pr-20" />
+                      <button type="button" onClick={() => setKeyVisible(v => !v)}
+                        className="absolute right-12 top-3 text-muted-foreground hover:text-foreground px-2">
+                        {keyVisible ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(streamInfo.streamKey)}
+                        className="px-4 hover:bg-accent text-muted-foreground transition border-l border-border bg-background z-10" title="Copy">
+                        <Copy size={15} />
+                      </button>
+                    </div>
+                  </div>
+
                   <p className="text-xs text-muted-foreground text-center">
                     Browser streaming uses WebRTC (WHIP) — no software install needed.
                     For higher quality, use the{' '}
@@ -752,11 +964,12 @@ export default function CreateLiveStreamPage() {
               )}
             </div>
 
-            {/* Right column — stream info */}
-            <div className="col-span-12 lg:col-span-4">
+            {/* Right column — stream info & edit */}
+            <div className="col-span-12 lg:col-span-4 space-y-4">
+              {/* Stream Info Card */}
               <div className="bg-card border border-border rounded-xl overflow-hidden sticky top-6">
                 {streamInfo.thumbnailUrl ? (
-                  <img src={streamInfo.thumbnailUrl} alt={formData.title} className="w-full aspect-video object-cover" />
+                  <img src={streamInfo.thumbnailUrl} alt={formData.title || editFormData.title} className="w-full aspect-video object-cover" />
                 ) : (
                   <div className="w-full aspect-video bg-muted flex items-center justify-center">
                     <Radio className="w-8 h-8 text-muted-foreground opacity-30" />
@@ -765,9 +978,9 @@ export default function CreateLiveStreamPage() {
 
                 <div className="p-5 space-y-4">
                   <div>
-                    <h3 className="font-semibold text-foreground">{formData.title}</h3>
-                    {formData.description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{formData.description}</p>
+                    <h3 className="font-semibold text-foreground">{isEditMode ? editFormData.title : formData.title}</h3>
+                    {(isEditMode ? editFormData.description : formData.description) && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{isEditMode ? editFormData.description : formData.description}</p>
                     )}
                   </div>
 
@@ -795,13 +1008,105 @@ export default function CreateLiveStreamPage() {
                       className="flex items-center justify-center gap-2 py-2 border border-border rounded-lg text-sm text-foreground hover:bg-muted transition">
                       <Play className="w-4 h-4" /> Watch Page
                     </a>
-                    <button type="button" onClick={() => setShowPostModal(true)}
-                      className="flex items-center justify-center gap-2 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition">
-                      <Send className="w-4 h-4" /> Share in Feed
-                    </button>
+                    {!isEditMode && (
+                      <button type="button" onClick={() => setShowPostModal(true)}
+                        className="flex items-center justify-center gap-2 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition">
+                        <Send className="w-4 h-4" /> Share in Feed
+                      </button>
+                    )}
                   </div>
+
+                  {isEditMode && (
+                    <div className="flex gap-2 pt-2 border-t border-border">
+                      <button type="button" onClick={() => setEditFormVisible(!editFormVisible)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-lg text-sm font-medium transition">
+                        <Edit3 className="w-4 h-4" /> {editFormVisible ? 'Hide' : 'Edit'}
+                      </button>
+                      <button type="button" onClick={handleDeleteStream} disabled={editLoading}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg text-sm font-medium transition disabled:opacity-50">
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Edit Form */}
+              {isEditMode && editFormVisible && (
+                <form onSubmit={handleSaveStreamEdit} className="bg-card border border-border rounded-xl p-5 space-y-4">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <Edit3 className="w-4 h-4" /> Edit Stream Details
+                  </h3>
+
+                  {editError && (
+                    <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                      <AlertCircle className="w-4 h-4 shrink-0" /> {editError}
+                    </div>
+                  )}
+
+                  {editSuccess && (
+                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600 text-sm">
+                      {editSuccess}
+                    </div>
+                  )}
+
+                  {/* Thumbnail */}
+                  <div className="relative bg-black rounded-lg overflow-hidden border-2 border-dashed border-border cursor-pointer group" style={{ aspectRatio: '16/9' }}
+                    onClick={() => !editThumbnailPreview && editFileInputRef.current?.click()}>
+                    {editThumbnailPreview ? (
+                      <>
+                        <img src={editThumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button type="button" onClick={e => { e.stopPropagation(); editFileInputRef.current?.click(); }}
+                            className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-xs">Change</button>
+                          <button type="button" onClick={e => { e.stopPropagation(); removeEditThumbnail(); }}
+                            className="px-3 py-1 bg-red-500/70 hover:bg-red-500 text-white rounded text-xs">Remove</button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                        <ImagePlus className="w-8 h-8 opacity-40" />
+                      </div>
+                    )}
+                    <input ref={editFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleEditThumbnailChange} />
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Title</label>
+                    <input name="title" type="text" maxLength={100} value={editFormData.title} onChange={handleEditFormChange}
+                      className="w-full bg-background border border-input rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Description</label>
+                    <textarea name="description" rows={3} maxLength={1000} value={editFormData.description} onChange={handleEditFormChange}
+                      className="w-full bg-background border border-input rounded-lg p-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
+
+                  {/* Academic Info */}
+                  <AcademicSelector 
+                    values={{ year: editFormData.year, semester: editFormData.semester, module_name: editFormData.module_name }}
+                    onChange={handleEditAcademicChange} 
+                    showErrors={false} 
+                    variant="default" 
+                  />
+
+                  {/* Scheduled Time */}
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Scheduled Start</label>
+                    <input name="scheduled_start_time" type="datetime-local" value={editFormData.scheduled_start_time} onChange={handleEditFormChange}
+                      className="w-full bg-background border border-input rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
+
+                  {/* Save Button */}
+                  <button type="submit" disabled={editLoading}
+                    className="w-full py-2 bg-primary hover:opacity-90 disabled:opacity-50 text-primary-foreground rounded-lg text-sm font-medium transition">
+                    {editLoading ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         )}
