@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
     await ensureTablesExist()
     const { questionId, userId, voteType } = await request.json()
 
+    console.log('🗳️ Vote request:', { questionId, userId, voteType })
+
     if (!questionId || !userId || !voteType) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -23,40 +25,122 @@ export async function POST(request: NextRequest) {
 
     // Check if user already voted
     const existingVote = await sql`
-      SELECT * FROM question_votes 
+      SELECT vote_type FROM question_votes 
       WHERE question_id = ${questionId} AND user_id = ${userId}
     `
 
+    console.log('📋 Existing vote:', existingVote?.[0]?.vote_type)
+
     if (existingVote && existingVote.length > 0) {
-      if (existingVote[0].vote_type === voteType) {
-        // Remove vote
+      const currentVoteType = existingVote[0].vote_type
+      
+      if (currentVoteType === voteType) {
+        // Same vote - remove it
+        console.log('🗑️ Removing vote')
+        
+        if (voteType === 'upvote') {
+          await sql`
+            UPDATE questions 
+            SET upvotes = CASE WHEN upvotes > 0 THEN upvotes - 1 ELSE 0 END
+            WHERE id = ${questionId}
+          `
+        } else {
+          await sql`
+            UPDATE questions 
+            SET downvotes = CASE WHEN downvotes > 0 THEN downvotes - 1 ELSE 0 END
+            WHERE id = ${questionId}
+          `
+        }
+        
         await sql`
           DELETE FROM question_votes 
           WHERE question_id = ${questionId} AND user_id = ${userId}
         `
-        return NextResponse.json({ status: 'removed' })
+        console.log('✅ Vote removed')
+        const votes = await getUpdatedVotes(questionId)
+        return NextResponse.json({ status: 'removed', ...votes })
       } else {
-        // Update vote
+        // Different vote - change it
+        console.log(`🔄 Changing vote from ${currentVoteType} to ${voteType}`)
+
+        // Remove old vote
+        if (currentVoteType === 'upvote') {
+          await sql`
+            UPDATE questions 
+            SET upvotes = CASE WHEN upvotes > 0 THEN upvotes - 1 ELSE 0 END
+            WHERE id = ${questionId}
+          `
+        } else {
+          await sql`
+            UPDATE questions 
+            SET downvotes = CASE WHEN downvotes > 0 THEN downvotes - 1 ELSE 0 END
+            WHERE id = ${questionId}
+          `
+        }
+
+        // Add new vote
+        if (voteType === 'upvote') {
+          await sql`
+            UPDATE questions 
+            SET upvotes = upvotes + 1
+            WHERE id = ${questionId}
+          `
+        } else {
+          await sql`
+            UPDATE questions 
+            SET downvotes = downvotes + 1
+            WHERE id = ${questionId}
+          `
+        }
+        
         await sql`
           UPDATE question_votes 
           SET vote_type = ${voteType}
           WHERE question_id = ${questionId} AND user_id = ${userId}
         `
-        return NextResponse.json({ status: 'updated' })
+        console.log('✅ Vote changed')
+        const votes = await getUpdatedVotes(questionId)
+        return NextResponse.json({ status: 'updated', ...votes })
       }
     } else {
-      // Create new vote
+      // Create new vote - increment the count
+      console.log('➕ Creating new vote')
+      
+      if (voteType === 'upvote') {
+        await sql`
+          UPDATE questions 
+          SET upvotes = upvotes + 1
+          WHERE id = ${questionId}
+        `
+      } else {
+        await sql`
+          UPDATE questions 
+          SET downvotes = downvotes + 1
+          WHERE id = ${questionId}
+        `
+      }
+      
       await sql`
         INSERT INTO question_votes (question_id, user_id, vote_type)
         VALUES (${questionId}, ${userId}, ${voteType})
       `
-      return NextResponse.json({ status: 'created' })
+      console.log('✅ Vote created')
+      const votes = await getUpdatedVotes(questionId)
+      return NextResponse.json({ status: 'created', ...votes })
     }
   } catch (error: any) {
-    console.error('Vote error:', error)
+    console.error('❌ Vote error:', error)
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
     )
   }
+}
+
+// Helper function to get updated vote counts
+async function getUpdatedVotes(questionId: number) {
+  const result = await sql`
+    SELECT upvotes, downvotes FROM questions WHERE id = ${questionId}
+  `
+  return result?.[0] || { upvotes: 0, downvotes: 0 }
 }

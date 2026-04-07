@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ArrowBigUp, ArrowBigDown } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface VoteButtonsProps {
   questionId: string
@@ -24,6 +25,7 @@ export default function VoteButtons({
   orientation = "vertical",
   initialVote = null
 }: VoteButtonsProps) {
+  const { toast } = useToast()
   const [vote, setVote] = useState<"up" | "down" | null>(initialVote)
   const [currentUpvotes, setCurrentUpvotes] = useState(upvotes)
   const [currentDownvotes, setCurrentDownvotes] = useState(downvotes)
@@ -34,11 +36,17 @@ export default function VoteButtons({
   const handleVote = async (type: "up" | "down") => {
     const userId = localStorage.getItem('studentId')
     if (!userId) {
-      alert('Please log in to vote')
+      toast({
+        title: "Not Logged In",
+        description: "Please log in to vote",
+        variant: "destructive"
+      })
       return
     }
 
+    console.log('🗳️ User voting:', { questionId, userId, voteType: type === 'up' ? 'upvote' : 'downvote' })
     setIsLoading(true)
+    
     try {
       const response = await fetch('/api/qna/votes', {
         method: 'POST',
@@ -51,37 +59,49 @@ export default function VoteButtons({
       })
 
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error)
-
-      // Update local state based on response
-      let newVote: "up" | "down" | null = type
-      let upvoteChange = 0
-      let downvoteChange = 0
-
-      if (data.status === 'removed') {
-        newVote = null
-        if (vote === 'up') upvoteChange = -1
-        else if (vote === 'down') downvoteChange = -1
-      } else if (data.status === 'updated') {
-        if (vote === 'up') upvoteChange = -1
-        else if (vote === 'down') downvoteChange = -1
-        if (type === 'up') upvoteChange += 1
-        else downvoteChange += 1
-      } else {
-        if (vote === 'up') upvoteChange = -1
-        else if (vote === 'down') downvoteChange = -1
-        if (type === 'up') upvoteChange += 1
-        else downvoteChange += 1
+      console.log('📋 Vote API response:', { status: data.status, upvotes: data.upvotes, downvotes: data.downvotes })
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Vote failed')
       }
 
-      setVote(newVote)
-      setCurrentUpvotes(currentUpvotes + upvoteChange)
-      setCurrentDownvotes(currentDownvotes + downvoteChange)
+      // Simple approach: trust the server response for the correct counts
+      setCurrentUpvotes(data.upvotes || currentUpvotes)
+      setCurrentDownvotes(data.downvotes || currentDownvotes)
+      
+      // Update user's vote type and show confirmation message
+      if (data.status === 'removed') {
+        setVote(null)
+        toast({
+          title: "✅ Vote Removed",
+          description: `Your ${type === 'up' ? 'upvote' : 'downvote'} has been removed`,
+          variant: "default"
+        })
+      } else if (data.status === 'created') {
+        setVote(type)
+        toast({
+          title: "✅ Vote Recorded",
+          description: `Your ${type === 'up' ? 'upvote' : 'downvote'} has been saved`,
+          variant: "default"
+        })
+      } else if (data.status === 'updated') {
+        setVote(type)
+        toast({
+          title: "✅ Vote Changed",
+          description: `Changed to ${type === 'up' ? 'upvote' : 'downvote'}`,
+          variant: "default"
+        })
+      }
+      
       onVote?.(type)
       onVoteComplete?.()
     } catch (error) {
-      console.error('Vote error:', error)
-      alert('Failed to vote')
+      console.error('❌ Vote error:', error)
+      toast({
+        title: "❌ Vote Failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive"
+      })
     } finally {
       setIsLoading(false)
     }

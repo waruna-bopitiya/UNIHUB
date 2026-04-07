@@ -3,7 +3,12 @@ import { sql } from './db'
 let initialized = false
 
 export async function ensureTablesExist() {
-  if (initialized) return
+  if (initialized) {
+    console.log('✅ Database tables already initialized')
+    return
+  }
+
+  console.log('🔧 Initializing database tables...')
 
   await sql`
     CREATE TABLE IF NOT EXISTS users (
@@ -178,11 +183,38 @@ export async function ensureTablesExist() {
       subject_code    VARCHAR(50)   NOT NULL,
       year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
       semester        INTEGER       NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      upvotes         INTEGER       NOT NULL DEFAULT 0 CHECK (upvotes >= 0),
+      downvotes       INTEGER       NOT NULL DEFAULT 0 CHECK (downvotes >= 0),
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `
+
+  // Migration: Add upvotes and downvotes columns if they don't exist
+  try {
+    await sql`
+      ALTER TABLE questions
+      ADD COLUMN IF NOT EXISTS upvotes INTEGER NOT NULL DEFAULT 0 CHECK (upvotes >= 0)
+    `
+    console.log('✅ upvotes column added to questions table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add upvotes column:', error.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE questions
+      ADD COLUMN IF NOT EXISTS downvotes INTEGER NOT NULL DEFAULT 0 CHECK (downvotes >= 0)
+    `
+    console.log('✅ downvotes column added to questions table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add downvotes column:', error.message)
+    }
+  }
 
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_questions_subject_code ON questions(subject_code)`
