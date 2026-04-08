@@ -115,14 +115,14 @@ export function AcademicSelector({
     : [];
 
   const isDark = variant === 'dark';
-  const errorClass = isDark ? 'text-xs text-red-500 mt-1' : 'text-xs text-destructive mt-1';
+  const errorClass = 'text-xs text-destructive mt-1';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Year Dropdown */}
       <div>
-        <label className={`block text-xs font-bold uppercase mb-2 ${isDark ? 'text-gray-400' : 'text-muted-foreground'}`}>
-          Year <span className="text-red-500">*</span>
+        <label className="block text-xs font-bold uppercase mb-2 text-muted-foreground">
+          Year <span className="text-destructive">*</span>
         </label>
         <Select
           value={values.year}
@@ -145,8 +145,8 @@ export function AcademicSelector({
 
       {/* Semester Dropdown */}
       <div>
-        <label className={`block text-xs font-bold uppercase mb-2 ${isDark ? 'text-gray-400' : 'text-muted-foreground'}`}>
-          Semester <span className="text-red-500">*</span>
+        <label className="block text-xs font-bold uppercase mb-2 text-muted-foreground">
+          Semester <span className="text-destructive">*</span>
         </label>
         <Select
           value={values.semester}
@@ -169,8 +169,8 @@ export function AcademicSelector({
 
       {/* Module Dropdown */}
       <div>
-        <label className={`block text-xs font-bold uppercase mb-2 ${isDark ? 'text-gray-400' : 'text-muted-foreground'}`}>
-          Module <span className="text-red-500">*</span>
+        <label className="block text-xs font-bold uppercase mb-2 text-muted-foreground">
+          Module <span className="text-destructive">*</span>
         </label>
         <Select
           value={values.module_name}

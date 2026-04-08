@@ -174,8 +174,8 @@ export function PostCard({
       {/* Stream Embed */}
       {streamVideoId && (
         <div 
-          ref={videoContainerRef} // Ref එක මෙතනට ලබා දී ඇත
-          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative group/video" 
+          ref={videoContainerRef}
+          className="mb-4 rounded-xl overflow-hidden border border-border bg-card relative group/video" 
           style={{ aspectRatio: '16/9' }}
         >
           {!isPlaying ? (
@@ -189,18 +189,18 @@ export function PostCard({
                 alt={streamTitle ?? 'Live stream'}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/30 transition-colors">
-                <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg transform group-hover:scale-105 transition-transform">
+              <div className="absolute inset-0 flex items-center justify-center bg-card/40 group-hover:bg-card/30 transition-colors">
+                <div className="flex items-center gap-2 bg-destructive text-destructive-foreground px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg transform group-hover:scale-105 transition-transform">
                   <Play className="w-4 h-4 fill-white" /> Watch Video
                 </div>
               </div>
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600/90 text-white text-xs px-2.5 py-1 rounded-full font-bold">
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-destructive/90 text-destructive-foreground text-xs px-2.5 py-1 rounded-full font-bold">
                 <Radio className="w-3 h-3" /> LIVE
               </div>
             </div>
           ) : (
             // ඔයාගේ අදහසට අනුව සකසන ලද ක්‍රමය
-            <div className="absolute inset-0 overflow-hidden bg-black">
+            <div className="absolute inset-0 overflow-hidden bg-card">
               
               {/* Crop Effect Wrapper: උඩින් සහ යටින් වීඩියෝව crop කිරීමට */}
               <div className="absolute top-[5%] bottom-[5%] left-0 right-0 overflow-hidden">
@@ -215,8 +215,8 @@ export function PostCard({
               </div>
 
               {/* MASKING LAYERS (යූටියුබ් පාලකයන් වසා දැමීමට) */}
-              <div className="absolute top-0 left-0 right-0 h-[10%] bg-black z-10"></div>
-              <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-black z-10"></div>
+              <div className="absolute top-0 left-0 right-0 h-[10%] bg-card z-10"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-card z-10"></div>
 
               {/* Overlay - යූටියුබ් එකට redirect වීම වැළැක්වීමට */}
               <div className="absolute inset-0 z-20 bg-transparent pointer-events-auto"></div>
@@ -224,7 +224,7 @@ export function PostCard({
               {/* Custom Full Screen බොත්තම (Overlay එකට උඩින් z-30 ලෙස ඇත) */}
               <button 
                 onClick={toggleFullScreen}
-                className="absolute bottom-4 right-4 z-30 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover/video:opacity-100"
+                className="absolute bottom-4 right-4 z-30 p-2 bg-card/50 hover:bg-card/80 text-foreground rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover/video:opacity-100"
                 title="Full Screen"
               >
                 <Maximize className="w-5 h-5" />
@@ -267,7 +267,7 @@ export function PostCard({
           onClick={handleShare}
           className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors ${
             shareClicked
-              ? 'text-green-600 bg-green-50'
+              ? 'text-green-500 bg-green-500/20'
               : 'text-muted-foreground hover:bg-secondary'
           }`}
         >

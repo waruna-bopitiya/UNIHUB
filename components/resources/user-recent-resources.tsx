@@ -297,7 +297,7 @@ export function UserRecentResources({ uploaderId, uploaderName }: UserRecentReso
                         <div>📅 <span className="font-medium text-foreground">{resource.year}</span> - Semester <span className="font-medium text-foreground">{resource.semester}</span></div>
                         <div>📤 <span className="font-medium text-foreground">{new Date(resource.created_at).toLocaleDateString()}</span></div>
                         {resource.description && (
-                          <p className="italic text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-2">
+                          <p className="italic text-xs text-muted-foreground line-clamp-2 mt-2">
                             "{resource.description}"
                           </p>
                         )}

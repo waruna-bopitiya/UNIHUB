@@ -355,14 +355,14 @@ export default function EditLiveStreamPage() {
           {/* LEFT COLUMN — EDIT FORM */}
           <div className="space-y-6">
             {error && (
-              <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-600">
+              <div className="mb-6 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive">
                 <AlertCircle className="w-5 h-5" />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div className="mb-6 flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-green-600">
+              <div className="mb-6 flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-green-400">
                 <span>✅ {success}</span>
               </div>
             )}
@@ -383,7 +383,7 @@ export default function EditLiveStreamPage() {
                         <button
                           type="button"
                           onClick={removeThumbnail}
-                          className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                          className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -523,7 +523,7 @@ export default function EditLiveStreamPage() {
               <div className="bg-card border border-border rounded-xl p-6 space-y-4">
                 <h3 className="font-semibold text-foreground">Browser Stream</h3>
                 
-                <div className="bg-black rounded-lg overflow-hidden border border-border" style={{ aspectRatio: '16/9' }}>
+                <div className="bg-card rounded-lg overflow-hidden border border-border" style={{ aspectRatio: '16/9' }}>
                   <div className="relative w-full h-full flex items-center justify-center">
                     <video ref={videoPreviewRef} autoPlay muted playsInline
                       className={`w-full h-full object-cover ${!cameraStream || isCamOff ? 'hidden' : ''}`}
@@ -535,8 +535,8 @@ export default function EditLiveStreamPage() {
                       </div>
                     )}
                     {connStatus === 'live' && (
-                      <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600/90 text-white px-3 py-1.5 rounded-full text-xs font-bold">
-                        <span className="w-2 h-2 bg-white rounded-full animate-pulse" /> LIVE
+                      <div className="absolute top-4 left-4 flex items-center gap-2 bg-destructive/90 text-destructive-foreground px-3 py-1.5 rounded-full text-xs font-bold">
+                        <span className="w-2 h-2 bg-destructive-foreground rounded-full animate-pulse" /> LIVE
                       </div>
                     )}
                   </div>
@@ -545,11 +545,11 @@ export default function EditLiveStreamPage() {
                 {cameraStream && (
                   <div className="flex items-center justify-center gap-3">
                     <button type="button" onClick={toggleMute}
-                      className={`p-3 rounded-full border transition ${isMuted ? 'bg-red-500/20 border-red-500/30 text-red-500' : 'bg-muted border-border text-foreground hover:bg-border'}`}>
+                      className={`p-3 rounded-full border transition ${isMuted ? 'bg-destructive/20 border-destructive/30 text-destructive' : 'bg-muted border-border text-foreground hover:bg-border'}`}>
                       {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                     </button>
                     <button type="button" onClick={toggleCam}
-                      className={`p-3 rounded-full border transition ${isCamOff ? 'bg-red-500/20 border-red-500/30 text-red-500' : 'bg-muted border-border text-foreground hover:bg-border'}`}>
+                      className={`p-3 rounded-full border transition ${isCamOff ? 'bg-destructive/20 border-destructive/30 text-destructive' : 'bg-muted border-border text-foreground hover:bg-border'}`}>
                       {isCamOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
                     </button>
                   </div>
@@ -569,7 +569,7 @@ export default function EditLiveStreamPage() {
                     </button>
                   ) : connStatus !== 'live' ? (
                     <button type="button" onClick={goLive} disabled={connStatus === 'connecting'}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg transition">
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-destructive hover:bg-destructive/90 disabled:opacity-50 text-destructive-foreground font-bold rounded-lg transition">
                       {connStatus === 'connecting' ? <Loader2 className="animate-spin w-5 h-5" /> : <Play className="w-5 h-5 fill-white" />}
                       Go Live
                     </button>
@@ -634,7 +634,7 @@ export default function EditLiveStreamPage() {
                       <Copy size={15} />
                     </button>
                   </div>
-                  <p className="text-xs text-red-500">Keep this private – grants direct access to your stream.</p>
+                  <p className="text-xs text-destructive">Keep this private – grants direct access to your stream.</p>
                 </div>
 
                 <div className="bg-muted rounded-lg p-4 text-xs text-muted-foreground space-y-1">
@@ -656,7 +656,7 @@ export default function EditLiveStreamPage() {
                 </button>
 
                 {connStatus === 'live' && (
-                  <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600 text-sm font-medium">
+                  <div className="flex items-center gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-sm font-medium">
                     <Wifi className="w-4 h-4" /> Stream is live!
                   </div>
                 )}
