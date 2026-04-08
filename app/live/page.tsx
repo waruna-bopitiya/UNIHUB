@@ -156,11 +156,11 @@ function LiveStreamCard({
 export default function LivePage() {
   const router = useRouter()
   const [streams, setStreams] = useState<LiveStream[]>([])
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [loadingStreams, setLoadingStreams] = useState(true)
   const [pageError, setPageError] = useState('')
   const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('Anonymous')
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null)
 
   useEffect(() => {
@@ -195,10 +195,34 @@ export default function LivePage() {
       }
     }
 
-    // Get current user ID
-    const userId = localStorage.getItem('studentId')
-    setCurrentUserId(userId)
+    async function loadCurrentUserName() {
+      const userId = localStorage.getItem('studentId')
+      setCurrentUserId(userId)
 
+      if (!userId) {
+        setCurrentUserName('Anonymous')
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/user/profile?id=${userId}`, {
+          cache: 'no-store',
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (active && data.first_name) {
+            const fullName = [data.first_name, data.second_name].filter(Boolean).join(' ')
+            setCurrentUserName(fullName || 'Anonymous')
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error)
+        setCurrentUserName('Anonymous')
+      }
+    }
+
+    loadCurrentUserName()
     loadStreams()
 
     return () => {
@@ -266,46 +290,6 @@ export default function LivePage() {
     () => liveStreams.filter((stream) => stream.id !== featuredStream?.id),
     [featuredStream?.id, liveStreams]
   )
-
-  useEffect(() => {
-    let active = true
-
-    async function loadMessages() {
-      if (!featuredStream?.id) {
-        setChatMessages([])
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/live/messages?streamId=${featuredStream.id}&limit=50`, {
-          cache: 'no-store',
-        })
-        
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Failed to load live chat' }))
-          throw new Error(error.error ?? 'Failed to load live chat')
-        }
-
-        const data = await response.json()
-
-        if (active) {
-          setChatMessages(Array.isArray(data) ? data : [])
-        }
-      } catch (error) {
-        if (active) {
-          console.error('Error loading messages:', error)
-          setPageError(error instanceof Error ? error.message : 'Failed to load live chat')
-          setChatMessages([])
-        }
-      }
-    }
-
-    loadMessages()
-
-    return () => {
-      active = false
-    }
-  }, [featuredStream?.id])
 
   const handleDeleteStream = async (streamId: number) => {
     if (!currentUserId) {
@@ -376,45 +360,93 @@ export default function LivePage() {
         {/* My Live Streams Section */}
         {currentUserId && userStreams.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-2xl font-bold text-foreground mb-6">My Live Streams</h2>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-1 h-8 bg-gradient-to-b from-primary to-secondary rounded-full"></div>
+              <h2 className="text-3xl font-bold text-foreground">My Live Streams</h2>
+              <span className="ml-auto px-3 py-1 text-sm font-medium bg-primary/10 text-primary rounded-full">
+                {userStreams.length} Stream{userStreams.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {userStreams.map((stream) => (
-                <div key={stream.id} className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-shadow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-foreground">{stream.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {stream.module_name ?? 'Live stream'}
-                      </p>
+                <div 
+                  key={stream.id} 
+                  className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:border-primary/50"
+                >
+                  {/* Card Header with Thumbnail Placeholder */}
+                  <div className="relative h-40 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 group-hover:opacity-75 transition-opacity"></div>
+                    <div className="relative z-10 text-center">
+                      <Radio className="w-12 h-12 text-primary/60 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground font-medium">Stream Preview</p>
                     </div>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      stream.status === 'live' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    
+                    {/* Status Badge - Premium Position */}
+                    <span className={`absolute top-3 right-3 z-20 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 ${
+                      stream.status === 'live' 
+                        ? 'bg-red-500/90 text-white shadow-lg shadow-red-500/50' 
+                        : 'bg-blue-500/90 text-white shadow-lg shadow-blue-500/30'
                     }`}>
-                      {stream.status === 'live' ? 'LIVE' : 'SCHEDULED'}
+                      <span className={`w-2 h-2 rounded-full ${stream.status === 'live' ? 'bg-white animate-pulse' : 'bg-white'}`}></span>
+                      {stream.status === 'live' ? 'LIVE NOW' : 'SCHEDULED'}
                     </span>
                   </div>
-                  <div className="flex gap-2 pt-3 border-t border-border">
-                    <button
-                      onClick={() => router.push(`/live/edit/${stream.id}`)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-secondary text-secondary-foreground rounded hover:opacity-80 transition-opacity text-sm font-medium"
-                      title="Edit stream"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStream(stream.id)}
-                      disabled={deleteLoading === stream.id}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-destructive/10 text-destructive rounded hover:bg-destructive/20 transition-colors text-sm font-medium disabled:opacity-50"
-                      title="Delete stream"
-                    >
-                      {deleteLoading === stream.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                      Delete
-                    </button>
+
+                  {/* Card Content */}
+                  <div className="p-5">
+                    {/* Title and Module */}
+                    <div className="mb-4">
+                      <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors mb-1.5 line-clamp-2">
+                        {stream.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground font-medium flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
+                        {stream.module_name ?? 'Module TBD'}
+                      </p>
+                    </div>
+
+                    {/* Time and Status Info */}
+                    <div className="space-y-2.5 mb-5 py-4 border-y border-border">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="w-4 h-4 text-primary/60" />
+                        <span>
+                          {stream.scheduled_start_time 
+                            ? formatScheduledTime(stream.scheduled_start_time)
+                            : 'Time TBD'
+                          }
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4 text-secondary/60" />
+                        <span>{stream.status === 'live' ? 'Live Stream Active' : 'Upcoming'}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push(`/live/edit/${stream.id}`)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-all duration-200 font-medium text-sm group/btn"
+                        title="Edit stream"
+                      >
+                        <Edit2 className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStream(stream.id)}
+                        disabled={deleteLoading === stream.id}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg transition-all duration-200 font-medium text-sm group/btn disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Delete stream"
+                      >
+                        {deleteLoading === stream.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                        )}
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -466,7 +498,12 @@ export default function LivePage() {
 
           <div className="h-[500px] lg:h-auto border border-border rounded-xl overflow-hidden">
             {featuredStream ? (
-              <ChatPanel messages={chatMessages} streamId={featuredStream.id} />
+              <ChatPanel 
+                messages={[]}
+                streamId={featuredStream.id}
+                currentUserName={currentUserName}
+                currentUserId={currentUserId}
+              />
             ) : (
               <div className="h-full flex items-center justify-center p-6 text-center text-muted-foreground">
                 {loadingStreams ? 'Loading live chat...' : 'No active stream selected'}
