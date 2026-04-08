@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { MessageCircle, ChevronDown, ChevronUp } from "lucide-react"
+import { MessageCircle, ChevronDown, ChevronUp, Trash2, Edit2 } from "lucide-react"
 import Link from "next/link"
 import VoteButtons from "./VoteButtons"
+import { toast } from "sonner"
 
 interface AnswerCardProps {
   answer: {
@@ -21,7 +22,10 @@ interface AnswerCardProps {
     comments?: CommentType[]
   }
   questionId: string
+  userId?: string
   onVote?: (answerId: string, value: number) => void
+  onAnswerDeleted?: () => void
+  onAnswerUpdated?: () => void
 }
 
 interface CommentType {
@@ -35,15 +39,89 @@ interface CommentType {
   createdAt: Date
 }
 
-export default function AnswerCard({ answer, questionId, onVote }: AnswerCardProps) {
+export default function AnswerCard({ answer, questionId, userId, onVote, onAnswerDeleted, onAnswerUpdated }: AnswerCardProps) {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [isAddingComment, setIsAddingComment] = useState(false)
   const [comments, setComments] = useState<CommentType[]>(answer.comments || [])
+  const [isEditingAnswer, setIsEditingAnswer] = useState(false)
+  const [editedContent, setEditedContent] = useState(answer.content)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [isDeletingAnswer, setIsDeletingAnswer] = useState(false)
+
+  const isAnswerAuthor = userId && userId === answer.author.id
 
   const handleVote = (type: "up" | "down") => {
     const value = type === "up" ? 1 : -1
     onVote?.(answer.id, value)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editedContent.trim()) {
+      toast.error("Answer cannot be empty")
+      return
+    }
+
+    if (editedContent.trim().length < 10) {
+      toast.error("Answer must be at least 10 characters")
+      return
+    }
+
+    setIsSavingEdit(true)
+    try {
+      const response = await fetch('/api/qna/answers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answerId: answer.id,
+          content: editedContent.trim(),
+          userId
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update answer')
+      }
+
+      toast.success("Answer updated successfully!")
+      setIsEditingAnswer(false)
+      onAnswerUpdated?.()
+    } catch (error) {
+      console.error('Error updating answer:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update answer')
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
+  const handleDeleteAnswer = async () => {
+    if (!confirm('Are you sure you want to delete this answer? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeletingAnswer(true)
+    try {
+      const response = await fetch(
+        `/api/qna/answers?answerId=${answer.id}&userId=${userId}`,
+        { method: 'DELETE' }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete answer')
+      }
+
+      toast.success("Answer deleted successfully")
+      onAnswerDeleted?.()
+    } catch (error) {
+      console.error('Error deleting answer:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to delete answer')
+    } finally {
+      setIsDeletingAnswer(false)
+    }
   }
 
   const handleAddComment = async () => {
@@ -94,30 +172,87 @@ export default function AnswerCard({ answer, questionId, onVote }: AnswerCardPro
 
         {/* Answer content */}
         <div className="flex-1">
-          {/* Answer text */}
-          <div className="prose prose-sm max-w-none">
-            <p className="whitespace-pre-wrap text-sm">{answer.content}</p>
-          </div>
-
-          {/* Author info */}
-          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/50">
-            <Link href={`/qna/profile/${answer.author.id}`}>
-              <img
-                src={answer.author.avatar}
-                alt={answer.author.name}
-                className="w-6 h-6 rounded-full hover:opacity-80 transition-opacity"
+          {/* Edit mode */}
+          {isEditingAnswer ? (
+            <div className="space-y-3">
+              <textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary min-h-32"
+                placeholder="Edit your answer..."
               />
-            </Link>
-            <Link
-              href={`/qna/profile/${answer.author.id}`}
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              {answer.author.name}
-            </Link>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(answer.createdAt, { addSuffix: true })}
-            </span>
-          </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setIsEditingAnswer(false)
+                    setEditedContent(answer.content)
+                  }}
+                  className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSavingEdit}
+                  className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingEdit ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Answer text */}
+              <div className="prose prose-sm max-w-none">
+                <p className="whitespace-pre-wrap text-sm">{answer.content}</p>
+              </div>
+
+              {/* Author info and action buttons */}
+              <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/50 justify-between">
+                <div className="flex items-center gap-2">
+                  <Link href={`/qna/profile/${answer.author.id}`}>
+                    <img
+                      src={answer.author.avatar}
+                      alt={answer.author.name}
+                      className="w-6 h-6 rounded-full hover:opacity-80 transition-opacity"
+                    />
+                  </Link>
+                  <Link
+                    href={`/qna/profile/${answer.author.id}`}
+                    className="text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {answer.author.name}
+                  </Link>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(answer.createdAt, { addSuffix: true })}
+                  </span>
+                </div>
+
+                {/* Action buttons - only show for answer author */}
+                {isAnswerAuthor && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditingAnswer(true)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      title="Edit answer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleDeleteAnswer}
+                      disabled={isDeletingAnswer}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete answer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Comments section */}
           <div className="mt-4">

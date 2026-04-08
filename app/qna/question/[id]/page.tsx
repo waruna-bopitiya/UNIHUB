@@ -138,6 +138,12 @@ export default function QuestionDetailPage() {
     fetchAnswers()
   }, [params.id, userId, userDataLoaded])
 
+  const handleAnswerDeleted = (answerId: string) => {
+    // Remove the deleted answer from the state
+    setAnswers(prev => prev.filter(a => a.id !== answerId))
+    toast.success("Answer removed from your view")
+  }
+
   const handleVote = async (type: "up" | "down") => {
     if (!isLoggedIn) {
       toast.error("Please sign in to vote")
@@ -460,6 +466,8 @@ export default function QuestionDetailPage() {
                 questionId={question.id}
                 userId={userId || undefined}
                 onVoteComplete={fetchAnswers}
+                onAnswerUpdated={fetchAnswers}
+                onAnswerDeleted={() => handleAnswerDeleted(answer.id)}
               />
             ))
           )}

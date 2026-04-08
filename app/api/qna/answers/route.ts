@@ -195,3 +195,128 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    await ensureTablesExist()
+    const body = await request.json()
+
+    const { answerId, content, userId } = body
+
+    if (!answerId || !content || !userId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: answerId, content, userId' },
+        { status: 400 }
+      )
+    }
+
+    if (content.trim().length < 10 || content.trim().length > 5000) {
+      return NextResponse.json(
+        { error: 'Answer must be between 10 and 5000 characters' },
+        { status: 400 }
+      )
+    }
+
+    // Check if answer exists and belongs to the user
+    const answerExists = await sql`
+      SELECT id, user_id FROM answers WHERE id = ${parseInt(answerId)}
+    `
+
+    if (answerExists.length === 0) {
+      return NextResponse.json(
+        { error: 'Answer not found' },
+        { status: 404 }
+      )
+    }
+
+    if (answerExists[0].user_id !== userId) {
+      return NextResponse.json(
+        { error: 'You can only edit your own answers' },
+        { status: 403 }
+      )
+    }
+
+    // Update the answer
+    await sql`
+      UPDATE answers 
+      SET content = ${content.trim()}, updated_at = NOW()
+      WHERE id = ${parseInt(answerId)}
+    `
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Answer updated successfully'
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Error updating answer:', errorMessage)
+    return NextResponse.json(
+      {
+        error: 'Failed to update answer',
+        details: errorMessage
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await ensureTablesExist()
+    const { searchParams } = new URL(request.url)
+    const answerId = searchParams.get('answerId')
+    const userId = searchParams.get('userId')
+
+    if (!answerId || !userId) {
+      return NextResponse.json(
+        { error: 'Missing required parameters: answerId, userId' },
+        { status: 400 }
+      )
+    }
+
+    // Check if answer exists and belongs to the user
+    const answerExists = await sql`
+      SELECT id, user_id FROM answers WHERE id = ${parseInt(answerId)}
+    `
+
+    if (answerExists.length === 0) {
+      return NextResponse.json(
+        { error: 'Answer not found' },
+        { status: 404 }
+      )
+    }
+
+    if (answerExists[0].user_id !== userId) {
+      return NextResponse.json(
+        { error: 'You can only delete your own answers' },
+        { status: 403 }
+      )
+    }
+
+    // Delete the answer (and its votes cascade)
+    await sql`
+      DELETE FROM answers WHERE id = ${parseInt(answerId)}
+    `
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Answer deleted successfully'
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Error deleting answer:', errorMessage)
+    return NextResponse.json(
+      {
+        error: 'Failed to delete answer',
+        details: errorMessage
+      },
+      { status: 500 }
+    )
+  }
+}
