@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { MessageCircle, ChevronDown, ChevronUp } from "lucide-react"
+import { MessageCircle, ChevronDown, ChevronUp, ArrowBigUp, ArrowBigDown } from "lucide-react"
 import Link from "next/link"
-import VoteButtons from "./VoteButtons"
+import { toast } from "sonner"
 
 interface AnswerCardProps {
   answer: {
@@ -17,11 +17,13 @@ interface AnswerCardProps {
     }
     upvotes: number
     downvotes: number
+    userVote?: 'upvote' | 'downvote' | null
     createdAt: Date
     comments?: CommentType[]
   }
   questionId: string
-  onVote?: (answerId: string, value: number) => void
+  userId?: string
+  onVoteComplete?: () => void
 }
 
 interface CommentType {
@@ -35,15 +37,86 @@ interface CommentType {
   createdAt: Date
 }
 
-export default function AnswerCard({ answer, questionId, onVote }: AnswerCardProps) {
+export default function AnswerCard({ answer, questionId, userId, onVoteComplete }: AnswerCardProps) {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [isAddingComment, setIsAddingComment] = useState(false)
   const [comments, setComments] = useState<CommentType[]>(answer.comments || [])
+  const [upvotes, setUpvotes] = useState(answer.upvotes)
+  const [downvotes, setDownvotes] = useState(answer.downvotes)
+  const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(
+    answer.userVote ? (answer.userVote === 'upvote' ? 'upvote' : 'downvote') : null
+  )
+  const [isVoting, setIsVoting] = useState(false)
 
-  const handleVote = (type: "up" | "down") => {
-    const value = type === "up" ? 1 : -1
-    onVote?.(answer.id, value)
+  console.log(`🎯 AnswerCard #${answer.id} rendered - prop.userVote=${answer.userVote}, state.userVote=${answer.userVote ? (answer.userVote === 'upvote' ? 'upvote' : 'downvote') : null}`)
+
+  // Sync state with answer prop when it changes (after database refresh)
+  useEffect(() => {
+    console.log(`🔄 AnswerCard #${answer.id} useEffect triggered - answer.userVote=${answer.userVote}`)
+    setUpvotes(answer.upvotes)
+    setDownvotes(answer.downvotes)
+    const newUserVote = answer.userVote ? (answer.userVote === 'upvote' ? 'upvote' : 'downvote') : null
+    setUserVote(newUserVote)
+    console.log(`📊 Answer #${answer.id} updated from database - userVote: ${answer.userVote} → ${newUserVote}`)
+  }, [answer.id, answer.upvotes, answer.downvotes, answer.userVote])
+
+  const handleVote = async (type: "up" | "down") => {
+    if (!userId) {
+      toast.error("Please sign in to vote")
+      return
+    }
+
+    setIsVoting(true)
+    try {
+      const response = await fetch('/api/qna/answer-votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answerId: parseInt(answer.id),
+          questionId: parseInt(questionId),
+          userId,
+          voteType: type === 'up' ? 'upvote' : 'downvote'
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Vote failed')
+      }
+
+      // Update local state with new vote counts
+      setUpvotes(Math.max(0, parseInt(data.upvotes) || 0))
+      setDownvotes(Math.max(0, parseInt(data.downvotes) || 0))
+
+      // Update user's vote state
+      const newVote = type === 'up' ? 'upvote' : 'downvote'
+      if (data.status === 'removed') {
+        setUserVote(null)
+        console.log('🗑️ Vote removed - userVote set to null')
+        toast.success(`Your ${type === 'up' ? 'upvote' : 'downvote'} has been removed`)
+      } else if (data.status === 'created') {
+        setUserVote(newVote)
+        console.log('➕ Vote created - userVote set to:', newVote)
+        toast.success(`Your ${type === 'up' ? 'upvote' : 'downvote'} has been saved`)
+      } else if (data.status === 'updated') {
+        setUserVote(newVote)
+        console.log('🔄 Vote updated - userVote set to:', newVote)
+        toast.success(`Changed to ${type === 'up' ? 'upvote' : 'downvote'}`)
+      }
+
+      // Refresh answers from database to show updated badge
+      if (onVoteComplete) {
+        console.log('📄 Refreshing answers from database... userId in AnswerCard:', userId)
+        onVoteComplete()
+      }
+    } catch (error) {
+      console.error('❌ Vote error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to vote. Please try again.')
+    } finally {
+      setIsVoting(false)
+    }
   }
 
   const handleAddComment = async () => {
@@ -80,18 +153,50 @@ export default function AnswerCard({ answer, questionId, onVote }: AnswerCardPro
     }
   }
 
+  const netVotes = upvotes - downvotes
+
   return (
     <div className="border border-border rounded-lg bg-card p-4">
       <div className="flex gap-4">
-        {/* Vote buttons - using reusable VoteButtons component */}
-        <VoteButtons
-          questionId={questionId}
-          upvotes={answer.upvotes}
-          downvotes={answer.downvotes}
-          onVote={handleVote}
-          size="md"
-          orientation="vertical"
-        />
+        {/* Vote buttons */}
+        <div className="flex flex-col items-center gap-2">
+          <button 
+            onClick={() => handleVote("up")}
+            disabled={isVoting}
+            className={`transition-colors rounded-md p-1 ${
+              userVote === "upvote" 
+                ? "text-primary bg-primary/10" 
+                : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+            } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <ArrowBigUp className="w-6 h-6" />
+          </button>
+          <span className={`text-lg font-bold ${Math.max(0, netVotes) > 0 ? 'text-primary' : Math.max(0, netVotes) < 0 ? 'text-destructive' : ''}`}>
+            {Math.max(0, netVotes)}
+          </span>
+          <button 
+            onClick={() => handleVote("down")}
+            disabled={isVoting}
+            className={`transition-colors rounded-md p-1 ${
+              userVote === "downvote" 
+                ? "text-destructive bg-destructive/10" 
+                : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <ArrowBigDown className="w-6 h-6" />
+          </button>
+
+          {/* User vote badge - More prominent */}
+          {userVote && (
+            <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold text-center transition-all w-full ${
+              userVote === 'upvote' 
+                ? 'bg-primary/20 text-primary border border-primary/50' 
+                : 'bg-destructive/20 text-destructive border border-destructive/50'
+            }`}>
+              {userVote === 'upvote' ? 'You ⬆️' : 'You ⬇️'}
+            </div>
+          )}
+        </div>
 
         {/* Answer content */}
         <div className="flex-1">

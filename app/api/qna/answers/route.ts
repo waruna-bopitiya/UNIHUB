@@ -1,10 +1,13 @@
 import { sql } from '@/lib/db'
+import { ensureTablesExist } from '@/lib/db-init'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureTablesExist()
     const { searchParams } = new URL(request.url)
     const questionId = searchParams.get('questionId')
+    const userId = searchParams.get('userId')
 
     if (!questionId) {
       return NextResponse.json(
@@ -15,40 +18,75 @@ export async function GET(request: NextRequest) {
 
     const questionIdNum = parseInt(questionId)
 
-    // Fetch answers for the question
-    const answers = await sql`
-      SELECT 
-        a.id,
-        a.content,
-        a.user_id,
-        a.created_at,
-        u.first_name,
-        u.second_name
-      FROM answers a
-      JOIN users u ON a.user_id = u.id
-      WHERE a.question_id = ${questionIdNum}
-      ORDER BY a.created_at DESC
-    `
+    // Fetch answers for the question with vote counts
+    let answers
+    if (userId) {
+      answers = await sql`
+        SELECT 
+          a.id,
+          a.content,
+          a.user_id,
+          a.upvotes,
+          a.downvotes,
+          a.created_at,
+          u.first_name,
+          u.second_name,
+          av.vote_type as user_vote
+        FROM answers a
+        JOIN users u ON a.user_id = u.id
+        LEFT JOIN answer_votes av ON a.id = av.answer_id AND av.user_id = ${userId}
+        WHERE a.question_id = ${questionIdNum}
+        ORDER BY a.created_at DESC
+      `
+    } else {
+      answers = await sql`
+        SELECT 
+          a.id,
+          a.content,
+          a.user_id,
+          a.upvotes,
+          a.downvotes,
+          a.created_at,
+          u.first_name,
+          u.second_name,
+          NULL::varchar as user_vote
+        FROM answers a
+        JOIN users u ON a.user_id = u.id
+        WHERE a.question_id = ${questionIdNum}
+        ORDER BY a.created_at DESC
+      `
+    }
 
-    const formattedAnswers = answers.map((a: any) => ({
-      id: a.id.toString(),
-      content: a.content,
-      author: {
-        id: a.user_id,
-        name: `${a.first_name}${a.second_name ? ' ' + a.second_name : ''}`,
-        avatar: `https://avatar.vercel.sh/${a.first_name.toLowerCase()}`
-      },
-      upvotes: 0,
-      downvotes: 0,
-      createdAt: a.created_at,
-      comments: []
-    }))
+    const formattedAnswers = answers.map((a: any) => {
+      const userVote = a.user_vote ? (a.user_vote === 'upvote' ? 'upvote' : a.user_vote === 'downvote' ? 'downvote' : null) : null
+      
+      console.log(`📊 Answer ${a.id}: upvotes=${a.upvotes}, downvotes=${a.downvotes}, userVote=${a.user_vote} → ${userVote}`)
+      
+      return {
+        id: a.id.toString(),
+        content: a.content,
+        author: {
+          id: a.user_id,
+          name: `${a.first_name}${a.second_name ? ' ' + a.second_name : ''}`,
+          avatar: `https://avatar.vercel.sh/${a.first_name.toLowerCase()}`
+        },
+        upvotes: Math.max(0, parseInt(a.upvotes) || 0),
+        downvotes: Math.max(0, parseInt(a.downvotes) || 0),
+        userVote: userVote, // 'upvote', 'downvote', or null
+        createdAt: a.created_at,
+        comments: []
+      }
+    })
+
+    console.log('✅ Formatted answers response:', JSON.stringify(formattedAnswers.map(a => ({ id: a.id, userVote: a.userVote }))))
+    return NextResponse.json(formattedAnswers)
 
     return Response.json(formattedAnswers)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error('Error fetching answers:', errorMessage)
-    return Response.json(
+    console.error('❌ Error fetching answers:', errorMessage)
+    console.error('Full error:', error)
+    return NextResponse.json(
       {
         error: 'Failed to fetch answers',
         details: errorMessage
@@ -60,6 +98,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureTablesExist()
     const body = await request.json()
 
     const { questionId, userId, content } = body

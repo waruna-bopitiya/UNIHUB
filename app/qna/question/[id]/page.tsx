@@ -24,6 +24,7 @@ export default function QuestionDetailPage() {
   const [userName, setUserName] = useState<string | null>(null)
   const [isVoting, setIsVoting] = useState(false)
   const [userVote, setUserVote] = useState<"up" | "down" | null>(null)
+  const [userDataLoaded, setUserDataLoaded] = useState(false)
 
   // Check if user is logged in
   useEffect(() => {
@@ -35,6 +36,8 @@ export default function QuestionDetailPage() {
       setUserId(studentId)
       setUserName(firstName)
     }
+    // Mark that we've finished loading user data (whether or not they're logged in)
+    setUserDataLoaded(true)
   }, [])
 
   // Fetch the question from the API
@@ -54,7 +57,8 @@ export default function QuestionDetailPage() {
         }
 
         const allQuestions = await response.json()
-        const foundQuestion = allQuestions.find((q: any) => q.id === params.id || q.id.toString() === params.id)
+        const questionId = Array.isArray(params.id) ? params.id[0] : params.id
+        const foundQuestion = allQuestions.find((q: any) => q.id === questionId || q.id.toString() === questionId)
         
         if (foundQuestion) {
           // Sanitize votes
@@ -86,34 +90,53 @@ export default function QuestionDetailPage() {
     fetchQuestion()
   }, [params.id, userId])
 
-  // Fetch answers for the question
-  useEffect(() => {
-    const fetchAnswers = async () => {
-      if (!params.id) return
-      
-      try {
-        setAnswersLoading(true)
-        const queryParams = new URLSearchParams({ questionId: params.id })
-        if (userId) queryParams.append('userId', userId)
-        
-        const response = await fetch(`/api/qna/answers?${queryParams.toString()}`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch answers')
-        }
-
-        const data = await response.json()
-        setAnswers(data)
-      } catch (err) {
-        console.error('Error fetching answers:', err)
-        setAnswers([])
-      } finally {
-        setAnswersLoading(false)
+  // Function to fetch answers - can be called independently
+  const fetchAnswers = async () => {
+    if (!params.id) return
+    
+    try {
+      setAnswersLoading(true)
+      const questionIdStr = Array.isArray(params.id) ? params.id[0] : params.id
+      const queryParams = new URLSearchParams({ questionId: questionIdStr })
+      console.log('🔍 fetchAnswers called - userId:', userId, 'questionId:', questionIdStr)
+      if (userId) {
+        queryParams.append('userId', userId)
+        console.log('✅ userId added to query params')
+      } else {
+        console.log('⚠️ No userId available - will fetch without user vote info')
       }
-    }
+      
+      const response = await fetch(`/api/qna/answers?${queryParams.toString()}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('API Error:', errorData)
+        throw new Error(errorData.details || errorData.error || 'Failed to fetch answers')
+      }
 
+      const data = await response.json()
+      console.log('✅ Fetched answers:', { userId, questionId: questionIdStr, answers: data.map((a: any) => ({ id: a.id, userVote: a.userVote })) })
+      setAnswers(data)
+      setAnswers(data)
+    } catch (err) {
+      console.error('Error fetching answers:', err)
+      setAnswers([])
+    } finally {
+      setAnswersLoading(false)
+    }
+  }
+
+  // Fetch answers for the question - wait until user data is loaded from localStorage
+  useEffect(() => {
+    console.log('📋 Answers useEffect triggered - userDataLoaded:', userDataLoaded, 'params.id:', params.id)
+    if (!userDataLoaded) {
+      // Don't fetch until we've checked localStorage for userId
+      console.log('⏳ Waiting for user data to load...')
+      return
+    }
+    console.log('✅ User data loaded, fetching answers with userId:', userId)
     fetchAnswers()
-  }, [params.id, userId])
+  }, [params.id, userId, userDataLoaded])
 
   const handleVote = async (type: "up" | "down") => {
     if (!isLoggedIn) {
@@ -197,7 +220,7 @@ export default function QuestionDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          questionId: params.id,
+          questionId: Array.isArray(params.id) ? params.id[0] : params.id,
           userId: userId,
           content: answerContent.trim()
         })
@@ -223,23 +246,6 @@ export default function QuestionDetailPage() {
     } finally {
       setIsPosting(false)
     }
-  }
-
-  const handleAnswerVote = (answerId: string, value: number) => {
-    // TODO: API call to vote on answer
-    console.log("Vote on answer:", answerId, value)
-    
-    // Update local state - use answers state, not question.answers
-    setAnswers(
-      answers.map((a: any) => {
-        if (a.id === answerId) {
-          const newUpvotes = value === 1 ? a.upvotes + 1 : value === -1 ? a.upvotes - 1 : a.upvotes
-          const newDownvotes = value === -1 ? a.downvotes + 1 : value === 1 ? a.downvotes - 1 : a.downvotes
-          return { ...a, upvotes: newUpvotes, downvotes: newDownvotes }
-        }
-        return a
-      })
-    )
   }
 
   const netQuestionVotes = question ? question.upvotes - question.downvotes : 0
@@ -452,7 +458,8 @@ export default function QuestionDetailPage() {
                 key={answer.id} 
                 answer={answer} 
                 questionId={question.id}
-                onVote={handleAnswerVote}
+                userId={userId || undefined}
+                onVoteComplete={fetchAnswers}
               />
             ))
           )}
