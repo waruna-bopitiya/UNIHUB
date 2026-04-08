@@ -363,6 +363,12 @@ export default function Home() {
     fetchQuestions()
   }
 
+  const handleDeleteQuestion = (questionId: string) => {
+    // Remove the question from filtered and all questions
+    setFilteredQuestions(prev => prev.filter(q => q.id !== questionId))
+    setAllQuestions(prev => prev.filter(q => q.id !== questionId))
+  }
+
   return (
     <AppLayout>
       <div className="w-full py-6 px-4 md:px-6 lg:px-8">
@@ -695,7 +701,12 @@ export default function Home() {
                     </div>
                   ) : (
                     filteredQuestions.map((question) => (
-                      <QuestionCard key={question.id} question={question} onVoteComplete={handleVoteComplete} />
+                      <QuestionCard 
+                        key={question.id} 
+                        question={question} 
+                        onVoteComplete={handleVoteComplete}
+                        onDelete={() => handleDeleteQuestion(question.id)}
+                      />
                     ))
                   )}
                 </div>

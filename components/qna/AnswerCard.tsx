@@ -85,6 +85,7 @@ export default function AnswerCard({ answer, questionId, onVote }: AnswerCardPro
       <div className="flex gap-4">
         {/* Vote buttons - using reusable VoteButtons component */}
         <VoteButtons
+          questionId={questionId}
           upvotes={answer.upvotes}
           downvotes={answer.downvotes}
           onVote={handleVote}

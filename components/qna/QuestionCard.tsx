@@ -4,6 +4,7 @@ import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { MessageCircle, Edit2, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import VoteButtons from "./VoteButtons"
 
 interface QuestionCardProps {
@@ -51,8 +52,8 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
     console.log("Vote on question:", question.id, type)
   }
 
-  const isOwner = currentUserId && (question.user_id || question.author.id) && 
-    currentUserId === (question.user_id || question.author.id)
+  const isOwner = currentUserId && (question.user_id || question.author?.id) && 
+    String(currentUserId) === String(question.user_id || question.author?.id)
   const isEditable = isOwner && isWithinEditWindow(question.createdAt)
 
   const handleDelete = async () => {
@@ -78,6 +79,7 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
       }
 
       console.log('✅ Question deleted successfully')
+      toast.success('Question deleted successfully')
       if (onDelete) {
         onDelete()
       }
@@ -110,10 +112,10 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
         />
 
         {/* Question content */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <Link href={`/qna/question/${question.id}`}>
-              <h2 className="text-lg font-semibold hover:text-primary transition-colors">
+            <Link href={`/qna/question/${question.id}`} className="flex-1 min-w-0">
+              <h2 className="text-lg font-semibold hover:text-primary transition-colors line-clamp-2 break-words">
                 {question.title}
               </h2>
             </Link>
@@ -142,7 +144,7 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
             )}
           </div>
 
-          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+          <p className="text-sm text-muted-foreground line-clamp-2 mt-1 break-words">
             {question.content}
           </p>
           
