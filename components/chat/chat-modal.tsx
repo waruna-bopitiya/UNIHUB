@@ -741,7 +741,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
                         {conv.name}
                       </p>
                       {conv.unread > 0 && (
-                        <span className="text-xs bg-red-500 text-white rounded-full px-2 py-0.5 flex-shrink-0">
+                        <span className="text-xs bg-destructive text-destructive-foreground rounded-full px-2 py-0.5 flex-shrink-0">
                           {conv.unread}
                         </span>
                       )}

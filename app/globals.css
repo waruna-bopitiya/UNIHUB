@@ -122,4 +122,106 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Dark mode enhancements */
+  :root {
+    color-scheme: dark;
+  }
+  
+  /* Enhanced dark mode styling for all elements */
+  input,
+  textarea,
+  select {
+    @apply bg-input text-foreground;
+  }
+  
+  /* Ensure buttons have proper dark styling */
+  button {
+    @apply transition-colors;
+  }
+  
+  /* Links in dark mode */
+  a {
+    @apply text-primary hover:text-accent transition-colors;
+  }
+  
+  /* Scrollbar styling for dark mode */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-sidebar rounded-full hover:bg-muted;
+  }
+  
+  /* Code blocks dark styling */
+  code {
+    @apply bg-card text-card-foreground px-2 py-1 rounded;
+  }
+  
+  pre {
+    @apply bg-card text-card-foreground p-4 rounded-lg overflow-x-auto;
+  }
+  
+  /* Tables dark mode */
+  table {
+    @apply w-full;
+  }
+  
+  thead {
+    @apply bg-sidebar;
+  }
+  
+  tbody tr {
+    @apply border-b border-border hover:bg-card;
+  }
+  
+  /* Form elements */
+  label {
+    @apply text-foreground;
+  }
+  
+  /* Placeholder text */
+  ::placeholder {
+    @apply text-muted-foreground;
+  }
+}
+
+@layer components {
+  /* Dark theme utility classes */
+  .dark-bg {
+    @apply bg-background;
+  }
+  
+  .dark-card {
+    @apply bg-card text-card-foreground;
+  }
+  
+  .dark-input {
+    @apply bg-input text-foreground border-border focus:ring-ring;
+  }
+  
+  .dark-border {
+    @apply border-border;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
 }

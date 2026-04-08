@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'  // <-- Add this import
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -37,22 +38,42 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
-        {children}
-        {/* Toast notifications container */}
-        <Toaster 
-          position="top-center"
-          richColors
-          closeButton
-          toastOptions={{
-            duration: 3000,
-            style: {
-              fontSize: '14px',
-              padding: '12px 16px',
-            },
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (localStorage.getItem('theme') === null) {
+                  localStorage.setItem('theme', 'dark');
+                }
+              } catch (e) {}
+            `,
           }}
         />
-        <Analytics />
+      </head>
+      <body className="font-sans antialiased bg-background text-foreground">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          storageKey="theme"
+        >
+          {children}
+          {/* Toast notifications container */}
+          <Toaster 
+            position="top-center"
+            richColors
+            closeButton
+            toastOptions={{
+              duration: 3000,
+              style: {
+                fontSize: '14px',
+                padding: '12px 16px',
+              },
+            }}
+          />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

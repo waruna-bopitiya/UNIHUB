@@ -304,13 +304,13 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {formError && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {formError}
         </div>
       )}
 
       {currentUser && userPermissionMessage && (
-        <div className="rounded-lg border border-blue-500/40 bg-blue-500/10 px-4 py-3 text-sm text-blue-600">
+        <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 px-4 py-3 text-sm text-blue-400">
           <strong>Permission Level:</strong> {userPermissionMessage}
         </div>
       )}
@@ -333,7 +333,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
               className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
-            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
+            {errors.title && <p className="mt-1 text-xs text-destructive">{errors.title}</p>}
           </div>
 
           <div>
@@ -348,7 +348,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
               rows={3}
               required
             />
-            {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
+            {errors.description && <p className="mt-1 text-xs text-destructive">{errors.description}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -374,7 +374,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                   </option>
                 ))}
               </select>
-              {errors.year && <p className="mt-1 text-xs text-red-500">{errors.year}</p>}
+              {errors.year && <p className="mt-1 text-xs text-destructive">{errors.year}</p>}
             </div>
 
             <div>
@@ -399,7 +399,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                   </option>
                 ))}
               </select>
-              {errors.semester && <p className="mt-1 text-xs text-red-500">{errors.semester}</p>}
+              {errors.semester && <p className="mt-1 text-xs text-destructive">{errors.semester}</p>}
             </div>
 
             <div>
@@ -420,7 +420,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                   </option>
                 ))}
               </select>
-              {errors.course && <p className="mt-1 text-xs text-red-500">{errors.course}</p>}
+              {errors.course && <p className="mt-1 text-xs text-destructive">{errors.course}</p>}
             </div>
 
             <div>
@@ -452,7 +452,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
-              {errors.duration && <p className="mt-1 text-xs text-red-500">{errors.duration}</p>}
+              {errors.duration && <p className="mt-1 text-xs text-destructive">{errors.duration}</p>}
             </div>
           </div>
         </div>
@@ -473,7 +473,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
         </div>
 
         <div className="space-y-6">
-          {errors.questions && <p className="text-sm text-red-500">{errors.questions}</p>}
+          {errors.questions && <p className="text-sm text-destructive">{errors.questions}</p>}
           {questions.map((question, qIndex) => (
             <div key={question.id} className="border border-border rounded-lg p-4">
               <div className="flex items-start justify-between mb-4">
@@ -507,7 +507,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                     required
                   />
                   {errors.questionErrors[question.id]?.question && (
-                    <p className="mt-1 text-xs text-red-500">
+                    <p className="mt-1 text-xs text-destructive">
                       {errors.questionErrors[question.id]?.question}
                     </p>
                   )}
@@ -540,14 +540,14 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                           required
                         />
                         {errors.questionErrors[question.id]?.options?.[optionIndex] && (
-                          <p className="text-xs text-red-500 min-w-[160px]">
+                          <p className="text-xs text-destructive min-w-[160px]">
                             {errors.questionErrors[question.id]?.options?.[optionIndex]}
                           </p>
                         )}
                       </div>
                     ))}
                     {errors.questionErrors[question.id]?.correctAnswer && (
-                      <p className="mt-1 text-xs text-red-500">
+                      <p className="mt-1 text-xs text-destructive">
                         {errors.questionErrors[question.id]?.correctAnswer}
                       </p>
                     )}
