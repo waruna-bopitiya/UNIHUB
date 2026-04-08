@@ -51,22 +51,94 @@ export async function POST(req: NextRequest) {
         }
 
         const chat = chatDetails[0]
+        console.log(`📋 Processing chat ${cId}: sender's chat, participant_id=${chat.participant_id}`)
+        
+        // Find the recipient's corresponding chat (if they have one)
+        let recipientChatId = null
+        
+        // Method 1: Find by participant_id relationship
+        if (chat.participant_id) {
+          try {
+            const recipientChat = await sql`
+              SELECT id FROM chats
+              WHERE user_id = ${chat.participant_id}
+              AND participant_id = ${chat.user_id}
+              LIMIT 1
+            `
+            if (recipientChat.length > 0) {
+              recipientChatId = recipientChat[0].id
+              console.log(`✅ Found recipient's chat (by ID match): ${recipientChatId}`)
+            }
+          } catch (err) {
+            console.warn('⚠️ Could not find recipient chat by ID:', err)
+          }
+        }
+        
+        // Method 2: Fallback - search by participant name if ID method failed
+        if (!recipientChatId && chat.participant_name) {
+          try {
+            console.log(`🔍 Searching by participant name: "${chat.participant_name}"`)
+            const recipientChat = await sql`
+              SELECT id FROM chats
+              WHERE participant_name = ${chat.participant_name}
+              AND user_id != ${chat.user_id}
+              LIMIT 1
+            `
+            if (recipientChat.length > 0) {
+              recipientChatId = recipientChat[0].id
+              console.log(`✅ Found recipient's chat (by name match): ${recipientChatId}`)
+            }
+          } catch (err) {
+            console.warn('⚠️ Could not find recipient chat by name:', err)
+          }
+        }
+        
+        if (!recipientChatId) {
+          console.warn(`⚠️ Could not find recipient chat for ${cId} - message will only appear in sender's chat`)
+        }
 
-        // Add the message (sent messages are marked as read, received messages are unread)
-        const result = await sql`
-          INSERT INTO chat_messages (chat_id, sender, sender_avatar, content, is_own, is_read)
-          VALUES (${cId}, ${sender || 'You'}, ${senderAvatar || 'Y'}, ${content.trim()}, ${isOwn || true}, ${isOwn || false})
-          RETURNING id, sender, sender_avatar, content, is_own, is_read, created_at
-        `
+        // Function to add message to a chat
+        const addMessageToChat = async (chatIdToUse: number, isOwn: boolean) => {
+          const result = await sql`
+            INSERT INTO chat_messages (chat_id, sender, sender_avatar, sender_id, content, is_own, is_read, status)
+            VALUES (${chatIdToUse}, ${sender || 'You'}, ${senderAvatar || 'Y'}, ${null}, ${content.trim()}, ${isOwn}, ${false}, 'sent')
+            RETURNING id, sender, sender_avatar, content, is_own, is_read, status, created_at
+          `
+          const msg = result[0]
+          console.log(`✅ Message created in chat ${chatIdToUse}: ID=${msg.id}, sender="${msg.sender}", content="${msg.content}", created_at="${msg.created_at}", is_own=${msg.is_own}`)
+          return msg
+        }
 
-        const message = result[0]
+        // Add message to sender's chat (is_own = true from sender's perspective)
+        const message = await addMessageToChat(cId, true)
 
-        // Update chat's updated_at timestamp
-        await sql`
-          UPDATE chats
-          SET updated_at = NOW()
-          WHERE id = ${cId}
-        `
+        // Also add message to recipient's chat if it exists (is_own = false from recipient's perspective)
+        if (recipientChatId) {
+          try {
+            const recipientMessage = await addMessageToChat(recipientChatId, false)
+            console.log(`🔄 Bidirectional message created:`)
+            console.log(`   Sender chat ${cId}: msg_id=${message.id}`)
+            console.log(`   Recipient chat ${recipientChatId}: msg_id=${recipientMessage.id}`)
+          } catch (err) {
+            console.warn(`⚠️ Could not add message to recipient's chat:`, err)
+          }
+        } else {
+          console.warn(`⚠️ No recipient chat found for ${cId} - message only in sender's chat`)
+        }
+
+        // Update both chats' updated_at timestamp
+        const chatIdsToUpdate = [cId]
+        if (recipientChatId) {
+          chatIdsToUpdate.push(recipientChatId)
+        }
+        
+        for (const chatIdUpdate of chatIdsToUpdate) {
+          await sql`
+            UPDATE chats
+            SET updated_at = NOW()
+            WHERE id = ${chatIdUpdate}
+          `
+        }
 
         savedMessages.push({
           id: message.id.toString(),
@@ -80,6 +152,7 @@ export async function POST(req: NextRequest) {
           }),
           isOwn: message.is_own,
           isRead: message.is_read,
+          status: message.status,
         })
 
         console.log('✅ Message saved to chat', cId, 'with ID:', message.id)

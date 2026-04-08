@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Send, Search, Plus, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { ChatMessageItem, DateDivider, getMessageDateGroup } from './message-display'
 
 interface ChatMessage {
   id: string
@@ -12,6 +13,7 @@ interface ChatMessage {
   content: string
   timestamp: string
   isOwn: boolean
+  isDeleted?: boolean
 }
 
 interface ChatConversation {
@@ -140,6 +142,8 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const [newMemberName, setNewMemberName] = useState('')
   const [userId, setUserId] = useState<string | null>(null)
   const [loadingChats, setLoadingChats] = useState(true)
+  const [userYear, setUserYear] = useState<number | null>(null)
+  const [userSemester, setUserSemester] = useState<number | null>(null)
   
   // User suggestions state
   const [suggestions, setSuggestions] = useState<any[]>([])
@@ -156,6 +160,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const [isResizing, setIsResizing] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
   const [cursor, setCursor] = useState('default')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Load user ID and fetch chats on mount
   useEffect(() => {
@@ -172,6 +177,15 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
 
         setUserId(storedUserId)
         console.log('👤 Fetching chats for user:', storedUserId)
+
+        // Fetch user's profile to get year and semester
+        const profileResponse = await fetch(`/api/user/profile?id=${storedUserId}`)
+        const profileData = await profileResponse.json()
+        if (profileData.year_of_university && profileData.semester) {
+          setUserYear(profileData.year_of_university)
+          setUserSemester(profileData.semester)
+          console.log('📚 User year:', profileData.year_of_university, 'Semester:', profileData.semester)
+        }
 
         const response = await fetch(`/api/chat?userId=${storedUserId}`)
         const result = await response.json()
@@ -200,6 +214,34 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       loadChats()
     }
   }, [isOpen])
+
+  // Auto-refresh chats every 2 seconds when chat is open
+  useEffect(() => {
+    if (!isOpen || !userId) return
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/chat?userId=${userId}`)
+        const result = await response.json()
+
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          setConversations(result.data)
+          
+          // Keep the currently selected conversation updated
+          if (selectedConversation) {
+            const updated = result.data.find((c: any) => c.id === selectedConversation.id)
+            if (updated) {
+              setSelectedConversation(updated)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error refreshing chats:', error)
+      }
+    }, 2000) // Refresh every 2 seconds
+
+    return () => clearInterval(refreshInterval)
+  }, [isOpen, userId, selectedConversation])
 
   // Handle resize mouse down
   const handleResizeStart = (position: string) => (e: React.MouseEvent) => {
@@ -243,7 +285,14 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
     }
   }, [isResizing])
 
-  // Handle cursor change for resize hints
+  // Auto-scroll to latest message
+  useEffect(() => {
+    if (messagesEndRef.current && selectedConversation) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
+  }, [selectedConversation?.messages.length, selectedConversation?.id])
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!modalRef.current || isResizing) return
@@ -294,9 +343,13 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       const result = await response.json()
 
       if (result.status === 'success' && Array.isArray(result.data)) {
-        console.log('✅ Got', result.data.length, 'suggestions')
-        setSuggestions(result.data)
-        setShowSuggestions(true)
+        // Filter to only show students from same year and semester
+        const suitableStudents = result.data.filter(
+          (user: any) => user.year === userYear && user.semester === userSemester
+        )
+        console.log('✅ Got', suitableStudents.length, 'suitable suggestions (same year/semester)')
+        setSuggestions(suitableStudents)
+        setShowSuggestions(suitableStudents.length > 0)
       } else {
         setSuggestions([])
         setShowSuggestions(false)
@@ -436,9 +489,15 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
   const handleCreateNewChat = async () => {
     if (!newMemberName.trim() || !userId) return
 
+    // Validate selected user is from same year/semester
+    if (selectedUser && (selectedUser.year !== userYear || selectedUser.semester !== userSemester)) {
+      alert(`⚠️ You can only message students from Year ${userYear}, Semester ${userSemester}. This student is from Year ${selectedUser.year}, Semester ${selectedUser.semester}.`)
+      return
+    }
+
     try {
       const displayName = selectedUser?.fullName || newMemberName
-      console.log('💾 Creating new chat with participant:', displayName)
+      console.log('💾 Creating new chat with participant:', displayName, `(Year ${selectedUser?.year}, Sem ${selectedUser?.semester})`)
 
       // Save chat to backend
       const response = await fetch('/api/chat', {
@@ -619,33 +678,37 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
         return
       }
 
-      console.log('✅ Message deleted successfully from database')
+      console.log('✅ Message soft-deleted successfully from database (WhatsApp style)')
       console.log('📊 Updating UI for conversation:', selectedConversation.id)
 
-      // Remove from frontend state using numeric comparison
+      // Mark message as deleted in frontend state (not removing it completely)
       const updatedConversations = conversations.map((conv) => {
         if (conv.id === selectedConversation.id) {
           console.log('Found matching conversation')
-          console.log('Before filter - total messages:', conv.messages.length)
           
           const messageIdNum = parseInt(messageId, 10)
-          const newMessages = conv.messages.filter((m) => {
+          const newMessages = conv.messages.map((m) => {
             const msgIdNum = parseInt(m.id, 10)
-            const shouldKeep = msgIdNum !== messageIdNum
             
             if (msgIdNum === messageIdNum) {
-              console.log('🎯 DELETING message ID:', m.id)
+              console.log('🎯 Marking message ID:', m.id, 'as deleted')
+              return {
+                ...m,
+                isDeleted: true,
+                content: '', // Clear the content, will show "This message was deleted"
+              }
             }
-            return shouldKeep
+            return m
           })
           
-          console.log('After filter - total messages:', newMessages.length)
-          console.log('Deleted count:', conv.messages.length - newMessages.length)
+          // Update lastMessage if the last message was deleted
+          const lastMsg = newMessages[newMessages.length - 1]
+          const lastMessageText = lastMsg?.isDeleted ? 'This message was deleted' : (lastMsg?.content || 'No messages yet')
           
           return {
             ...conv,
             messages: newMessages,
-            lastMessage: newMessages.length > 0 ? newMessages[newMessages.length - 1].content : 'No messages yet',
+            lastMessage: lastMessageText,
           }
         }
         return conv
@@ -656,7 +719,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       
       const updated = updatedConversations.find((c) => c.id === selectedConversation.id)
       setSelectedConversation(updated || null)
-      console.log('✅ UI updated successfully')
+      console.log('✅ UI updated successfully - message now shows as deleted')
     } catch (error) {
       console.error('❌ Exception during delete:', error)
       alert('Failed to delete message: ' + String(error))
@@ -676,22 +739,15 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       className="fixed bottom-0 right-0 bg-background border border-border shadow-2xl flex flex-col z-50 rounded-t-lg transition-cursor overflow-hidden
       "
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-primary/5">
+      {/* Header - WhatsApp Green Style */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-teal-500 to-cyan-500 dark:from-teal-700 dark:to-cyan-700">
         <div>
-          <h2 className="font-bold text-foreground 
-            /* Mobile */
-            text-base
-            /* Tablet and up */
-            sm:text-lg
-            /* Desktop */
-            lg:text-xl
-          ">Messages</h2>
-          <p className="text-xs text-muted-foreground mt-1">Chat with students</p>
+          <h2 className="font-bold text-white text-lg">Messages</h2>
+          <p className="text-xs text-teal-100 mt-0.5">Stay connected with your class</p>
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-secondary rounded-lg transition-colors flex-shrink-0"
+          className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white"
         >
           <X className="w-5 h-5" />
         </button>
@@ -794,115 +850,128 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
             )}
           </div>
 
-          {/* Conversations */}
-          <div className="flex-1 overflow-y-auto">
-            {filteredConversations.map((conv) => (
-              <button
-                key={conv.id}
-                onClick={() => handleSelectConversation(conv)}
-                className={`w-full px-4 py-3 border-b border-border text-left transition-colors hover:bg-secondary ${
-                  selectedConversation?.id === conv.id
-                    ? 'bg-primary/10 border-l-2 border-l-primary'
-                    : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center text-sm flex-shrink-0">
-                    {conv.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium text-xs sm:text-sm text-foreground truncate">
-                        {conv.name}
-                      </p>
-                      {conv.unread > 0 && (
-                        <span className="text-xs bg-red-500 text-white rounded-full px-2 py-0.5 flex-shrink-0">
-                          {conv.unread}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {conv.lastMessage}
-                    </p>
-                  </div>
+          {/* Conversations - WhatsApp List Style */}
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+            {filteredConversations.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  <p className="text-sm">No conversations yet</p>
                 </div>
-              </button>
-            ))}
+              </div>
+            ) : (
+              filteredConversations.map((conv) => (
+                <button
+                  key={conv.id}
+                  onClick={() => handleSelectConversation(conv)}
+                  className={`w-full px-4 py-3 text-left transition-colors ${
+                    selectedConversation?.id === conv.id
+                      ? 'bg-teal-50 dark:bg-teal-900/30 border-l-4 border-l-teal-500'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">
+                      {conv.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`font-semibold text-sm truncate ${conv.unread > 0 ? 'text-foreground font-bold' : 'text-foreground'}`}>
+                          {conv.name}
+                        </p>
+                        {conv.unread > 0 && (
+                          <span className="text-xs bg-teal-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold flex-shrink-0">
+                            {conv.unread > 99 ? '99+' : conv.unread}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs truncate ${conv.unread > 0 ? 'text-gray-600 dark:text-gray-300 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {conv.lastMessage}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
 
         {/* Chat Area */}
         {selectedConversation && (
           <div className="flex-1 flex flex-col w-full sm:w-2/3 lg:w-3/5 xl:w-2/3">
-            {/* Chat Header */}
-            <div className="p-4 border-b border-border bg-primary/5 flex items-center gap-3 justify-between">
+            {/* Chat Header - WhatsApp Style */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-800 flex items-center gap-3 justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white font-bold flex items-center justify-center text-lg">
                   {selectedConversation.avatar}
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm sm:text-base">{selectedConversation.name}</p>
-                  <p className="text-xs text-muted-foreground">Last login: {selectedConversation.lastLogin || 'Never'}</p>
+                  <p className="font-bold text-foreground text-base">{selectedConversation.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {selectedConversation.lastLogin ? `Last active ${selectedConversation.lastLogin}` : 'Last login: Never'}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={handleDeleteChat}
-                className="p-2 hover:bg-red-500/20 rounded-lg text-red-500 transition-colors"
+                className="p-2 hover:bg-red-500/20 rounded-full text-red-500 transition-colors"
                 title="Delete entire chat"
               >
-                <Trash2 size={18} />
+                <Trash2 size={20} />
               </button>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto 
-              /* Mobile */
-              p-3 space-y-2
-              /* Tablet and up */
-              sm:p-4 sm:space-y-3
-            ">
-              {selectedConversation.messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'} group`}
-                >
-                  {!msg.isOwn && (
-                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center text-xs mr-2 flex-shrink-0">
-                      {msg.senderAvatar}
+            {/* Messages - WhatsApp Style */}
+            <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
+              {selectedConversation.messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+                      <Send className="w-8 h-8 text-gray-400" />
                     </div>
-                  )}
-                  <div className="flex items-end gap-2">
-                    <div
-                      className={`
-                        /* Mobile */
-                        max-w-[70%]
-                        /* Tablet and up */
-                        sm:max-w-xs
-                        px-3 py-2 rounded-lg text-sm ${
-                        msg.isOwn
-                          ? 'bg-primary text-primary-foreground rounded-br-none'
-                          : 'bg-secondary text-secondary-foreground rounded-bl-none'
-                      }`}
-                    >
-                      <p>{msg.content}</p>
-                      <p className={`text-xs mt-1 ${
-                        msg.isOwn 
-                          ? 'text-primary-foreground/70' 
-                          : 'text-secondary-foreground/70'
-                      }`}>
-                        {msg.timestamp}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteMessage(msg.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded text-red-500 transition-all"
-                      title="Delete message"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">No messages yet</p>
+                    <p className="text-gray-500 dark:text-gray-500 text-xs">Start the conversation by sending a message!</p>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="p-4 space-y-4">
+                  {(() => {
+                    let lastDateGroup: string | null = null
+                    const elements: React.ReactNode[] = []
+
+                    selectedConversation.messages.forEach((msg, idx) => {
+                      const currentDateGroup = getMessageDateGroup(msg.timestamp || new Date().toISOString())
+                      
+                      // Add date divider if date changed
+                      if (currentDateGroup !== lastDateGroup) {
+                        elements.push(
+                          <DateDivider key={`divider-${idx}`} date={msg.timestamp || new Date().toISOString()} />
+                        )
+                        lastDateGroup = currentDateGroup
+                      }
+
+                      // Add message
+                      elements.push(
+                        <ChatMessageItem
+                          key={msg.id}
+                          id={msg.id}
+                          sender={msg.sender}
+                          senderAvatar={msg.senderAvatar}
+                          content={msg.content}
+                          timestamp={msg.timestamp}
+                          isOwn={msg.isOwn}
+                          isRead={msg.isRead}
+                          status={(msg as any).status}
+                          isDeleted={(msg as any).isDeleted}
+                          onDelete={handleDeleteMessage}
+                        />
+                      )
+                    })
+
+                    return elements
+                  })()}
+                  <div ref={messagesEndRef} className="h-0" />
+                </div>
+              )}
             </div>
 
             {/* Recipient Profile Display */}
@@ -939,32 +1008,28 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
               </div>
             )}
 
-            {/* Message Input */}
-            <div className="
-              /* Mobile */
-              p-3 border-t border-border bg-background
-              /* Tablet and up */
-              sm:p-4
-            ">
-              <div className="flex gap-2">
+            {/* Message Input - WhatsApp Style */}
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <div className="flex gap-3 items-end">
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
                       handleSendMessage()
                     }
                   }}
-                  className="flex-1 text-sm"
+                  className="flex-1 rounded-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim()}
-                  size="sm"
-                  className="px-3"
+                  size="lg"
+                  className="rounded-full w-10 h-10 p-0 bg-teal-500 hover:bg-teal-600 disabled:opacity-50 flex items-center justify-center"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-5 h-5" />
                 </Button>
               </div>
             </div>

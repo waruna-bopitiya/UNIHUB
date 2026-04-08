@@ -16,10 +16,9 @@ const navItems = [
 
 interface SidebarProps {
   onClose?: () => void
-  onChatClick?: () => void
 }
 
-export function Sidebar({ onClose, onChatClick }: SidebarProps) {
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -57,14 +56,19 @@ export function Sidebar({ onClose, onChatClick }: SidebarProps) {
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
-        <button 
-          onClick={onChatClick}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors group"
-          title="Open Chat"
+        <Link
+          href="/messages"
+          onClick={onClose}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+            pathname === '/messages'
+              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent'
+          }`}
+          title="Open Messages"
         >
-          <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <MessageCircle className="w-5 h-5" />
           <span className="font-medium">Messages</span>
-        </button>
+        </Link>
         <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
