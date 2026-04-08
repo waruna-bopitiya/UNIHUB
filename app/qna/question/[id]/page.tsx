@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
+import { ArrowLeft, ArrowBigUp, ArrowBigDown, RotateCw } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 import { AppLayout } from "@/components/layout/app-layout"
@@ -25,6 +25,8 @@ export default function QuestionDetailPage() {
   const [isVoting, setIsVoting] = useState(false)
   const [userVote, setUserVote] = useState<"up" | "down" | null>(null)
   const [userDataLoaded, setUserDataLoaded] = useState(false)
+  const [answerSortType, setAnswerSortType] = useState<"votes" | "recent">("recent")
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Check if user is logged in
   useEffect(() => {
@@ -142,6 +144,32 @@ export default function QuestionDetailPage() {
     // Remove the deleted answer from the state
     setAnswers(prev => prev.filter(a => a.id !== answerId))
     toast.success("Answer removed from your view")
+  }
+
+  const handleSortAnswers = (sortType: "votes" | "recent") => {
+    setAnswerSortType(sortType)
+    toast.success(`Sorted by ${sortType === "votes" ? "highest voted" : "most recent"}`)
+  }
+
+  const getSortedAnswers = () => {
+    let sorted = [...answers]
+    if (answerSortType === "votes") {
+      sorted.sort((a, b) => {
+        const aVotes = (a.upvotes || 0) - (a.downvotes || 0)
+        const bVotes = (b.upvotes || 0) - (b.downvotes || 0)
+        return bVotes - aVotes
+      })
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+    return sorted
+  }
+
+  const handleRefreshAnswers = async () => {
+    setIsRefreshing(true)
+    await fetchAnswers()
+    toast.success("Answers refreshed!")
+    setIsRefreshing(false)
   }
 
   const handleVote = async (type: "up" | "down") => {
@@ -403,9 +431,48 @@ export default function QuestionDetailPage() {
 
       {/* Answers section */}
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">
-          {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
+          </h2>
+          
+          {/* Refresh button */}
+          <button
+            onClick={handleRefreshAnswers}
+            disabled={isRefreshing || answersLoading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-border hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh answers"
+          >
+            <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Sort buttons */}
+        {answers.length > 0 && (
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => handleSortAnswers("recent")}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                answerSortType === "recent"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border hover:bg-secondary"
+              }`}
+            >
+              Most Recent
+            </button>
+            <button
+              onClick={() => handleSortAnswers("votes")}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                answerSortType === "votes"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border hover:bg-secondary"
+              }`}
+            >
+              Highest Voted
+            </button>
+          </div>
+        )}
 
         {/* Answer form */}
         {isLoggedIn ? (
@@ -459,7 +526,7 @@ export default function QuestionDetailPage() {
               No answers yet. Be the first to answer this question!
             </p>
           ) : (
-            answers.map((answer) => (
+            getSortedAnswers().map((answer) => (
               <AnswerCard 
                 key={answer.id} 
                 answer={answer} 
