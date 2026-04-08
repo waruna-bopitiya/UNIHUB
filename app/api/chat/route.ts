@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     const chatsWithMessages = await Promise.all(
       chats.map(async (chat: any) => {
         const messages = await sql`
-          SELECT id, sender, sender_avatar, content, is_own, is_read, created_at
+          SELECT id, sender, sender_avatar, content, is_own, is_read, created_at, deleted_at
           FROM chat_messages
           WHERE chat_id = ${chat.id}
           ORDER BY created_at ASC
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
           id: chat.id.toString(),
           name: chat.chat_name,
           avatar: chat.avatar,
-          lastMessage: messages.length > 0 ? messages[messages.length - 1].content : 'No messages yet',
+          lastMessage: messages.length > 0 ? (messages[messages.length - 1].deleted_at ? 'This message was deleted' : messages[messages.length - 1].content) : 'No messages yet',
           unread: unreadCount,
           lastLogin: lastLoginDisplay,
           messages: messages.map((msg: any) => ({
@@ -92,6 +92,7 @@ export async function GET(req: NextRequest) {
             }),
             isOwn: msg.is_own,
             isRead: msg.is_read,
+            isDeleted: msg.deleted_at !== null,
           })),
         }
       })
