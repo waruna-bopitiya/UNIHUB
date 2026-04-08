@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { sql, sqlWithRetry } from '@/lib/db'
 import { ensureTablesExist } from '@/lib/db-init'
 
 export async function POST(
@@ -22,6 +22,12 @@ export async function POST(
     const body = await req.json()
     const { answers, participantName = 'Anonymous' } = body
 
+    console.log('📝 Quiz submission received:', {
+      quizId,
+      participantName,
+      answersCount: answers?.length,
+    })
+
     if (!Array.isArray(answers)) {
       return NextResponse.json(
         { status: 'error', message: 'Answers must be an array' },
@@ -29,10 +35,11 @@ export async function POST(
       )
     }
 
-    // Get quiz and questions
-    const quizzes = await sql`
-      SELECT id, title FROM quizzes WHERE id = ${quizId}
-    `
+    // Get quiz and questions with retry logic
+    console.log('🔍 Fetching quiz details from database...')
+    const quizzes = await sqlWithRetry(() =>
+      sql`SELECT id, title FROM quizzes WHERE id = ${quizId}`
+    )
 
     if (quizzes.length === 0) {
       return NextResponse.json(
@@ -42,16 +49,19 @@ export async function POST(
     }
 
     const quiz = quizzes[0]
+    console.log('✅ Quiz found:', { id: quiz.id, title: quiz.title })
 
-    const questions = await sql`
-      SELECT 
-        id,
-        correct_answer as correctAnswer,
-        question_order
-      FROM quiz_questions
-      WHERE quiz_id = ${quizId}
-      ORDER BY question_order ASC
-    `
+    const questions = await sqlWithRetry(() =>
+      sql`
+        SELECT 
+          id,
+          correct_answer as correctAnswer,
+          question_order
+        FROM quiz_questions
+        WHERE quiz_id = ${quizId}
+        ORDER BY question_order ASC
+      `
+    )
 
     if (questions.length === 0) {
       return NextResponse.json(
@@ -78,21 +88,33 @@ export async function POST(
       }
     }
 
-    // Store response
-    const [response] = await sql`
-      INSERT INTO quiz_responses
-        (quiz_id, participant_name, answers, score, total_questions, date_taken)
-      VALUES
-        (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length}, NOW())
-      RETURNING id, score, total_questions, date_taken
-    `
+    console.log('📊 Score calculated:', { score, total: questions.length })
 
-    // Update participants count
-    await sql`
-      UPDATE quizzes
-      SET participants = participants + 1
-      WHERE id = ${quizId}
-    `
+    // Store response with retry logic
+    console.log('💾 Saving quiz response to database...')
+    const [response] = await sqlWithRetry(() =>
+      sql`
+        INSERT INTO quiz_responses
+          (quiz_id, participant_name, answers, score, total_questions, date_taken)
+        VALUES
+          (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length}, NOW())
+        RETURNING id, score, total_questions, date_taken
+      `
+    )
+
+    console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
+
+    // Update participants count with retry logic
+    console.log('📈 Updating participants count...')
+    await sqlWithRetry(() =>
+      sql`
+        UPDATE quizzes
+        SET participants = participants + 1
+        WHERE id = ${quizId}
+      `
+    )
+
+    console.log('✅ Participants count updated')
 
     return NextResponse.json({
       status: 'success',
@@ -105,9 +127,10 @@ export async function POST(
       },
     })
   } catch (error: any) {
-    console.error('Error submitting quiz:', error)
+    console.error('❌ Error submitting quiz:', error.message)
+    console.error('Error details:', error)
     return NextResponse.json(
-      { status: 'error', message: error.message },
+      { status: 'error', message: error.message || 'Failed to submit quiz' },
       { status: 500 }
     )
   }

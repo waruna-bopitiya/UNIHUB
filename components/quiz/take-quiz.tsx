@@ -33,6 +33,11 @@ interface TakeQuizProps {
     rating: number
     date: string
   }[]
+  currentUser?: {
+    id: string
+    firstName: string
+    email: string
+  }
   onAddComment: (name: string, message: string) => void
   onAddRating: (name: string, rating: number) => void
   onComplete: (score: number, answers: number[]) => void
@@ -44,11 +49,30 @@ export function TakeQuiz({
   participantScores,
   quizComments,
   quizRatings,
+  currentUser,
   onAddComment,
   onAddRating,
   onComplete,
   onCancel,
 }: TakeQuizProps) {
+  // Guard: Check if quiz has questions
+  if (!quiz.questions || quiz.questions.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-8 text-center">
+        <h3 className="text-xl font-semibold text-foreground mb-2">No Questions Available</h3>
+        <p className="text-muted-foreground mb-6">
+          This quiz doesn't have any questions yet. Please try another quiz.
+        </p>
+        <button
+          onClick={onCancel}
+          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
+        >
+          Back to Quizzes
+        </button>
+      </div>
+    )
+  }
+
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>(
     Array(quiz.questions.length).fill(null)
@@ -57,9 +81,7 @@ export function TakeQuiz({
   const [showResults, setShowResults] = useState(false)
   const [score, setScore] = useState(0)
   const [showPreviousScores, setShowPreviousScores] = useState(false)
-  const [commentName, setCommentName] = useState('')
   const [commentMessage, setCommentMessage] = useState('')
-  const [ratingName, setRatingName] = useState('')
   const [selectedRating, setSelectedRating] = useState<number>(0)
   const [submitError, setSubmitError] = useState('')
 
@@ -130,24 +152,22 @@ export function TakeQuiz({
   }
 
   const handleAddCommentClick = () => {
-    const trimmedName = commentName.trim()
     const trimmedMessage = commentMessage.trim()
 
-    if (!trimmedName || !trimmedMessage) {
+    if (!trimmedMessage || !currentUser) {
       return
     }
 
-    onAddComment(trimmedName, trimmedMessage)
+    onAddComment(currentUser.firstName, trimmedMessage)
     setCommentMessage('')
   }
 
   const handleAddRatingClick = () => {
-    const trimmedName = ratingName.trim()
-    if (!trimmedName || selectedRating < 1 || selectedRating > 5) {
+    if (!currentUser || selectedRating < 1 || selectedRating > 5) {
       return
     }
 
-    onAddRating(trimmedName, selectedRating)
+    onAddRating(currentUser.firstName, selectedRating)
     setSelectedRating(0)
   }
 
@@ -274,15 +294,11 @@ export function TakeQuiz({
 
         <div className="border border-border rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-foreground mb-3">Comments</h3>
+          {currentUser && (
+            <p className="text-sm text-muted-foreground mb-3">Commenting as: <strong>{currentUser.firstName}</strong></p>
+          )}
 
           <div className="space-y-3 mb-4">
-            <input
-              type="text"
-              value={commentName}
-              onChange={(e) => setCommentName(e.target.value)}
-              placeholder="Your name"
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
-            />
             <textarea
               value={commentMessage}
               onChange={(e) => setCommentMessage(e.target.value)}
@@ -293,7 +309,8 @@ export function TakeQuiz({
             <div className="flex justify-end">
               <button
                 onClick={handleAddCommentClick}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
+                disabled={!currentUser}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Post Comment
               </button>
@@ -319,15 +336,11 @@ export function TakeQuiz({
 
         <div className="border border-border rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-foreground mb-3">Ratings</h3>
+          {currentUser && (
+            <p className="text-sm text-muted-foreground mb-3">Rating as: <strong>{currentUser.firstName}</strong></p>
+          )}
 
           <div className="space-y-3 mb-4">
-            <input
-              type="text"
-              value={ratingName}
-              onChange={(e) => setRatingName(e.target.value)}
-              placeholder="Your name"
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
-            />
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
@@ -347,7 +360,8 @@ export function TakeQuiz({
             <div className="flex justify-end">
               <button
                 onClick={handleAddRatingClick}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium"
+                disabled={!currentUser}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submit Rating
               </button>

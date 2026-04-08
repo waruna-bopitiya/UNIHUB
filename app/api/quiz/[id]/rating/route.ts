@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { sql, sqlWithRetry } from '@/lib/db'
 import { ensureTablesExist } from '@/lib/db-init'
 
 export async function GET(
@@ -85,6 +85,8 @@ export async function POST(
     const body = await req.json()
     const { name = 'Anonymous', rating } = body
 
+    console.log('📤 Saving rating:', { quizId, name, rating })
+
     if (typeof rating !== 'number' || rating < 1 || rating > 5) {
       return NextResponse.json(
         { status: 'error', message: 'Rating must be between 1 and 5' },
@@ -93,7 +95,10 @@ export async function POST(
     }
 
     // Check if quiz exists
-    const quizzes = await sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    const quizzes = await sqlWithRetry(() =>
+      sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    )
+
     if (quizzes.length === 0) {
       return NextResponse.json(
         { status: 'error', message: 'Quiz not found' },
@@ -101,14 +106,18 @@ export async function POST(
       )
     }
 
-    // Insert rating
-    const [newRating] = await sql`
-      INSERT INTO quiz_ratings
-        (quiz_id, name, rating)
-      VALUES
-        (${quizId}, ${name?.trim() || 'Anonymous'}, ${rating})
-      RETURNING id, name, rating, created_at
-    `
+    // Insert rating with retry logic
+    const [newRating] = await sqlWithRetry(() =>
+      sql`
+        INSERT INTO quiz_ratings
+          (quiz_id, name, rating)
+        VALUES
+          (${quizId}, ${name?.trim() || 'Anonymous'}, ${rating})
+        RETURNING id, name, rating, created_at
+      `
+    )
+
+    console.log('✅ Rating saved successfully:', newRating)
 
     return NextResponse.json(
       {
@@ -123,7 +132,8 @@ export async function POST(
       { status: 201 }
     )
   } catch (error: any) {
-    console.error('Error adding rating:', error)
+    console.error('❌ Error adding rating:', error.message)
+    console.error('Error details:', error)
     return NextResponse.json(
       { status: 'error', message: error.message },
       { status: 500 }

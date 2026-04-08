@@ -14,6 +14,7 @@ import {
 import { useState, useEffect } from 'react'
 import { BookOpen, Download, Search, Star, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { jsPDF } from 'jspdf'
 
 interface Quiz {
   id: string
@@ -755,139 +756,6 @@ const studentNames = [
   'Naveen Wijesinghe',
 ]
 
-const mockParticipantScoresByQuiz: Record<string, ParticipantScoreSummary[]> =
-  normalizedQuizzes.reduce((acc, quiz) => {
-    acc[quiz.id] = studentNames.map((name, index) => {
-      const key = `${quiz.id}-${name}-${index}`
-      const scoreSeed = key.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
-      const score = scoreSeed % (quiz.questions.length + 1)
-      return {
-        name,
-        score,
-        totalQuestions: quiz.questions.length,
-      }
-    })
-
-    return acc
-  }, {} as Record<string, ParticipantScoreSummary[]>)
-
-const baseQuizCommentsByQuiz: Record<string, QuizComment[]> = {
-  '1': [
-    {
-      name: 'Nimal',
-      message: 'Good quiz. Questions are clear and useful.',
-      date: '3/23/2026, 9:15:00 AM',
-    },
-    {
-      name: 'Sajee',
-      message: 'Nice for quick revision before class.',
-      date: '3/23/2026, 12:05:00 PM',
-    },
-  ],
-  '2': [
-    {
-      name: 'Malithi',
-      message: 'Algebra section was balanced and fair.',
-      date: '3/22/2026, 4:10:00 PM',
-    },
-  ],
-  '6': [
-    {
-      name: 'Tharushi',
-      message: 'Pattern-based questions were very practical.',
-      date: '3/21/2026, 8:40:00 AM',
-    },
-    {
-      name: 'Dilan',
-      message: 'A bit challenging, but helpful examples.',
-      date: '3/21/2026, 9:25:00 AM',
-    },
-  ],
-}
-
-const baseQuizRatingsByQuiz: Record<string, QuizRating[]> = {
-  '1': [
-    {
-      name: 'Kasuni',
-      rating: 4,
-      date: '3/23/2026, 10:00:00 AM',
-    },
-    {
-      name: 'Ishara',
-      rating: 5,
-      date: '3/23/2026, 11:20:00 AM',
-    },
-  ],
-  '2': [
-    {
-      name: 'Kasun',
-      rating: 4,
-      date: '3/22/2026, 4:15:00 PM',
-    },
-    {
-      name: 'Malithi',
-      rating: 5,
-      date: '3/22/2026, 5:02:00 PM',
-    },
-  ],
-  '6': [
-    {
-      name: 'Ruvin',
-      rating: 5,
-      date: '3/21/2026, 10:10:00 AM',
-    },
-    {
-      name: 'Tharushi',
-      rating: 4,
-      date: '3/21/2026, 10:22:00 AM',
-    },
-  ],
-}
-
-const mockQuizCommentsByQuiz: Record<string, QuizComment[]> = normalizedQuizzes.reduce(
-  (acc, quiz, index) => {
-    const existing = baseQuizCommentsByQuiz[quiz.id] || []
-    const fallbackComments: QuizComment[] = [
-      {
-        name: `Student ${index + 1}`,
-        message: `This ${quiz.course} quiz was helpful for revision.`,
-        date: '3/24/2026, 9:00:00 AM',
-      },
-      {
-        name: `Learner ${index + 1}`,
-        message: 'Good balance of theory and practical questions.',
-        date: '3/24/2026, 10:20:00 AM',
-      },
-    ]
-
-    acc[quiz.id] = existing.length > 0 ? [...existing, fallbackComments[0]] : fallbackComments
-    return acc
-  },
-  {} as Record<string, QuizComment[]>,
-)
-
-const mockQuizRatingsByQuiz: Record<string, QuizRating[]> = normalizedQuizzes.reduce(
-  (acc, quiz, index) => {
-    const existing = baseQuizRatingsByQuiz[quiz.id] || []
-    const fallbackRatings: QuizRating[] = [
-      {
-        name: `Student ${index + 1}`,
-        rating: 4,
-        date: '3/24/2026, 10:45:00 AM',
-      },
-      {
-        name: `Learner ${index + 1}`,
-        rating: 5,
-        date: '3/24/2026, 11:05:00 AM',
-      },
-    ]
-
-    acc[quiz.id] = existing.length > 0 ? [...existing, fallbackRatings[0]] : fallbackRatings
-    return acc
-  },
-  {} as Record<string, QuizRating[]>,
-)
-
 const scoreChartConfig = {
   participants: {
     label: 'Participants',
@@ -927,6 +795,10 @@ export default function QuizPage() {
   const [resultsSearch, setResultsSearch] = useState('')
   const [scoreSearch, setScoreSearch] = useState('')
   const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
+
+  // Score data from API
+  const [scoreDataFromApi, setScoreDataFromApi] = useState<any>(null)
+  const [loadingScoreData, setLoadingScoreData] = useState(false)
 
   // Fetch current user info on mount
   useEffect(() => {
@@ -1005,6 +877,75 @@ export default function QuizPage() {
     fetchQuizzesFromDatabase()
   }, [])
 
+  // Fetch quiz results from database
+  useEffect(() => {
+    const fetchQuizResultsFromDatabase = async () => {
+      try {
+        if (!currentUser?.firstName) {
+          console.log('⏭️  Skipping results fetch - no user logged in')
+          return
+        }
+
+        console.log('📊 Fetching quiz results from database for user:', currentUser.firstName)
+        const response = await fetch(`/api/quiz/results?participantName=${encodeURIComponent(currentUser.firstName)}`)
+        const result = await response.json()
+
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          console.log('✅ Quiz results loaded from database:', result.data.length, 'results')
+          // Map results to QuizResult type
+          const dbResults = result.data.map((r: any) => ({
+            quizId: r.quizId.toString(),
+            quizTitle: r.quizTitle,
+            participantName: r.participantName,
+            score: r.score,
+            totalQuestions: r.totalQuestions,
+            dateTaken: new Date(r.dateTaken).toLocaleDateString(),
+          }))
+          
+          // Set results from database
+          setQuizResults(dbResults)
+        } else {
+          console.log('⚠️ No quiz results found in database')
+          setQuizResults([])
+        }
+      } catch (error) {
+        console.error('❌ Error fetching quiz results from database:', error)
+      }
+    }
+
+    fetchQuizResultsFromDatabase()
+  }, [currentUser])
+
+  // Fetch score data from database
+  useEffect(() => {
+    const fetchScoreDataFromDatabase = async () => {
+      try {
+        if (!quizResults || quizResults.length === 0) {
+          console.log('⏭️  Skipping score data fetch - no quiz results yet')
+          return
+        }
+
+        console.log('📊 Fetching score statistics from database...')
+        setLoadingScoreData(true)
+        const response = await fetch('/api/quiz/scores')
+        const result = await response.json()
+
+        if (result.status === 'success') {
+          console.log('✅ Score data loaded from database:', result.data)
+          setScoreDataFromApi(result.data)
+        } else {
+          console.log('⚠️ Failed to fetch score data:', result.message)
+        }
+      } catch (error) {
+        console.error('❌ Error fetching score data from database:', error)
+      } finally {
+        setLoadingScoreData(false)
+      }
+    }
+
+    fetchScoreDataFromDatabase()
+  }, [quizResults])
+
   const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
     const escapeCsv = (value: string | number) => {
       const normalized = String(value).replace(/\"/g, '""')
@@ -1023,15 +964,108 @@ export default function QuizPage() {
     URL.revokeObjectURL(url)
   }
 
-  const handleDownloadResult = (result: QuizResult) => {
-    const percentage = Math.round((result.score / result.totalQuestions) * 100)
-    downloadCsv(`quiz-result-${result.quizId}-${Date.now()}.csv`, [
-      ['Quiz Title', 'Date Taken', 'Score', 'Total Questions', 'Percentage'],
-      [result.quizTitle, result.dateTaken, result.score, result.totalQuestions, `${percentage}%`],
-    ])
+  const downloadPdf = (fileName: string, rows: Array<Array<string | number>>) => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 10
+    let yPosition = margin
+
+    // Add title
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Quiz Results Report', margin, yPosition)
+    yPosition += 10
+
+    // Add date
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Generated: ${new Date().toLocaleString()}`, margin, yPosition)
+    yPosition += 8
+
+    // Add table
+    doc.setFontSize(11)
+    const cellPadding = 3
+    const colWidths = rows[0].map(() => (pageWidth - 2 * margin) / rows[0].length)
+
+    // Draw header row
+    doc.setFont('helvetica', 'bold')
+    doc.setFillColor(41, 128, 185)
+    doc.setTextColor(255, 255, 255)
+
+    let xPosition = margin
+    for (let i = 0; i < rows[0].length; i++) {
+      doc.rect(xPosition, yPosition - 4, colWidths[i], 6, 'F')
+      doc.text(String(rows[0][i]), xPosition + cellPadding, yPosition)
+      xPosition += colWidths[i]
+    }
+    yPosition += 8
+
+    // Draw data rows
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(0, 0, 0)
+
+    for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) {
+      // Check if we need a new page
+      if (yPosition > pageHeight - margin - 10) {
+        doc.addPage()
+        yPosition = margin
+
+        // Redraw header on new page
+        doc.setFont('helvetica', 'bold')
+        doc.setFillColor(41, 128, 185)
+        doc.setTextColor(255, 255, 255)
+
+        xPosition = margin
+        for (let i = 0; i < rows[0].length; i++) {
+          doc.rect(xPosition, yPosition - 4, colWidths[i], 6, 'F')
+          doc.text(String(rows[0][i]), xPosition + cellPadding, yPosition)
+          xPosition += colWidths[i]
+        }
+        yPosition += 8
+
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(0, 0, 0)
+      }
+
+      // Draw alternating row background
+      if (rowIdx % 2 === 0) {
+        doc.setFillColor(240, 240, 240)
+        doc.rect(margin, yPosition - 4, pageWidth - 2 * margin, 6, 'F')
+      }
+
+      xPosition = margin
+      for (let i = 0; i < rows[rowIdx].length; i++) {
+        doc.text(String(rows[rowIdx][i]), xPosition + cellPadding, yPosition)
+        xPosition += colWidths[i]
+      }
+      yPosition += 6
+    }
+
+    // Add footer
+    doc.setFontSize(9)
+    doc.setTextColor(128, 128, 128)
+    doc.text(`Page 1 of ${doc.getNumberOfPages()}`, pageWidth / 2, pageHeight - 5, { align: 'center' })
+
+    // Download
+    doc.save(fileName)
   }
 
-  const handleDownloadAllResults = () => {
+  const handleDownloadResult = (result: QuizResult, format: 'csv' | 'pdf' = 'pdf') => {
+    const percentage = Math.round((result.score / result.totalQuestions) * 100)
+    const data = [
+      ['Quiz Title', 'Date Taken', 'Score', 'Total Questions', 'Percentage'],
+      [result.quizTitle, result.dateTaken, result.score, result.totalQuestions, `${percentage}%`],
+    ]
+
+    if (format === 'pdf') {
+      downloadPdf(`quiz-result-${result.quizId}-${Date.now()}.pdf`, data)
+    } else {
+      downloadCsv(`quiz-result-${result.quizId}-${Date.now()}.csv`, data)
+    }
+  }
+
+  const handleDownloadAllResults = (format: 'csv' | 'pdf' = 'pdf') => {
     const rows = [
       ['Quiz Title', 'Date Taken', 'Score', 'Total Questions', 'Percentage'],
       ...quizResults.map((result) => [
@@ -1043,7 +1077,51 @@ export default function QuizPage() {
       ]),
     ]
 
-    downloadCsv(`quiz-results-${Date.now()}.csv`, rows)
+    if (format === 'pdf') {
+      downloadPdf(`quiz-results-${Date.now()}.pdf`, rows)
+    } else {
+      downloadCsv(`quiz-results-${Date.now()}.csv`, rows)
+    }
+  }
+
+  const fetchQuizRatings = async (quizId: string) => {
+    try {
+      console.log('📥 Fetching ratings from database for quiz:', quizId)
+      const response = await fetch(`/api/quiz/${quizId}/rating`)
+      const result = await response.json()
+
+      if (response.ok) {
+        console.log('✅ Ratings loaded from database:', result.data)
+        setQuizRatings((prev) => ({
+          ...prev,
+          [quizId]: result.data || [],
+        }))
+      } else {
+        console.error('❌ Failed to fetch ratings:', result.message)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching ratings:', error)
+    }
+  }
+
+  const fetchQuizComments = async (quizId: string) => {
+    try {
+      console.log('📥 Fetching comments from database for quiz:', quizId)
+      const response = await fetch(`/api/quiz/${quizId}/comment`)
+      const result = await response.json()
+
+      if (response.ok) {
+        console.log('✅ Comments loaded from database:', result.data)
+        setQuizComments((prev) => ({
+          ...prev,
+          [quizId]: result.data || [],
+        }))
+      } else {
+        console.error('❌ Failed to fetch comments:', result.message)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching comments:', error)
+    }
   }
 
   const handleCreateQuiz = async (quizData: any) => {
@@ -1101,6 +1179,9 @@ export default function QuizPage() {
     const quiz = quizzes.find((q) => q.id === quizId)
     if (quiz) {
       setPreviewQuiz(quiz)
+      // Load ratings and comments from database
+      fetchQuizRatings(quizId)
+      fetchQuizComments(quizId)
     }
   }
 
@@ -1108,6 +1189,9 @@ export default function QuizPage() {
     if (previewQuiz) {
       setSelectedQuiz(previewQuiz)
       setPreviewQuiz(null)
+      // Load ratings and comments from database
+      fetchQuizRatings(previewQuiz.id)
+      fetchQuizComments(previewQuiz.id)
     }
   }
 
@@ -1115,24 +1199,59 @@ export default function QuizPage() {
     setPreviewQuiz(null)
   }
 
-  const handleQuizComplete = (score: number, answers: number[]) => {
-    if (selectedQuiz) {
-      const result: QuizResult = {
+  const handleQuizComplete = async (score: number, answers: number[]) => {
+    if (!selectedQuiz) return
+
+    try {
+      console.log('📤 Submitting quiz response to database:', {
+        quizId: selectedQuiz.id,
+        score,
+        totalQuestions: answers.length,
+        participantName: currentUser?.firstName || 'Anonymous',
+      })
+
+      const response = await fetch(`/api/quiz/${selectedQuiz.id}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answers,
+          participantName: currentUser?.firstName || 'You',
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ API error:', result.message)
+        alert('Failed to save your quiz response: ' + result.message)
+        return
+      }
+
+      console.log('✅ Quiz response saved to database successfully!')
+
+      // Update local state with actual response from API
+      const quizResult: QuizResult = {
         quizId: selectedQuiz.id,
         quizTitle: selectedQuiz.title,
-        participantName: 'You',
-        score,
-        totalQuestions: selectedQuiz.questions.length,
-        dateTaken: new Date().toLocaleDateString(),
+        participantName: currentUser?.firstName || 'You',
+        score: result.data.score,
+        totalQuestions: result.data.totalQuestions,
+        dateTaken: new Date(result.data.dateTaken).toLocaleDateString(),
       }
-      setQuizResults([result, ...quizResults])
-      
+
+      setQuizResults([quizResult, ...quizResults])
+
       // Update participants count
       setQuizzes(
         quizzes.map((q) =>
           q.id === selectedQuiz.id ? { ...q, participants: q.participants + 1 } : q
         )
       )
+
+      console.log('✅ Quiz complete! Your response has been saved.')
+    } catch (error) {
+      console.error('❌ Failed to submit quiz:', error)
+      alert('Failed to submit quiz. Please try again.')
     }
   }
 
@@ -1140,7 +1259,7 @@ export default function QuizPage() {
     setSelectedQuiz(null)
   }
 
-  const handleAddQuizComment = (quizId: string, name: string, message: string) => {
+  const handleAddQuizComment = async (quizId: string, name: string, message: string) => {
     const trimmedName = name.trim()
     const trimmedMessage = message.trim()
 
@@ -1148,36 +1267,84 @@ export default function QuizPage() {
       return
     }
 
-    setQuizComments((prev) => ({
-      ...prev,
-      [quizId]: [
-        {
-          name: trimmedName,
-          message: trimmedMessage,
-          date: new Date().toLocaleString(),
-        },
-        ...(prev[quizId] || []),
-      ],
-    }))
+    try {
+      console.log('📤 Submitting comment to database:', { quizId, name: trimmedName, message: trimmedMessage })
+      
+      const response = await fetch(`/api/quiz/${quizId}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmedName, message: trimmedMessage }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ API error:', result.message)
+        alert('Failed to submit comment: ' + result.message)
+        return
+      }
+
+      console.log('✅ Comment saved to database:', result.data)
+
+      // Update local state with new comment
+      setQuizComments((prev) => ({
+        ...prev,
+        [quizId]: [
+          {
+            name: trimmedName,
+            message: trimmedMessage,
+            date: new Date().toLocaleString(),
+          },
+          ...(prev[quizId] || []),
+        ],
+      }))
+    } catch (error) {
+      console.error('❌ Failed to submit comment:', error)
+      alert('Failed to submit comment. Please try again.')
+    }
   }
 
-  const handleAddQuizRating = (quizId: string, name: string, rating: number) => {
+  const handleAddQuizRating = async (quizId: string, name: string, rating: number) => {
     const trimmedName = name.trim()
     if (!trimmedName || rating < 1 || rating > 5) {
       return
     }
 
-    setQuizRatings((prev) => ({
-      ...prev,
-      [quizId]: [
-        {
-          name: trimmedName,
-          rating,
-          date: new Date().toLocaleString(),
-        },
-        ...(prev[quizId] || []),
-      ],
-    }))
+    try {
+      console.log('📤 Submitting rating to database:', { quizId, name: trimmedName, rating })
+      
+      const response = await fetch(`/api/quiz/${quizId}/rating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmedName, rating }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ API error:', result.message)
+        alert('Failed to submit rating: ' + result.message)
+        return
+      }
+
+      console.log('✅ Rating saved to database:', result.data)
+
+      // Update local state with new rating
+      setQuizRatings((prev) => ({
+        ...prev,
+        [quizId]: [
+          {
+            name: trimmedName,
+            rating,
+            date: new Date().toLocaleString(),
+          },
+          ...(prev[quizId] || []),
+        ],
+      }))
+    } catch (error) {
+      console.error('❌ Failed to submit rating:', error)
+      alert('Failed to submit rating. Please try again.')
+    }
   }
 
   const yearSemesterBuckets = Array.from(
@@ -1197,7 +1364,13 @@ export default function QuizPage() {
     .map(([, value]) => value)
     .sort((a, b) => (a.year === b.year ? a.semester - b.semester : a.year - b.year))
 
-  const categorizedScoreData = yearSemesterBuckets.map((bucket) => {
+  // Use API data if available, otherwise fallback to calculated data
+  const scoreDataFromApiCourseByYear = scoreDataFromApi?.courseByYear || null
+  const scoreDataFromApiQuizTakers = scoreDataFromApi?.quizTakers || null
+  const scoreDataSummary = scoreDataFromApi?.summary || { totalAttempts: 0, averageScore: 0, totalParticipants: 0 }
+
+  // Fallback calculated data (for backward compatibility if API is not ready)
+  const calculatedCategorizedScoreData = yearSemesterBuckets.map((bucket) => {
     const courseMap = bucket.quizzes.reduce((map, quiz) => {
       if (!map.has(quiz.course)) {
         map.set(quiz.course, {
@@ -1248,6 +1421,9 @@ export default function QuizPage() {
     }
   })
 
+  // Use calculated data for now (API will populate scoreDataFromApi for future optimization)
+  const categorizedScoreData: typeof calculatedCategorizedScoreData = scoreDataFromApiCourseByYear || calculatedCategorizedScoreData
+
   const totalAttempts = quizResults.length
   const overallAverageScore =
     quizResults.length > 0
@@ -1268,34 +1444,18 @@ export default function QuizPage() {
       ? categorizedScoreData
       : categorizedScoreData.filter((group) => group.year === selectedScoreYear)
 
-  const participantAttemptRows = [
-    ...Object.entries(mockParticipantScoresByQuiz).flatMap(([quizId, entries]) => {
-      const quiz = quizzes.find((q) => q.id === quizId)
-      if (!quiz) return []
-
-      return entries.map((entry) => ({
-        name: entry.name,
-        quizId,
-        year: quiz.year,
-        semester: quiz.semester,
-        course: quiz.course,
-        quizTitle: quiz.title,
-        percentage: Math.round((entry.score / entry.totalQuestions) * 100),
-      }))
-    }),
-    ...quizResults.map((result) => {
-      const quiz = quizzes.find((q) => q.id === result.quizId)
-      return {
-        name: result.participantName,
-        quizId: result.quizId,
-        year: quiz?.year ?? 0,
-        semester: quiz?.semester ?? 0,
-        course: quiz?.course ?? 'Unknown Course',
-        quizTitle: result.quizTitle,
-        percentage: Math.round((result.score / result.totalQuestions) * 100),
-      }
-    }),
-  ]
+  const participantAttemptRows = quizResults.map((result) => {
+    const quiz = quizzes.find((q) => q.id === result.quizId)
+    return {
+      name: result.participantName,
+      quizId: result.quizId,
+      year: quiz?.year ?? 0,
+      semester: quiz?.semester ?? 0,
+      course: quiz?.course ?? 'Unknown Course',
+      quizTitle: result.quizTitle,
+      percentage: Math.round((result.score / result.totalQuestions) * 100),
+    }
+  })
 
   const participantScoreData = Array.from(
     participantAttemptRows
@@ -1370,7 +1530,8 @@ export default function QuizPage() {
     }
   })
 
-  const courseTakerScoreByYearSemester = Array.from(
+  // Calculate course taker scores for calculated data
+  const calculatedCourseTakerScoreByYearSemester = Array.from(
     courseTakerScoreData.reduce((map, row) => {
       const key = `${row.year}-${row.semester}`
       if (!map.has(key)) {
@@ -1382,6 +1543,9 @@ export default function QuizPage() {
   )
     .map(([, value]) => value)
     .sort((a, b) => (a.year === b.year ? a.semester - b.semester : a.year - b.year))
+
+  // Use API data for quiz takers if available, otherwise use calculated data
+  const courseTakerScoreByYearSemester: typeof calculatedCourseTakerScoreByYearSemester = scoreDataFromApiQuizTakers || calculatedCourseTakerScoreByYearSemester
 
   const childScoresByCourseGroup = Array.from(
     participantAttemptRows
@@ -1464,26 +1628,17 @@ export default function QuizPage() {
   })
 
   if (selectedQuiz) {
-    const participantScores: ParticipantScoreSummary[] = [
-      ...(mockParticipantScoresByQuiz[selectedQuiz.id] || []),
-      ...quizResults
-        .filter((result) => result.quizId === selectedQuiz.id)
-        .map((result) => ({
-          name: result.participantName,
-          score: result.score,
-          totalQuestions: result.totalQuestions,
-        })),
-    ]
+    const participantScores: ParticipantScoreSummary[] = quizResults
+      .filter((result) => result.quizId === selectedQuiz.id)
+      .map((result) => ({
+        name: result.participantName,
+        score: result.score,
+        totalQuestions: result.totalQuestions,
+      }))
 
-    const combinedComments = [
-      ...(mockQuizCommentsByQuiz[selectedQuiz.id] || []),
-      ...(quizComments[selectedQuiz.id] || []),
-    ]
+    const combinedComments = quizComments[selectedQuiz.id] || []
 
-    const combinedRatings = [
-      ...(mockQuizRatingsByQuiz[selectedQuiz.id] || []),
-      ...(quizRatings[selectedQuiz.id] || []),
-    ]
+    const combinedRatings = quizRatings[selectedQuiz.id] || []
 
     return (
       <AppLayout>
@@ -1493,6 +1648,7 @@ export default function QuizPage() {
             participantScores={participantScores}
             quizComments={combinedComments}
             quizRatings={combinedRatings}
+            currentUser={currentUser}
             onAddComment={(name, message) =>
               handleAddQuizComment(selectedQuiz.id, name, message)
             }
@@ -1870,9 +2026,16 @@ export default function QuizPage() {
         )}
 
         {activeTab === 'results' && (
-          <div>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">My Results</h2>
+              <p className="text-muted-foreground">
+                View all your quiz attempts and scores
+              </p>
+            </div>
+
             {quizResults.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-12 bg-card border border-border rounded-lg">
                 <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">
                   No quiz results yet
@@ -1888,60 +2051,138 @@ export default function QuizPage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleDownloadAllResults}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download All Results
-                  </button>
-                </div>
-                <div>
-                  <div className="relative w-full md:max-w-md">
-                    <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={resultsSearch}
-                      onChange={(e) => setResultsSearch(e.target.value)}
-                      placeholder="Search results by quiz title or date"
-                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+              <div className="space-y-6">
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <h3 className="font-semibold text-foreground mb-4">Summary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-background border border-border rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
+                      <p className="text-2xl font-bold text-primary">{quizResults.length}</p>
+                    </div>
+                    <div className="bg-background border border-border rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Average Score</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {quizResults.length > 0
+                          ? Math.round(
+                              (quizResults.reduce((sum, r) => sum + (r.score / r.totalQuestions) * 100, 0) /
+                                quizResults.length)
+                            )
+                          : 0}
+                        %
+                      </p>
+                    </div>
+                    <div className="bg-background border border-border rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Total Correct</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {quizResults.reduce((sum, r) => sum + r.score, 0)}
+                      </p>
+                    </div>
+                    <div className="bg-background border border-border rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Total Questions</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {quizResults.reduce((sum, r) => sum + r.totalQuestions, 0)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                {filteredResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="bg-card border border-border rounded-lg p-6"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1">
-                          {result.quizTitle}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Completed on {result.dateTaken}
-                        </p>
+
+                <div className="space-y-4">
+                  <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+                    <div className="flex-1">
+                      <div className="relative w-full md:max-w-md">
+                        <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={resultsSearch}
+                          onChange={(e) => setResultsSearch(e.target.value)}
+                          placeholder="Search results by quiz title or date"
+                          className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary mb-1">
-                          {Math.round((result.score / result.totalQuestions) * 100)}%
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {result.score} / {result.totalQuestions} correct
-                        </p>
-                      </div>
+                    </div>
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleDownloadResult(result)}
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+                        onClick={() => handleDownloadAllResults('pdf')}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
                       >
                         <Download className="w-4 h-4" />
-                        Download
+                        Download as PDF
+                      </button>
+                      <button
+                        onClick={() => handleDownloadAllResults('csv')}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download as CSV
                       </button>
                     </div>
                   </div>
-                ))}
+
+                  {filteredResults.length === 0 ? (
+                    <div className="text-center py-8 bg-card border border-border rounded-lg">
+                      <p className="text-muted-foreground">
+                        No results match your search "{resultsSearch}"
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Showing {filteredResults.length} of {quizResults.length} results
+                      </p>
+                      {filteredResults.map((result, index) => {
+                        const percentage = Math.round((result.score / result.totalQuestions) * 100)
+                        const isPass = percentage >= 70
+
+                        return (
+                          <div
+                            key={index}
+                            className="bg-card border border-border rounded-lg p-6 hover:border-primary/50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-foreground mb-1">
+                                  {result.quizTitle}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Completed on {result.dateTaken}
+                                </p>
+                              </div>
+
+                              <div className="text-right">
+                                <div className={`text-3xl font-bold mb-1 ${isPass ? 'text-green-500' : 'text-orange-500'}`}>
+                                  {percentage}%
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {result.score} / {result.totalQuestions} correct
+                                </p>
+                                <div className="mt-2 text-xs font-medium bg-background rounded px-2 py-1 inline-block">
+                                  {isPass ? '✓ Pass' : '⚠ Review Required'}
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDownloadResult(result, 'pdf')}
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  PDF
+                                </button>
+                                <button
+                                  onClick={() => handleDownloadResult(result, 'csv')}
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  CSV
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2223,14 +2464,8 @@ export default function QuizPage() {
               <p className="text-muted-foreground mb-4">Previous comments and ratings</p>
 
               {(() => {
-                const previewComments = [
-                  ...(mockQuizCommentsByQuiz[previewQuiz.id] || []),
-                  ...(quizComments[previewQuiz.id] || []),
-                ]
-                const previewRatings = [
-                  ...(mockQuizRatingsByQuiz[previewQuiz.id] || []),
-                  ...(quizRatings[previewQuiz.id] || []),
-                ]
+                const previewComments = quizComments[previewQuiz.id] || []
+                const previewRatings = quizRatings[previewQuiz.id] || []
 
                 return (
                   <div className="space-y-4">

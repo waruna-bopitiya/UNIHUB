@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { sql, sqlWithRetry } from '@/lib/db'
 import { ensureTablesExist } from '@/lib/db-init'
 
 export async function GET(req: NextRequest) {
@@ -249,22 +249,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Insert quiz
+    // Insert quiz with retry logic
     console.log('💾 Inserting quiz into database with:', { title: title.trim(), year, semester, course: course.trim(), category: category?.trim() || 'General', difficulty, duration })
     
     let quiz: any
     try {
-      const result = await sql`
-        INSERT INTO quizzes
-          (title, description, creator, year, semester, course, category, difficulty, duration, participants)
-        VALUES
-          (${title.trim()}, ${description?.trim() || null}, ${creator.trim()}, ${year}, ${semester}, ${course.trim()}, ${category?.trim() || 'General'}, ${difficulty}, ${duration}, 0)
-        RETURNING id, title, description, creator, year, semester, course, category, difficulty, duration, participants, created_at, updated_at
-      `
+      const result = await sqlWithRetry(() =>
+        sql`
+          INSERT INTO quizzes
+            (title, description, creator, year, semester, course, category, difficulty, duration, participants)
+          VALUES
+            (${title.trim()}, ${description?.trim() || null}, ${creator.trim()}, ${year}, ${semester}, ${course.trim()}, ${category?.trim() || 'General'}, ${difficulty}, ${duration}, 0)
+          RETURNING id, title, description, creator, year, semester, course, category, difficulty, duration, participants, created_at, updated_at
+        `
+      )
       quiz = result[0]
       console.log('✅ Quiz inserted successfully:', { id: quiz.id, title: quiz.title, year: quiz.year, semester: quiz.semester, course: quiz.course })
     } catch (insertError: any) {
       console.error('❌ Error inserting quiz into quizzes table:', insertError.message)
+      console.error('Error details:', insertError)
       throw new Error(`Failed to insert quiz: ${insertError.message}`)
     }
 

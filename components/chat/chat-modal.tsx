@@ -321,7 +321,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
     }
   }, [isResizing])
 
-  const filteredConversations = conversations.filter((conv) =>
+  const filteredConversations = conversations.filter((conv: any) =>
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -390,11 +390,13 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       isRead: true,
     }
 
+    let updatedConversations: any = conversations
+
     try {
       // UPDATE UI IMMEDIATELY (Optimistic Update)
       console.log('💬 Displaying message immediately')
 
-      let updatedConversations = conversations.map((conv) => {
+      updatedConversations = conversations.map((conv: any) => {
         if (conv.id === selectedConversation.id) {
           return {
             ...conv,
@@ -406,7 +408,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       })
 
       setConversations(updatedConversations)
-      setSelectedConversation(updatedConversations.find((c) => c.id === selectedConversation.id) || null)
+      setSelectedConversation(updatedConversations.find((c: any) => c.id === selectedConversation.id) || null)
       setNewMessage('')
 
       // SEND TO BACKEND IN BACKGROUND
@@ -428,11 +430,11 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       if (!response.ok) {
         console.error('❌ Failed to send message:', result.message)
         // Remove optimistic message if failed - use updatedConversations
-        const rollbackConversations = updatedConversations.map((conv) => {
+        const rollbackConversations = updatedConversations.map((conv: any) => {
           if (conv.id === selectedConversation.id) {
             return {
               ...conv,
-              messages: conv.messages.filter((msg) => msg.id !== messageId),
+              messages: conv.messages.filter((msg: any) => msg.id !== messageId),
             }
           }
           return conv
@@ -455,11 +457,11 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       }
 
       // Replace optimistic message with real one - use updatedConversations
-      const finalConversations = updatedConversations.map((conv) => {
+      const finalConversations = updatedConversations.map((conv: any) => {
         if (conv.id === selectedConversation.id) {
           return {
             ...conv,
-            messages: conv.messages.map((msg) =>
+            messages: conv.messages.map((msg: any) =>
               msg.id === messageId ? result.data[0] : msg
             ),
           }
@@ -468,15 +470,15 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       })
 
       setConversations(finalConversations)
-      setSelectedConversation(finalConversations.find((c) => c.id === selectedConversation.id) || null)
+      setSelectedConversation(finalConversations.find((c: any) => c.id === selectedConversation.id) || null)
     } catch (error) {
       console.error('❌ Error sending message:', error)
       // Remove optimistic message on error - use updatedConversations which includes optimistic message
-      const rollbackConversations = updatedConversations.map((conv) => {
+      const rollbackConversations = updatedConversations.map((conv: any) => {
         if (conv.id === selectedConversation.id) {
           return {
             ...conv,
-            messages: conv.messages.filter((msg) => msg.id !== messageId),
+            messages: conv.messages.filter((msg: any) => msg.id !== messageId),
           }
         }
         return conv
@@ -618,7 +620,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
 
       // Remove from frontend state
       const chatIdStr = selectedConversation.id.toString()
-      const updatedConversations = conversations.filter((c) => {
+      const updatedConversations = conversations.filter((c: any) => {
         const convIdStr = c.id.toString()
         const shouldKeep = convIdStr !== chatIdStr
         if (!shouldKeep) {
@@ -682,12 +684,12 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       console.log('📊 Updating UI for conversation:', selectedConversation.id)
 
       // Mark message as deleted in frontend state (not removing it completely)
-      const updatedConversations = conversations.map((conv) => {
+      const updatedConversations = conversations.map((conv: any) => {
         if (conv.id === selectedConversation.id) {
           console.log('Found matching conversation')
           
           const messageIdNum = parseInt(messageId, 10)
-          const newMessages = conv.messages.map((m) => {
+          const newMessages = conv.messages.map((m: any) => {
             const msgIdNum = parseInt(m.id, 10)
             
             if (msgIdNum === messageIdNum) {
@@ -717,7 +719,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
       console.log('🔄 Setting updated conversations')
       setConversations(updatedConversations)
       
-      const updated = updatedConversations.find((c) => c.id === selectedConversation.id)
+      const updated = updatedConversations.find((c: any) => c.id === selectedConversation.id)
       setSelectedConversation(updated || null)
       console.log('✅ UI updated successfully - message now shows as deleted')
     } catch (error) {
@@ -959,7 +961,7 @@ export function ChatModal({ isOpen, onClose }: ChatModalProps) {
                           content={msg.content}
                           timestamp={msg.timestamp}
                           isOwn={msg.isOwn}
-                          isRead={msg.isRead}
+                          isRead={(msg as any).isRead}
                           status={(msg as any).status}
                           isDeleted={(msg as any).isDeleted}
                           onDelete={handleDeleteMessage}
