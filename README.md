@@ -15,8 +15,10 @@ A modern, full-stack learning platform that combines the social interaction feel
 - Live tutoring sessions with screen/camera sharing
 - Real-time chat with live viewers
 - Upcoming sessions discovery
-- View and set reminders for sessions
+- View and set reminders for sessions ⏰ Auto-notifications 30 min before
+- Watch previous session replays 🎬
 - Live viewer count and session duration tracking
+- Dark/Light mode support
 
 ### 📚 Study Library
 - Browse and download study materials (PDF, DOCX, PPT, ZIP)

@@ -64,6 +64,68 @@ export async function sendOTPEmail(email: string, otp: string) {
   }
 }
 
+// Send message notification email
+export async function sendMessageNotificationEmail(
+  recipientEmail: string,
+  recipientName: string,
+  senderName: string,
+  messagePreview: string
+) {
+  try {
+    const mailOptions = {
+      from: process.env.GMAIL_EMAIL,
+      to: recipientEmail,
+      subject: `New Message from ${senderName} - UniHub`,
+      html: `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+    <div style="background-color: white; max-width: 600px; margin: 0 auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">UniHub</h1>
+      </div>
+      <div style="padding: 30px 20px;">
+        <h2 style="color: #333; margin-top: 0;">Hi ${recipientName},</h2>
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">
+          You have received a new message from <strong>${senderName}</strong>
+        </p>
+        <div style="background-color: #f9f9f9; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px;">
+          <p style="color: #666; font-size: 14px; line-height: 1.6; margin: 0;">
+            "${messagePreview}"
+          </p>
+        </div>
+        <p style="color: #666; font-size: 16px; line-height: 1.6;">
+          Reply to messages and continue the conversation in UniHub
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://unihub.app'}" 
+             style="display: inline-block; background-color: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+            Open UniHub Chat
+          </a>
+        </div>
+        <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
+          UniHub - Student Learning Platform<br>
+          © 2026 All rights reserved
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`,
+    }
+
+    await emailTransporter.sendMail(mailOptions)
+    console.log(`✅ Message notification email sent to ${recipientEmail}`)
+    return true
+  } catch (error) {
+    console.error('❌ Failed to send message notification email:', error)
+    // Don't throw - let the message be saved even if email fails
+    return false
+  }
+}
+
 // Verify email transporter is working
 export async function verifyEmailTransporter() {
   try {

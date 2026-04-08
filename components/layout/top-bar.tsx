@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { NotificationBell } from '@/components/notifications/notification-bell'
+import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Dialog,
   DialogContent,
@@ -259,6 +260,9 @@ export function TopBar({ onMenuClick }: TopBarProps) {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Notifications - only show if logged in */}
             {isLoggedIn && (
               <NotificationBell />
