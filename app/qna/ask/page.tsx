@@ -190,11 +190,11 @@ export default function AskQuestionPage() {
     return (
       <div className="container max-w-3xl mx-auto py-6 px-4">
         <Link 
-          href="/qna"
+          href="/?section=qna"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to questions
+          Back to Home
         </Link>
 
         <div className="bg-secondary/30 rounded-lg p-8 text-center">
@@ -237,13 +237,13 @@ export default function AskQuestionPage() {
             </h3>
             <div className="space-y-2">
               <Link
-                href="/qna"
+                href="/?section=qna"
                 className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
               >
-                ← Back to Questions
+                ← Back to Home
               </Link>
               <Link
-                href="/qna/category/it3050"
+                href="/qna"
                 className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
               >
                 📚 Browse Questions
