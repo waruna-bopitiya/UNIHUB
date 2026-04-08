@@ -149,8 +149,8 @@ export async function PATCH(
 
     const question = questions[0]
 
-    // Verify the user is the owner
-    if (question.user_id !== studentIdCookie) {
+    // Verify the user is the owner (convert to string for comparison)
+    if (String(question.user_id) !== String(studentIdCookie)) {
       return NextResponse.json(
         { error: 'You can only edit your own questions' },
         { status: 403 }
@@ -239,8 +239,8 @@ export async function DELETE(
 
     const question = questions[0]
 
-    // Verify the user is the owner
-    if (question.user_id !== studentIdCookie) {
+    // Verify the user is the owner (convert to string for comparison)
+    if (String(question.user_id) !== String(studentIdCookie)) {
       return NextResponse.json(
         { error: 'You can only delete your own questions' },
         { status: 403 }
