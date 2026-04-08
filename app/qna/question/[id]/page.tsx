@@ -226,15 +226,12 @@ export default function QuestionDetailPage() {
   }
 
   const handleAnswerVote = (answerId: string, value: number) => {
-    if (!question) return
-    
     // TODO: API call to vote on answer
     console.log("Vote on answer:", answerId, value)
     
-    // Update local state
-    setQuestion({
-      ...question,
-      answers: question.answers.map((a: any) => {
+    // Update local state - use answers state, not question.answers
+    setAnswers(
+      answers.map((a: any) => {
         if (a.id === answerId) {
           const newUpvotes = value === 1 ? a.upvotes + 1 : value === -1 ? a.upvotes - 1 : a.upvotes
           const newDownvotes = value === -1 ? a.downvotes + 1 : value === 1 ? a.downvotes - 1 : a.downvotes
@@ -242,7 +239,7 @@ export default function QuestionDetailPage() {
         }
         return a
       })
-    })
+    )
   }
 
   const netQuestionVotes = question ? question.upvotes - question.downvotes : 0

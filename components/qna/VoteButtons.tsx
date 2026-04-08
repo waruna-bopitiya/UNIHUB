@@ -34,12 +34,19 @@ export default function VoteButtons({
 
   const handleVote = async (type: "up" | "down") => {
     const userId = localStorage.getItem('studentId')
-    if (!userId) {
+    if (!userId || !userId.trim()) {
       toast.error("Please log in to vote")
       return
     }
 
-    console.log('🗳️ User voting:', { questionId, userId, voteType: type === 'up' ? 'upvote' : 'downvote' })
+    const parsedQuestionId = parseInt(questionId)
+    if (isNaN(parsedQuestionId)) {
+      console.error('❌ Invalid questionId:', questionId)
+      toast.error("Invalid question ID")
+      return
+    }
+
+    console.log('🗳️ User voting:', { questionId: parsedQuestionId, userId, voteType: type === 'up' ? 'upvote' : 'downvote' })
     setIsLoading(true)
     
     try {
@@ -47,17 +54,27 @@ export default function VoteButtons({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          questionId: parseInt(questionId),
-          userId,
+          questionId: parsedQuestionId,
+          userId: String(userId).trim(),
           voteType: type === 'up' ? 'upvote' : 'downvote'
         })
       })
 
       const data = await response.json()
-      console.log('📋 Vote API response:', { status: data.status, upvotes: data.upvotes, downvotes: data.downvotes })
+      console.log('📋 Vote API response:', { status: response.status, ...data })
       
       if (!response.ok) {
         throw new Error(data.error || 'Vote failed')
+      }
+
+      // Verify response has required fields
+      if (data.upvotes === undefined && data.upvotes !== 0) {
+        console.error('❌ API missing upvotes field:', data)
+        throw new Error('Invalid response from server - missing upvotes')
+      }
+      if (data.downvotes === undefined && data.downvotes !== 0) {
+        console.error('❌ API missing downvotes field:', data)
+        throw new Error('Invalid response from server - missing downvotes')
       }
 
       // Ensure votes are never negative - strict protection
