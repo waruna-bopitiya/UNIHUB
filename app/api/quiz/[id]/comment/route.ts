@@ -19,8 +19,10 @@ export async function GET(
       )
     }
 
-    // Check if quiz exists
-    const quizzes = await sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    // Check if quiz exists with retry logic
+    const quizzes = await sqlWithRetry(() =>
+      sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    )
     if (quizzes.length === 0) {
       return NextResponse.json(
         { status: 'error', message: 'Quiz not found' },
@@ -28,17 +30,19 @@ export async function GET(
       )
     }
 
-    // Get comments
-    const comments = await sql`
-      SELECT 
-        id,
-        name,
-        message,
-        created_at
-      FROM quiz_comments
-      WHERE quiz_id = ${quizId}
-      ORDER BY created_at DESC
-    `
+    // Get comments with retry logic
+    const comments = await sqlWithRetry(() =>
+      sql`
+        SELECT 
+          id,
+          name,
+          message,
+          created_at
+        FROM quiz_comments
+        WHERE quiz_id = ${quizId}
+        ORDER BY created_at DESC
+      `
+    )
 
     return NextResponse.json({
       status: 'success',
@@ -50,9 +54,12 @@ export async function GET(
       count: comments.length,
     })
   } catch (error: any) {
-    console.error('Error fetching comments:', error)
+    console.error('❌ Error from comment endpoint:', error)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { status: 'error', message: error.message },
+      { status: 'error', message: error.message || 'Failed to save comment', details: error.toString() },
       { status: 500 }
     )
   }
@@ -100,7 +107,13 @@ export async function POST(
     }
 
     // Insert comment with retry logic
-    const [comment] = await sqlWithRetry(() =>
+    console.log('💾 Attempting to insert comment with data:', {
+      quizId,
+      name: name?.trim() || 'Anonymous',
+      message: message.trim(),
+      messageLength: message.trim().length,
+    })
+    const result = await sqlWithRetry(() =>
       sql`
         INSERT INTO quiz_comments
           (quiz_id, name, message)
@@ -110,6 +123,11 @@ export async function POST(
       `
     )
 
+    if (!result || result.length === 0) {
+      throw new Error('Failed to insert comment - no result returned')
+    }
+
+    const comment = result[0]
     console.log('✅ Comment saved successfully:', comment)
 
     return NextResponse.json(

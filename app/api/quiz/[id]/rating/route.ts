@@ -19,8 +19,10 @@ export async function GET(
       )
     }
 
-    // Check if quiz exists
-    const quizzes = await sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    // Check if quiz exists with retry logic
+    const quizzes = await sqlWithRetry(() =>
+      sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    )
     if (quizzes.length === 0) {
       return NextResponse.json(
         { status: 'error', message: 'Quiz not found' },
@@ -28,17 +30,19 @@ export async function GET(
       )
     }
 
-    // Get ratings
-    const ratings = await sql`
-      SELECT 
-        id,
-        name,
-        rating,
-        created_at
-      FROM quiz_ratings
-      WHERE quiz_id = ${quizId}
-      ORDER BY created_at DESC
-    `
+    // Get ratings with retry logic
+    const ratings = await sqlWithRetry(() =>
+      sql`
+        SELECT 
+          id,
+          name,
+          rating,
+          created_at
+        FROM quiz_ratings
+        WHERE quiz_id = ${quizId}
+        ORDER BY created_at DESC
+      `
+    )
 
     // Calculate average rating
     const avgRating =
@@ -57,9 +61,12 @@ export async function GET(
       averageRating: parseFloat(avgRating as string),
     })
   } catch (error: any) {
-    console.error('Error fetching ratings:', error)
+    console.error('❌ Error from rating endpoint:', error)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { status: 'error', message: error.message },
+      { status: 'error', message: error.message || 'Failed to save rating', details: error.toString() },
       { status: 500 }
     )
   }
@@ -107,7 +114,13 @@ export async function POST(
     }
 
     // Insert rating with retry logic
-    const [newRating] = await sqlWithRetry(() =>
+    console.log('💾 Attempting to insert rating with data:', {
+      quizId,
+      name: name?.trim() || 'Anonymous',
+      rating,
+      ratingIsNumber: typeof rating === 'number',
+    })
+    const result = await sqlWithRetry(() =>
       sql`
         INSERT INTO quiz_ratings
           (quiz_id, name, rating)
@@ -117,6 +130,11 @@ export async function POST(
       `
     )
 
+    if (!result || result.length === 0) {
+      throw new Error('Failed to insert rating - no result returned')
+    }
+
+    const newRating = result[0]
     console.log('✅ Rating saved successfully:', newRating)
 
     return NextResponse.json(

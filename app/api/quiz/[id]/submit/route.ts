@@ -91,17 +91,29 @@ export async function POST(
     console.log('📊 Score calculated:', { score, total: questions.length })
 
     // Store response with retry logic
-    console.log('💾 Saving quiz response to database...')
-    const [response] = await sqlWithRetry(() =>
+    console.log('💾 Attempting to insert quiz response with data:', {
+      quizId,
+      participantName,
+      answersCount: answers.length,
+      questionsCount: questions.length,
+      score,
+      answers: answers.slice(0, 3), // Log first 3 answers for debugging
+    })
+    const result = await sqlWithRetry(() =>
       sql`
         INSERT INTO quiz_responses
-          (quiz_id, participant_name, answers, score, total_questions, date_taken)
+          (quiz_id, participant_name, answers, score, total_questions)
         VALUES
-          (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length}, NOW())
-        RETURNING id, score, total_questions, date_taken
+          (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length})
+        RETURNING id, score, total_questions, date_taken, created_at
       `
     )
 
+    if (!result || result.length === 0) {
+      throw new Error('Failed to insert quiz response - no result returned')
+    }
+
+    const response = result[0]
     console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
 
     // Update participants count with retry logic
@@ -128,9 +140,10 @@ export async function POST(
     })
   } catch (error: any) {
     console.error('❌ Error submitting quiz:', error.message)
-    console.error('Error details:', error)
+    console.error('Error details:', error.stack)
+    console.error('Full error:', JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { status: 'error', message: error.message || 'Failed to submit quiz' },
+      { status: 'error', message: error.message || 'Failed to submit quiz', details: error.toString() },
       { status: 500 }
     )
   }
