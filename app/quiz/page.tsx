@@ -837,43 +837,44 @@ export default function QuizPage() {
   }, [])
 
   // Fetch quizzes from database on page load
-  useEffect(() => {
-    const fetchQuizzesFromDatabase = async () => {
-      try {
-        console.log('📚 Fetching quizzes from database...')
-        const response = await fetch('/api/quiz')
-        const result = await response.json()
+  // Function to fetch quizzes from database
+  const fetchQuizzesFromDatabase = async () => {
+    try {
+      console.log('📚 Fetching quizzes from database...')
+      const response = await fetch('/api/quiz')
+      const result = await response.json()
 
-        if (result.status === 'success' && Array.isArray(result.data)) {
-          console.log('✅ Quizzes loaded from database:', result.data.length, 'quizzes')
-          // Map database quizzes to Quiz type and merge with mock data
-          const dbQuizzes = result.data.map((q: any) => ({
-            id: q.id.toString(),
-            title: q.title,
-            description: q.description,
-            creator: q.creator,
-            questions: [], // Questions will be loaded separately if needed
-            duration: q.duration,
-            participants: q.participants,
-            category: q.category,
-            difficulty: q.difficulty,
-            year: q.year,
-            semester: q.semester,
-            course: q.course,
-          }))
-          
-          // Set quizzes from database, then add mock data
-          setQuizzes([...dbQuizzes, ...normalizedQuizzes])
-        } else {
-          console.log('⚠️ No quizzes found in database, using mock data')
-          setQuizzes(normalizedQuizzes)
-        }
-      } catch (error) {
-        console.error('❌ Error fetching quizzes from database:', error)
+      if (result.status === 'success' && Array.isArray(result.data)) {
+        console.log('✅ Quizzes loaded from database:', result.data.length, 'quizzes')
+        // Map database quizzes to Quiz type and merge with mock data
+        const dbQuizzes = result.data.map((q: any) => ({
+          id: q.id.toString(),
+          title: q.title,
+          description: q.description,
+          creator: q.creator,
+          questions: [], // Questions will be loaded separately if needed
+          duration: q.duration,
+          participants: q.participants,
+          category: q.category,
+          difficulty: q.difficulty,
+          year: q.year,
+          semester: q.semester,
+          course: q.course,
+        }))
+        
+        // Set quizzes from database, then add mock data
+        setQuizzes([...dbQuizzes, ...normalizedQuizzes])
+      } else {
+        console.log('⚠️ No quizzes found in database, using mock data')
         setQuizzes(normalizedQuizzes)
       }
+    } catch (error) {
+      console.error('❌ Error fetching quizzes from database:', error)
+      setQuizzes(normalizedQuizzes)
     }
+  }
 
+  useEffect(() => {
     fetchQuizzesFromDatabase()
   }, [])
 
@@ -1160,13 +1161,8 @@ export default function QuizPage() {
 
       console.log('✅ Quiz created successfully in database!')
       
-      // Add to frontend state
-      const newQuiz: Quiz = {
-        id: result.data.id.toString(),
-        ...quizData,
-        participants: 0,
-      }
-      setQuizzes([newQuiz, ...quizzes])
+      // Refresh quizzes from database to show the newly created quiz
+      await fetchQuizzesFromDatabase()
       
       // Set the filters to show the newly created quiz
       setSelectedYear(quizData.year)
