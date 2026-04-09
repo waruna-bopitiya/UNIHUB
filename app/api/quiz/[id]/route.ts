@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { sql, sqlWithRetry } from '@/lib/db'
 import { ensureTablesExist } from '@/lib/db-init'
 
 export async function GET(
@@ -19,53 +19,63 @@ export async function GET(
       )
     }
 
-    // Get quiz
-    const quizzes = await sql`
-      SELECT 
-        id,
-        title,
-        description,
-        creator,
-        year,
-        semester,
-        course,
-        category,
-        difficulty,
-        duration,
-        participants,
-        created_at,
-        updated_at
-      FROM quizzes
-      WHERE id = ${quizId}
-    `
+    // Get quiz with retry logic
+    console.log('🔍 Fetching quiz with ID:', quizId)
+    const quizzes = await sqlWithRetry(() =>
+      sql`
+        SELECT 
+          id,
+          title,
+          description,
+          creator,
+          year,
+          semester,
+          course,
+          category,
+          difficulty,
+          duration,
+          participants,
+          created_at,
+          updated_at
+        FROM quizzes
+        WHERE id = ${quizId}
+      `
+    )
 
-    if (quizzes.length === 0) {
+    if (!quizzes || quizzes.length === 0) {
+      console.error('❌ Quiz not found with ID:', quizId)
       return NextResponse.json(
-        { status: 'error', message: 'Quiz not found' },
+        { status: 'error', message: `Quiz not found (ID: ${quizId})` },
         { status: 404 }
       )
     }
 
     const quiz = quizzes[0]
+    console.log('✅ Quiz found:', { id: quiz.id, title: quiz.title })
 
-    // Get questions
-    const questions = await sql`
-      SELECT 
-        id,
-        question_text as question,
-        options,
-        correct_answer as correctAnswer,
-        question_order
-      FROM quiz_questions
-      WHERE quiz_id = ${quizId}
-      ORDER BY question_order ASC
-    `
+    // Get questions with retry logic
+    console.log('📚 Fetching questions for quiz ID:', quizId)
+    const questions = await sqlWithRetry(() =>
+      sql`
+        SELECT 
+          id,
+          question_text as question,
+          options,
+          correct_answer as correctAnswer,
+          question_order
+        FROM quiz_questions
+        WHERE quiz_id = ${quizId}
+        ORDER BY question_order ASC
+      `
+    )
+
+    console.log('✅ Questions fetched:', questions.length, 'questions')
 
     return NextResponse.json({
       status: 'success',
       data: {
         ...quiz,
-        questions: questions.map((q) => ({
+        questions: (questions || []).map((q) => ({
           id: q.id.toString(),
           question: q.question,
           options: q.options,

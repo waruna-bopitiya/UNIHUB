@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { sql, sqlWithRetry } from '@/lib/db'
 import { ensureTablesExist } from '@/lib/db-init'
 
 export async function GET(
@@ -19,8 +19,10 @@ export async function GET(
       )
     }
 
-    // Check if quiz exists
-    const quizzes = await sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    // Check if quiz exists with retry logic
+    const quizzes = await sqlWithRetry(() =>
+      sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    )
     if (quizzes.length === 0) {
       return NextResponse.json(
         { status: 'error', message: 'Quiz not found' },
@@ -28,17 +30,19 @@ export async function GET(
       )
     }
 
-    // Get comments
-    const comments = await sql`
-      SELECT 
-        id,
-        name,
-        message,
-        created_at
-      FROM quiz_comments
-      WHERE quiz_id = ${quizId}
-      ORDER BY created_at DESC
-    `
+    // Get comments with retry logic
+    const comments = await sqlWithRetry(() =>
+      sql`
+        SELECT 
+          id,
+          name,
+          message,
+          created_at
+        FROM quiz_comments
+        WHERE quiz_id = ${quizId}
+        ORDER BY created_at DESC
+      `
+    )
 
     return NextResponse.json({
       status: 'success',
@@ -50,9 +54,12 @@ export async function GET(
       count: comments.length,
     })
   } catch (error: any) {
-    console.error('Error fetching comments:', error)
+    console.error('❌ Error from comment endpoint:', error)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Full error object:', JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { status: 'error', message: error.message },
+      { status: 'error', message: error.message || 'Failed to save comment', details: error.toString() },
       { status: 500 }
     )
   }
@@ -78,6 +85,8 @@ export async function POST(
     const body = await req.json()
     const { name = 'Anonymous', message } = body
 
+    console.log('📤 Saving comment:', { quizId, name, messageLength: message?.length })
+
     if (!message?.trim()) {
       return NextResponse.json(
         { status: 'error', message: 'Comment message is required' },
@@ -86,7 +95,10 @@ export async function POST(
     }
 
     // Check if quiz exists
-    const quizzes = await sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    const quizzes = await sqlWithRetry(() =>
+      sql`SELECT id FROM quizzes WHERE id = ${quizId}`
+    )
+
     if (quizzes.length === 0) {
       return NextResponse.json(
         { status: 'error', message: 'Quiz not found' },
@@ -94,14 +106,29 @@ export async function POST(
       )
     }
 
-    // Insert comment
-    const [comment] = await sql`
-      INSERT INTO quiz_comments
-        (quiz_id, name, message)
-      VALUES
-        (${quizId}, ${name?.trim() || 'Anonymous'}, ${message.trim()})
-      RETURNING id, name, message, created_at
-    `
+    // Insert comment with retry logic
+    console.log('💾 Attempting to insert comment with data:', {
+      quizId,
+      name: name?.trim() || 'Anonymous',
+      message: message.trim(),
+      messageLength: message.trim().length,
+    })
+    const result = await sqlWithRetry(() =>
+      sql`
+        INSERT INTO quiz_comments
+          (quiz_id, name, message)
+        VALUES
+          (${quizId}, ${name?.trim() || 'Anonymous'}, ${message.trim()})
+        RETURNING id, name, message, created_at
+      `
+    )
+
+    if (!result || result.length === 0) {
+      throw new Error('Failed to insert comment - no result returned')
+    }
+
+    const comment = result[0]
+    console.log('✅ Comment saved successfully:', comment)
 
     return NextResponse.json(
       {
@@ -116,7 +143,8 @@ export async function POST(
       { status: 201 }
     )
   } catch (error: any) {
-    console.error('Error adding comment:', error)
+    console.error('❌ Error adding comment:', error.message)
+    console.error('Error details:', error)
     return NextResponse.json(
       { status: 'error', message: error.message },
       { status: 500 }
