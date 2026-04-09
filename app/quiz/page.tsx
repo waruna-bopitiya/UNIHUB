@@ -865,13 +865,19 @@ export default function QuizPage() {
           }))
         
         console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
-        // Merge mock quizzes to ensure Year 1 courses are always available
+        // Merge mock quizzes to ensure Year 1 and Year 2 courses are always available
         let finalQuizzes = dbQuizzes
         if (dbQuizzes.length > 0) {
-          // Check database courses for Year 1
+          // Check database courses for Year 1 and Year 2
           const year1DbCourses = new Set(
             dbQuizzes
               .filter((q: any) => q.year === 1)
+              .map((q: any) => q.course)
+          )
+          
+          const year2DbCourses = new Set(
+            dbQuizzes
+              .filter((q: any) => q.year === 2)
               .map((q: any) => q.course)
           )
           
@@ -885,10 +891,25 @@ export default function QuizPage() {
             (q) => q.year === 1
           )
           
-          // Add mock quizzes only if they fill gaps in the database
-          const mockQuizzesToAdd = year1MockQuizzes.filter(
-            (mock) => !year1DbCourses.has(mock.course)
+          // Add mock quizzes for Year 2, Semester 1 to ensure these courses are available:
+          // - Operating Systems and System Administration
+          // - Computer Networks
+          // - Database Management Systems
+          // - Object Oriented Programming
+          // - Software Engineering
+          const year2MockQuizzes = normalizedQuizzes.filter(
+            (q) => q.year === 2
           )
+          
+          // Add mock quizzes only if they fill gaps in the database
+          const mockQuizzesToAdd = [
+            ...year1MockQuizzes.filter(
+              (mock) => !year1DbCourses.has(mock.course)
+            ),
+            ...year2MockQuizzes.filter(
+              (mock) => !year2DbCourses.has(mock.course)
+            ),
+          ]
           
           finalQuizzes = [...dbQuizzes, ...mockQuizzesToAdd]
         }
