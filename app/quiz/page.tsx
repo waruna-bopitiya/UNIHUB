@@ -846,22 +846,25 @@ export default function QuizPage() {
 
       if (result.status === 'success' && Array.isArray(result.data)) {
         console.log('✅ Quizzes loaded from database:', result.data.length, 'quizzes')
-        // Map database quizzes to Quiz type and merge with mock data
-        const dbQuizzes = result.data.map((q: any) => ({
-          id: q.id.toString(),
-          title: q.title,
-          description: q.description,
-          creator: q.creator,
-          questions: [], // Questions will be loaded separately if needed
-          duration: q.duration,
-          participants: q.participants,
-          category: q.category,
-          difficulty: q.difficulty,
-          year: q.year,
-          semester: q.semester,
-          course: q.course,
-        }))
+        // Map database quizzes to Quiz type and merge with mock data with null checks
+        const dbQuizzes = result.data
+          .filter((q: any) => q && q.id) // Filter out any quizzes with missing id
+          .map((q: any) => ({
+            id: (q.id || '').toString(),
+            title: q.title || 'Untitled Quiz',
+            description: q.description || '',
+            creator: q.creator || 'Unknown',
+            questions: [], // Questions will be loaded separately if needed
+            duration: q.duration || 0,
+            participants: q.participants || 0,
+            category: q.category || 'General',
+            difficulty: q.difficulty || 'Medium',
+            year: q.year || 1,
+            semester: q.semester || 1,
+            course: q.course || 'Unknown Course',
+          }))
         
+        console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
         // Set quizzes from database, then add mock data
         setQuizzes([...dbQuizzes, ...normalizedQuizzes])
       } else {
@@ -893,16 +896,19 @@ export default function QuizPage() {
 
         if (result.status === 'success' && Array.isArray(result.data)) {
           console.log('✅ Quiz results loaded from database:', result.data.length, 'results')
-          // Map results to QuizResult type
-          const dbResults = result.data.map((r: any) => ({
-            quizId: r.quizId.toString(),
-            quizTitle: r.quizTitle,
-            participantName: r.participantName,
-            score: r.score,
-            totalQuestions: r.totalQuestions,
-            dateTaken: new Date(r.dateTaken).toLocaleDateString(),
-          }))
+          // Map results to QuizResult type with null checks
+          const dbResults = result.data
+            .filter((r: any) => r && r.quizId) // Filter out any results with missing data
+            .map((r: any) => ({
+              quizId: r.quizId.toString(),
+              quizTitle: r.quizTitle || 'Unknown Quiz',
+              participantName: r.participantName || 'Anonymous',
+              score: r.score || 0,
+              totalQuestions: r.totalQuestions || 0,
+              dateTaken: r.dateTaken ? new Date(r.dateTaken).toLocaleDateString() : 'Unknown Date',
+            }))
           
+          console.log('✅ Processed', dbResults.length, 'quiz results')
           // Set results from database
           setQuizResults(dbResults)
         } else {
@@ -911,6 +917,7 @@ export default function QuizPage() {
         }
       } catch (error) {
         console.error('❌ Error fetching quiz results from database:', error)
+        setQuizResults([])
       }
     }
 
