@@ -1281,6 +1281,10 @@ export default function QuizPage() {
         body: JSON.stringify({
           answers,
           participantName: currentUser?.firstName || 'You',
+          quizData: {
+            title: selectedQuiz.title,
+            questions: selectedQuiz.questions,
+          },
         }),
       })
 

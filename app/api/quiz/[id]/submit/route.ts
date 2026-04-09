@@ -20,12 +20,13 @@ export async function POST(
     }
 
     const body = await req.json()
-    const { answers, participantName = 'Anonymous' } = body
+    const { answers, participantName = 'Anonymous', quizData } = body
 
     console.log('📝 Quiz submission received:', {
       quizId,
       participantName,
       answersCount: answers?.length,
+      hasQuizData: !!quizData,
     })
 
     if (!Array.isArray(answers)) {
@@ -48,35 +49,47 @@ export async function POST(
       sql`SELECT id, title FROM quizzes WHERE id = ${quizId}`
     )
 
-    if (!quizzes || quizzes.length === 0) {
+    let quiz: any
+    let questions: any[]
+
+    if (quizzes && quizzes.length > 0) {
+      // Quiz found in database
+      quiz = quizzes[0]
+      console.log('✅ Quiz found in database:', { id: quiz.id, title: quiz.title })
+
+      questions = await sqlWithRetry(() =>
+        sql`
+          SELECT 
+            id,
+            correct_answer as correctAnswer,
+            question_order
+          FROM quiz_questions
+          WHERE quiz_id = ${quizId}
+          ORDER BY question_order ASC
+        `
+      )
+
+      if (!questions || questions.length === 0) {
+        console.error('❌ Quiz has no questions with ID:', quizId)
+        return NextResponse.json(
+          { status: 'error', message: 'Quiz has no questions' },
+          { status: 400 }
+        )
+      }
+    } else if (quizData && Array.isArray(quizData.questions)) {
+      // Quiz not in database - use quiz data from request (for mock quizzes)
+      console.log('⚠️  Quiz not found in database, using quiz data from request (mock quiz)')
+      quiz = { id: quizId, title: quizData.title || 'Quiz' }
+      questions = quizData.questions.map((q: any) => ({
+        id: q.id,
+        correctAnswer: q.correctAnswer,
+      }))
+    } else {
       console.error('❌ Quiz not found with ID:', quizId)
       console.error('⚠️  Available quizzes:', allQuizzes.length > 0 ? allQuizzes : 'No quizzes in database')
       return NextResponse.json(
         { status: 'error', message: `Quiz not found (ID: ${quizId})` },
         { status: 404 }
-      )
-    }
-
-    const quiz = quizzes[0]
-    console.log('✅ Quiz found:', { id: quiz.id, title: quiz.title })
-
-    const questions = await sqlWithRetry(() =>
-      sql`
-        SELECT 
-          id,
-          correct_answer as correctAnswer,
-          question_order
-        FROM quiz_questions
-        WHERE quiz_id = ${quizId}
-        ORDER BY question_order ASC
-      `
-    )
-
-    if (!questions || questions.length === 0) {
-      console.error('❌ Quiz has no questions with ID:', quizId)
-      return NextResponse.json(
-        { status: 'error', message: 'Quiz has no questions' },
-        { status: 400 }
       )
     }
 
