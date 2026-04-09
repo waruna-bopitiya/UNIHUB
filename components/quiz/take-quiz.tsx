@@ -480,8 +480,7 @@ export function TakeQuiz({
         </div>
       </div>
 
-      {/* Question display - HIDDEN */}
-      {false && (
+      {/* Question display */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
           {question.question}
@@ -517,7 +516,6 @@ export function TakeQuiz({
           ))}
         </div>
       </div>
-      )}
 
       {/* Navigation */}
       <div className="flex items-center justify-between gap-4">
