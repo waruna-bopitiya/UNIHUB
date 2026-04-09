@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sql } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json()
+
+		// Get user ID from request body or cookies
+		let userId = body.userId
+		if (!userId) {
+			userId = request.cookies.get('studentId')?.value
+		}
+		
+		if (!userId) {
+			console.error('❌ No userId provided in request or cookies')
+			return NextResponse.json(
+				{ message: 'User not authenticated. Please log in and try again.' },
+				{ status: 401 }
+			)
+		}
 
 		// Validate required fields
 		const { fullName, email, degreeProgram, cgpa, experienceYears, bio, expertiseAreas } = body
@@ -32,7 +47,7 @@ export async function POST(request: NextRequest) {
 
 		// Validate CGPA
 		const cgpaNum = parseFloat(cgpa)
-		if (isNaN(cgpaNum) || cgpaNum < 0 || cgpaNum > 4.2) {
+		if (isNaN(cgpaNum) || cgpaNum < 1.5 || cgpaNum > 4.2) {
 			return NextResponse.json(
 				{ message: 'Invalid CGPA value' },
 				{ status: 400 }
@@ -49,23 +64,44 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Validate bio length
-		if (bio.trim().length < 30) {
+		if (bio.trim().length < 20) {
 			return NextResponse.json(
-				{ message: 'Bio must be at least 30 characters' },
+				{ message: 'Bio must be at least 20 characters' },
 				{ status: 400 }
 			)
 		}
 
-		// TODO: Save to database
-		// For now, we just validate and return success
-		console.log('Tutor form submitted:', {
+		// Validate expertise areas
+		if (!expertiseAreas || expertiseAreas.trim().length < 3) {
+			return NextResponse.json(
+				{ message: 'Please provide at least one expertise area' },
+				{ status: 400 }
+			)
+		}
+
+		// Save to database - use upsert to update if already exists
+		const result = await sql`
+			INSERT INTO tutors (user_id, email, full_name, degree_program, cgpa, experience_years, bio, expertise_areas, status)
+			VALUES (${userId}, ${email}, ${fullName}, ${degreeProgram}, ${cgpaNum}, ${expNum}, ${bio}, ${expertiseAreas}, 'approved')
+			ON CONFLICT (user_id) DO UPDATE SET
+				email = EXCLUDED.email,
+				full_name = EXCLUDED.full_name,
+				degree_program = EXCLUDED.degree_program,
+				cgpa = EXCLUDED.cgpa,
+				experience_years = EXCLUDED.experience_years,
+				bio = EXCLUDED.bio,
+				expertise_areas = EXCLUDED.expertise_areas,
+				updated_at = CURRENT_TIMESTAMP
+			RETURNING id, status
+		`
+
+		console.log('✅ Tutor form submitted and saved to database:', {
+			userId,
 			fullName,
 			email,
 			degreeProgram,
 			cgpa: cgpaNum,
 			experienceYears: expNum,
-			bio,
-			expertiseAreas,
 			submittedAt: new Date().toISOString(),
 		})
 
@@ -73,6 +109,7 @@ export async function POST(request: NextRequest) {
 			{
 				message: 'Tutor form submitted successfully',
 				success: true,
+				tutorId: result[0]?.id,
 			},
 			{ status: 200 }
 		)
