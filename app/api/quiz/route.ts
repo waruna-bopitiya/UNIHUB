@@ -263,13 +263,36 @@ export async function POST(req: NextRequest) {
           RETURNING id, title, description, creator, year, semester, course, category, difficulty, duration, participants, created_at, updated_at
         `
       )
+      
+      if (!result || result.length === 0) {
+        throw new Error('Quiz insertion returned no result')
+      }
+      
       quiz = result[0]
+      
+      if (!quiz || !quiz.id) {
+        console.error('❌ Quiz created but ID is missing:', JSON.stringify(quiz))
+        throw new Error('Quiz created but ID is missing')
+      }
+      
       console.log('✅ Quiz inserted successfully:', { id: quiz.id, title: quiz.title, year: quiz.year, semester: quiz.semester, course: quiz.course })
     } catch (insertError: any) {
       console.error('❌ Error inserting quiz into quizzes table:', insertError.message)
       console.error('Error details:', insertError)
       throw new Error(`Failed to insert quiz: ${insertError.message}`)
     }
+
+    // Verify quiz was created before inserting questions
+    console.log('🔍 Verifying quiz was created with ID:', quiz.id)
+    const verifyQuizzes = await sqlWithRetry(() =>
+      sql`SELECT id FROM quizzes WHERE id = ${quiz.id}`
+    )
+    
+    if (!verifyQuizzes || verifyQuizzes.length === 0) {
+      console.error('❌ Quiz verification failed - quiz not found in database after insertion')
+      throw new Error(`Quiz was not properly saved to database (ID: ${quiz.id})`)
+    }
+    console.log('✅ Quiz verified in database')
 
     // Insert questions
     console.log('📚 Inserting', questions.length, 'questions for quiz ID:', quiz.id)

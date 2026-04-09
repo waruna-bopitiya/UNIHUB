@@ -35,14 +35,22 @@ export async function POST(
       )
     }
 
+    // Debug: Log all available quizzes
+    console.log('🔍 Debugging: Listing all quizzes in database...')
+    const allQuizzes = await sqlWithRetry(() =>
+      sql`SELECT id, title FROM quizzes LIMIT 10`
+    )
+    console.log('📊 Quizzes in database:', allQuizzes.map((q: any) => ({ id: q.id, title: q.title })))
+
     // Get quiz and questions with retry logic
-    console.log('🔍 Fetching quiz details from database...')
+    console.log('🔍 Fetching quiz details from database for ID:', quizId, 'Type:', typeof quizId)
     const quizzes = await sqlWithRetry(() =>
       sql`SELECT id, title FROM quizzes WHERE id = ${quizId}`
     )
 
     if (!quizzes || quizzes.length === 0) {
       console.error('❌ Quiz not found with ID:', quizId)
+      console.error('⚠️  Available quizzes:', allQuizzes.length > 0 ? allQuizzes : 'No quizzes in database')
       return NextResponse.json(
         { status: 'error', message: `Quiz not found (ID: ${quizId})` },
         { status: 404 }
