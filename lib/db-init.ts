@@ -335,6 +335,8 @@ export async function ensureTablesExist() {
       question_id     INTEGER       NOT NULL,
       user_id         VARCHAR(50)   NOT NULL,
       content         TEXT          NOT NULL,
+      upvotes         INTEGER       NOT NULL DEFAULT 0 CHECK (upvotes >= 0),
+      downvotes       INTEGER       NOT NULL DEFAULT 0 CHECK (downvotes >= 0),
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
@@ -342,9 +344,56 @@ export async function ensureTablesExist() {
     )
   `
 
+  // Migration: Add upvotes and downvotes columns to answers if they don't exist
+  try {
+    await sql`
+      ALTER TABLE answers
+      ADD COLUMN IF NOT EXISTS upvotes INTEGER NOT NULL DEFAULT 0 CHECK (upvotes >= 0)
+    `
+    console.log('✅ upvotes column added to answers table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.log('ℹ️ upvotes column already exists:', error?.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE answers
+      ADD COLUMN IF NOT EXISTS downvotes INTEGER NOT NULL DEFAULT 0 CHECK (downvotes >= 0)
+    `
+    console.log('✅ downvotes column added to answers table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.log('ℹ️ downvotes column already exists:', error?.message)
+    }
+  }
+
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_created_at ON answers(created_at DESC)`
+
+  // Table for Q&A Answer Votes
+  await sql`
+    CREATE TABLE IF NOT EXISTS answer_votes (
+      id              SERIAL PRIMARY KEY,
+      answer_id       INTEGER       NOT NULL,
+      question_id     INTEGER       NOT NULL,
+      user_id         VARCHAR(50)   NOT NULL,
+      vote_type       VARCHAR(50)   NOT NULL CHECK (vote_type IN ('upvote', 'downvote')),
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE CASCADE,
+      FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(answer_id, user_id)
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_answer_id ON answer_votes(answer_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_question_id ON answer_votes(question_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_user_id ON answer_votes(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_created_at ON answer_votes(created_at DESC)`
 
   // Table for Q&A Question Votes
   await sql`

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ArrowBigUp, ArrowBigDown } from "lucide-react"
+import { ArrowLeft, ArrowBigUp, ArrowBigDown, RotateCw } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 import { AppLayout } from "@/components/layout/app-layout"
@@ -24,6 +24,9 @@ export default function QuestionDetailPage() {
   const [userName, setUserName] = useState<string | null>(null)
   const [isVoting, setIsVoting] = useState(false)
   const [userVote, setUserVote] = useState<"up" | "down" | null>(null)
+  const [userDataLoaded, setUserDataLoaded] = useState(false)
+  const [answerSortType, setAnswerSortType] = useState<"votes" | "recent">("recent")
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Check if user is logged in
   useEffect(() => {
@@ -35,6 +38,8 @@ export default function QuestionDetailPage() {
       setUserId(studentId)
       setUserName(firstName)
     }
+    // Mark that we've finished loading user data (whether or not they're logged in)
+    setUserDataLoaded(true)
   }, [])
 
   // Fetch the question from the API
@@ -54,7 +59,8 @@ export default function QuestionDetailPage() {
         }
 
         const allQuestions = await response.json()
-        const foundQuestion = allQuestions.find((q: any) => q.id === params.id || q.id.toString() === params.id)
+        const questionId = Array.isArray(params.id) ? params.id[0] : params.id
+        const foundQuestion = allQuestions.find((q: any) => q.id === questionId || q.id.toString() === questionId)
         
         if (foundQuestion) {
           // Sanitize votes
@@ -86,34 +92,85 @@ export default function QuestionDetailPage() {
     fetchQuestion()
   }, [params.id, userId])
 
-  // Fetch answers for the question
-  useEffect(() => {
-    const fetchAnswers = async () => {
-      if (!params.id) return
-      
-      try {
-        setAnswersLoading(true)
-        const queryParams = new URLSearchParams({ questionId: params.id })
-        if (userId) queryParams.append('userId', userId)
-        
-        const response = await fetch(`/api/qna/answers?${queryParams.toString()}`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch answers')
-        }
-
-        const data = await response.json()
-        setAnswers(data)
-      } catch (err) {
-        console.error('Error fetching answers:', err)
-        setAnswers([])
-      } finally {
-        setAnswersLoading(false)
+  // Function to fetch answers - can be called independently
+  const fetchAnswers = async () => {
+    if (!params.id) return
+    
+    try {
+      setAnswersLoading(true)
+      const questionIdStr = Array.isArray(params.id) ? params.id[0] : params.id
+      const queryParams = new URLSearchParams({ questionId: questionIdStr })
+      console.log('🔍 fetchAnswers called - userId:', userId, 'questionId:', questionIdStr)
+      if (userId) {
+        queryParams.append('userId', userId)
+        console.log('✅ userId added to query params')
+      } else {
+        console.log('⚠️ No userId available - will fetch without user vote info')
       }
-    }
+      
+      const response = await fetch(`/api/qna/answers?${queryParams.toString()}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('API Error:', errorData)
+        throw new Error(errorData.details || errorData.error || 'Failed to fetch answers')
+      }
 
+      const data = await response.json()
+      console.log('✅ Fetched answers:', { userId, questionId: questionIdStr, answers: data.map((a: any) => ({ id: a.id, userVote: a.userVote })) })
+      setAnswers(data)
+      setAnswers(data)
+    } catch (err) {
+      console.error('Error fetching answers:', err)
+      setAnswers([])
+    } finally {
+      setAnswersLoading(false)
+    }
+  }
+
+  // Fetch answers for the question - wait until user data is loaded from localStorage
+  useEffect(() => {
+    console.log('📋 Answers useEffect triggered - userDataLoaded:', userDataLoaded, 'params.id:', params.id)
+    if (!userDataLoaded) {
+      // Don't fetch until we've checked localStorage for userId
+      console.log('⏳ Waiting for user data to load...')
+      return
+    }
+    console.log('✅ User data loaded, fetching answers with userId:', userId)
     fetchAnswers()
-  }, [params.id, userId])
+  }, [params.id, userId, userDataLoaded])
+
+  const handleAnswerDeleted = (answerId: string) => {
+    // Remove the deleted answer from the state
+    setAnswers(prev => prev.filter(a => a.id !== answerId))
+    toast.success("Answer removed from your view")
+  }
+
+  const handleSortAnswers = (sortType: "votes" | "recent") => {
+    setAnswerSortType(sortType)
+    toast.success(`Sorted by ${sortType === "votes" ? "highest voted" : "most recent"}`)
+  }
+
+  const getSortedAnswers = () => {
+    let sorted = [...answers]
+    if (answerSortType === "votes") {
+      sorted.sort((a, b) => {
+        const aVotes = (a.upvotes || 0) - (a.downvotes || 0)
+        const bVotes = (b.upvotes || 0) - (b.downvotes || 0)
+        return bVotes - aVotes
+      })
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+    return sorted
+  }
+
+  const handleRefreshAnswers = async () => {
+    setIsRefreshing(true)
+    await fetchAnswers()
+    toast.success("Answers refreshed!")
+    setIsRefreshing(false)
+  }
 
   const handleVote = async (type: "up" | "down") => {
     if (!isLoggedIn) {
@@ -197,7 +254,7 @@ export default function QuestionDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          questionId: params.id,
+          questionId: Array.isArray(params.id) ? params.id[0] : params.id,
           userId: userId,
           content: answerContent.trim()
         })
@@ -223,23 +280,6 @@ export default function QuestionDetailPage() {
     } finally {
       setIsPosting(false)
     }
-  }
-
-  const handleAnswerVote = (answerId: string, value: number) => {
-    // TODO: API call to vote on answer
-    console.log("Vote on answer:", answerId, value)
-    
-    // Update local state - use answers state, not question.answers
-    setAnswers(
-      answers.map((a: any) => {
-        if (a.id === answerId) {
-          const newUpvotes = value === 1 ? a.upvotes + 1 : value === -1 ? a.upvotes - 1 : a.upvotes
-          const newDownvotes = value === -1 ? a.downvotes + 1 : value === 1 ? a.downvotes - 1 : a.downvotes
-          return { ...a, upvotes: newUpvotes, downvotes: newDownvotes }
-        }
-        return a
-      })
-    )
   }
 
   const netQuestionVotes = question ? question.upvotes - question.downvotes : 0
@@ -391,9 +431,48 @@ export default function QuestionDetailPage() {
 
       {/* Answers section */}
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">
-          {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">
+            {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
+          </h2>
+          
+          {/* Refresh button */}
+          <button
+            onClick={handleRefreshAnswers}
+            disabled={isRefreshing || answersLoading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border border-border hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh answers"
+          >
+            <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Sort buttons */}
+        {answers.length > 0 && (
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => handleSortAnswers("recent")}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                answerSortType === "recent"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border hover:bg-secondary"
+              }`}
+            >
+              Most Recent
+            </button>
+            <button
+              onClick={() => handleSortAnswers("votes")}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                answerSortType === "votes"
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border hover:bg-secondary"
+              }`}
+            >
+              Highest Voted
+            </button>
+          </div>
+        )}
 
         {/* Answer form */}
         {isLoggedIn ? (
@@ -447,12 +526,15 @@ export default function QuestionDetailPage() {
               No answers yet. Be the first to answer this question!
             </p>
           ) : (
-            answers.map((answer) => (
+            getSortedAnswers().map((answer) => (
               <AnswerCard 
                 key={answer.id} 
                 answer={answer} 
                 questionId={question.id}
-                onVote={handleAnswerVote}
+                userId={userId || undefined}
+                onVoteComplete={fetchAnswers}
+                onAnswerUpdated={fetchAnswers}
+                onAnswerDeleted={() => handleAnswerDeleted(answer.id)}
               />
             ))
           )}

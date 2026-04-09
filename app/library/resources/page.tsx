@@ -1261,9 +1261,9 @@ export default function ResourcesPage() {
                         <Button
                           onClick={() => handleDelete(res.id)}
                           size="sm"
-                          variant="destructive"
+                          variant="outline"
                           disabled={deleting === res.id}
-                          className="gap-1 flex-shrink-0"
+                          className="gap-1 flex-shrink-0 px-3 text-red-600 hover:text-red-700"
                         >
                           <Trash2 size={16} />
                         </Button>
