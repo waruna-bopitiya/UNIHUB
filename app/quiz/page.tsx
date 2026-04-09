@@ -1167,6 +1167,12 @@ export default function QuizPage() {
         participants: 0,
       }
       setQuizzes([newQuiz, ...quizzes])
+      
+      // Set the filters to show the newly created quiz
+      setSelectedYear(quizData.year)
+      setSelectedSemester(quizData.semester)
+      setSelectedCourse(quizData.course)
+      
       setActiveTab('browse')
       alert('Quiz created successfully!')
     } catch (error) {
@@ -1978,9 +1984,9 @@ export default function QuizPage() {
                 {(() => {
                   const filteredQuizzes = quizzes.filter(
                     (q) =>
-                      q.year === selectedYear &&
-                      q.semester === selectedSemester &&
-                      q.course === selectedCourse &&
+                      (selectedYear === null || q.year === selectedYear) &&
+                      (selectedSemester === null || q.semester === selectedSemester) &&
+                      (selectedCourse === null || q.course === selectedCourse) &&
                       (browseQuizSearch.trim() === ''
                         ? true
                         : `${q.title} ${q.description} ${q.creator}`
@@ -1994,7 +2000,13 @@ export default function QuizPage() {
                         No quizzes available
                       </h3>
                       <p className="text-muted-foreground mb-6">
-                        No quizzes found for Year {selectedYear}, Semester {selectedSemester}
+                        {selectedYear === null
+                          ? 'Please select a year to browse quizzes'
+                          : selectedSemester === null
+                          ? `Please select a semester for Year ${selectedYear}`
+                          : selectedCourse === null
+                          ? `Please select a course for Year ${selectedYear}, Semester ${selectedSemester}`
+                          : `No quizzes found for Year ${selectedYear}, Semester ${selectedSemester}, ${selectedCourse}`}
                       </p>
                     </div>
                   ) : (
