@@ -22,6 +22,7 @@ export default function AskQuestionPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string | null>(null)
+  const [popularCategories, setPopularCategories] = useState<any[]>([])
   
   const [formData, setFormData] = useState({
     title: "",
@@ -70,6 +71,46 @@ export default function AskQuestionPage() {
     
     fetchSubjects()
   }, [selectedYear, selectedSemester])
+
+  // Fetch popular categories sorted by question count
+  useEffect(() => {
+    const fetchPopularCategories = async () => {
+      try {
+        // Fetch questions with maximum limit (API caps at 100)
+        const response = await fetch('/api/qna/questions?limit=100&offset=0')
+        const questions = await response.json()
+        
+        if (Array.isArray(questions)) {
+          // Count questions by subject code
+          const categoryCount: { [key: string]: { name: string; code: string; count: number } } = {}
+          
+          questions.forEach((q: any) => {
+            if (q.category && q.category.trim()) {
+              if (!categoryCount[q.category]) {
+                categoryCount[q.category] = {
+                  code: q.category,
+                  name: q.category,
+                  count: 0
+                }
+              }
+              categoryCount[q.category].count++
+            }
+          })
+          
+          // Convert to array and sort by count descending
+          const sorted = Object.values(categoryCount)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10) // Get top 10
+          
+          setPopularCategories(sorted)
+        }
+      } catch (error) {
+        console.error("Failed to fetch popular categories:", error)
+      }
+    }
+    
+    fetchPopularCategories()
+  }, [])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {
@@ -190,11 +231,11 @@ export default function AskQuestionPage() {
     return (
       <div className="container max-w-3xl mx-auto py-6 px-4">
         <Link 
-          href="/qna"
+          href="/?section=qna"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to questions
+          Back to Home
         </Link>
 
         <div className="bg-secondary/30 rounded-lg p-8 text-center">
@@ -237,13 +278,13 @@ export default function AskQuestionPage() {
             </h3>
             <div className="space-y-2">
               <Link
-                href="/qna"
+                href="/?section=qna"
                 className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
               >
-                ← Back to Questions
+                ← Back to Home
               </Link>
               <Link
-                href="/qna/category/it3050"
+                href="/qna"
                 className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
               >
                 📚 Browse Questions
@@ -425,24 +466,22 @@ export default function AskQuestionPage() {
           <div className="bg-card border border-border rounded-lg p-4">
             <h3 className="font-medium mb-3">📚 Popular Categories</h3>
             <div className="space-y-2">
-              <Link
-                href="/qna/category/it3050"
-                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
-              >
-                IT3050 - Employability
-              </Link>
-              <Link
-                href="/qna/category/it3040"
-                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
-              >
-                IT3040 - Project Mgmt
-              </Link>
-              <Link
-                href="/qna/category/it3030"
-                className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors"
-              >
-                IT3030 - Programming
-              </Link>
+              {popularCategories.length > 0 ? (
+                popularCategories.map((category) => (
+                  <Link
+                    key={category.code}
+                    href={`/qna/category/${category.code}`}
+                    className="block px-3 py-2 rounded-md text-sm hover:bg-secondary transition-colors flex justify-between items-center"
+                  >
+                    <span>{category.code}</span>
+                    <span className="text-xs bg-secondary rounded-full px-2 py-0.5">
+                      {category.count}
+                    </span>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground px-3 py-2">No categories yet</p>
+              )}
             </div>
           </div>
 

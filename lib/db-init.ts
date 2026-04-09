@@ -321,6 +321,8 @@ export async function ensureTablesExist() {
       question_id     INTEGER       NOT NULL,
       user_id         VARCHAR(50)   NOT NULL,
       content         TEXT          NOT NULL,
+      upvotes         INTEGER       NOT NULL DEFAULT 0 CHECK (upvotes >= 0),
+      downvotes       INTEGER       NOT NULL DEFAULT 0 CHECK (downvotes >= 0),
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
@@ -328,9 +330,56 @@ export async function ensureTablesExist() {
     )
   `
 
+  // Migration: Add upvotes and downvotes columns to answers if they don't exist
+  try {
+    await sql`
+      ALTER TABLE answers
+      ADD COLUMN IF NOT EXISTS upvotes INTEGER NOT NULL DEFAULT 0 CHECK (upvotes >= 0)
+    `
+    console.log('✅ upvotes column added to answers table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.log('ℹ️ upvotes column already exists:', error?.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE answers
+      ADD COLUMN IF NOT EXISTS downvotes INTEGER NOT NULL DEFAULT 0 CHECK (downvotes >= 0)
+    `
+    console.log('✅ downvotes column added to answers table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.log('ℹ️ downvotes column already exists:', error?.message)
+    }
+  }
+
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_answers_created_at ON answers(created_at DESC)`
+
+  // Table for Q&A Answer Votes
+  await sql`
+    CREATE TABLE IF NOT EXISTS answer_votes (
+      id              SERIAL PRIMARY KEY,
+      answer_id       INTEGER       NOT NULL,
+      question_id     INTEGER       NOT NULL,
+      user_id         VARCHAR(50)   NOT NULL,
+      vote_type       VARCHAR(50)   NOT NULL CHECK (vote_type IN ('upvote', 'downvote')),
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      FOREIGN KEY (answer_id) REFERENCES answers(id) ON DELETE CASCADE,
+      FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(answer_id, user_id)
+    )
+  `
+
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_answer_id ON answer_votes(answer_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_question_id ON answer_votes(question_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_user_id ON answer_votes(user_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_answer_votes_created_at ON answer_votes(created_at DESC)`
 
   // Table for Q&A Question Votes
   await sql`
@@ -439,20 +488,113 @@ export async function ensureTablesExist() {
       chat_id         INTEGER       NOT NULL,
       sender          VARCHAR(255)  NOT NULL,
       sender_avatar   VARCHAR(10)   NOT NULL,
+      sender_id       VARCHAR(50),
       content         TEXT          NOT NULL,
       is_own          BOOLEAN       NOT NULL DEFAULT false,
       is_read         BOOLEAN       NOT NULL DEFAULT false,
+      status          VARCHAR(20)   NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'read')),
+      edited_content  TEXT,
+      edited_at       TIMESTAMPTZ,
+      deleted_at      TIMESTAMPTZ,
       created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL
     )
   `
 
   // Chat table indexes
+  // Migration: Add WhatsApp-like columns to chat_messages
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false
+    `
+    console.log('✅ is_read column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add is_read column:', error.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'sent' CHECK (status IN ('pending', 'sent', 'delivered', 'read'))
+    `
+    console.log('✅ status column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add status column:', error.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS sender_id VARCHAR(50)
+    `
+    console.log('✅ sender_id column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add sender_id column:', error.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS edited_content TEXT
+    `
+    console.log('✅ edited_content column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add edited_content column:', error.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ
+    `
+    console.log('✅ edited_at column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add edited_at column:', error.message)
+    }
+  }
+
+  try {
+    await sql`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ
+    `
+    console.log('✅ deleted_at column added to chat_messages table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add deleted_at column:', error.message)
+    }
+  }
+  // Migration: Add participant_id column to chats table
+  try {
+    await sql`
+      ALTER TABLE chats
+      ADD COLUMN IF NOT EXISTS participant_id VARCHAR(50)
+    `
+    console.log('✅ participant_id column added to chats table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('Could not add participant_id column:', error.message)
+    }
+  }
   await sql`CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chats_created_at ON chats(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id ON chat_messages(chat_id)`
-  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_is_read ON chat_messages(is_read)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_status ON chat_messages(status)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON chat_messages(sender_id)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_deleted_at ON chat_messages(deleted_at)`
 
   // Quiz table indexes
   await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_year_semester ON quizzes(year, semester)`

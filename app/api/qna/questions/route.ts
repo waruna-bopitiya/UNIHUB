@@ -140,9 +140,9 @@ export async function GET(request: NextRequest) {
       id: q.id.toString(),
       title: q.title,
       content: q.content,
-      user_id: q.user_id,
+      user_id: String(q.user_id),
       author: {
-        id: q.user_id,
+        id: String(q.user_id),
         name: `${q.first_name}${q.second_name ? ' ' + q.second_name : ''}`,
         avatar: `https://avatar.vercel.sh/${q.first_name.toLowerCase()}`
       },
