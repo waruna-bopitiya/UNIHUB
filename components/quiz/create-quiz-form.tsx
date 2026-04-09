@@ -87,6 +87,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
   const [duration, setDuration] = useState(30)
   const [formError, setFormError] = useState('')
   const [errors, setErrors] = useState<FormErrors>({ questionErrors: {} })
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([
     {
       id: '1',
@@ -253,6 +254,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
     })
 
     try {
+      setIsSubmitting(true)
       await onSubmit(quizData)
       // Reset form only after successful submission
       setTitle('')
@@ -275,6 +277,8 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
     } catch (error) {
       console.error('Error submitting quiz:', error)
       setFormError('Error creating quiz. Please try again.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -563,10 +567,11 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       <div className="flex justify-end">
         <button
           type="submit"
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-5 h-5" />
-          Create Quiz
+          {isSubmitting ? 'Creating Quiz...' : 'Create Quiz'}
         </button>
       </div>
     </form>

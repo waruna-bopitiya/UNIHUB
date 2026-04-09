@@ -795,6 +795,7 @@ export default function QuizPage() {
   const [resultsSearch, setResultsSearch] = useState('')
   const [scoreSearch, setScoreSearch] = useState('')
   const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
+  const [isCreatingQuiz, setIsCreatingQuiz] = useState(false)
 
   // Score data from API
   const [scoreDataFromApi, setScoreDataFromApi] = useState<any>(null)
@@ -1180,6 +1181,13 @@ export default function QuizPage() {
   }
 
   const handleCreateQuiz = async (quizData: any) => {
+    // Prevent double submission
+    if (isCreatingQuiz) {
+      console.warn('⚠️ Quiz creation already in progress, ignoring duplicate submission')
+      return
+    }
+
+    setIsCreatingQuiz(true)
     try {
       console.log('🚀 Starting quiz creation...', quizData)
       
@@ -1228,6 +1236,8 @@ export default function QuizPage() {
     } catch (error) {
       console.error('❌ Failed to create quiz:', error)
       alert('Failed to create quiz. Check console for details.')
+    } finally {
+      setIsCreatingQuiz(false)
     }
   }
 
