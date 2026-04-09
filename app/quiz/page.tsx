@@ -865,8 +865,8 @@ export default function QuizPage() {
           }))
         
         console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
-        // Set quizzes from database, then add mock data
-        setQuizzes([...dbQuizzes, ...normalizedQuizzes])
+        // Set quizzes from database ONLY - don't mix with mock data to avoid ID conflicts
+        setQuizzes(dbQuizzes.length > 0 ? dbQuizzes : normalizedQuizzes)
       } else {
         console.log('⚠️ No quizzes found in database, using mock data')
         setQuizzes(normalizedQuizzes)
