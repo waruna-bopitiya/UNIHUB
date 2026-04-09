@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { CheckCircle2, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -120,6 +120,12 @@ export default function TutorFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
   const [badgeState, setBadgeState] = useState<BadgeState | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [userData, setUserData] = useState<{ name: string; email: string } | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [existingTutorId, setExistingTutorId] = useState<number | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const form = useForm<TutorFormValues>({
     resolver: zodResolver(tutorFormSchema),
@@ -134,44 +140,218 @@ export default function TutorFormPage() {
     },
   })
 
-  const onSubmit = async (values: TutorFormValues) => {
-    setIsSubmitting(true)
-
-    // Simulate async processing (like API call)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const result = evaluateTutorApplication(values)
-    setIsVerified(result.approved)
-    setBadgeState(result.badge)
-
-    if (result.approved) {
-      toast.success("✅ Verification successful! You're now a tutor!", {
-        duration: 3000,
-      })
-      setTimeout(() => router.push('/'), 2000)
-    } else {
-      // Build detailed missing requirements message in Sinhala
-      const { cgpa, experienceYears, bio } = values
-      const bioLength = bio.trim().length
-      const missing: string[] = []
-
-      if (cgpa < 1.5) missing.push(`CGPA ${cgpa} (අවම 1.5 අවශ්‍යයි)`)
-      if (bioLength < 20) missing.push(`Bio characters ${bioLength} (අවම 20 අවශ්‍යයි)`)
-
-      if (missing.length) {
-        toast.warning(
-          `Verify වීමට අවශ්‍ය දේ: ${missing.join(', ')}.`,
-          { duration: 8000 }
-        )
-      } else {
-        toast.success(
-          '✅ Congratulations! You are now verified as a Tutor!',
-          { duration: 5000 }
-        )
+  // Fetch user data from session on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // First, try to get studentId from localStorage
+        const studentIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem('studentId') : null
+        const firstNameFromStorage = typeof window !== 'undefined' ? localStorage.getItem('firstName') : null
+        
+        // If we have localStorage data, use it directly
+        if (studentIdFromStorage && firstNameFromStorage) {
+          // Fetch full user data from API using studentId
+          const response = await fetch(`/api/user/me?userId=${studentIdFromStorage}`)
+          
+          if (response.ok) {
+            const data = await response.json()
+            setUserData({
+              name: data.name,
+              email: data.email,
+            })
+            form.setValue('fullName', data.name)
+            form.setValue('email', data.email)
+            setAuthError(null)
+            
+            // Also fetch existing tutor data if it exists
+            const tutorResponse = await fetch(`/api/tutor/get?userId=${studentIdFromStorage}`)
+            if (tutorResponse.ok) {
+              const tutorData = await tutorResponse.json()
+              // Populate form with existing tutor data
+              form.setValue('degreeProgram', tutorData.degree_program)
+              form.setValue('cgpa', tutorData.cgpa)
+              form.setValue('experienceYears', tutorData.experience_years)
+              form.setValue('bio', tutorData.bio)
+              form.setValue('expertiseAreas', tutorData.expertise_areas)
+              
+              setIsVerified(true)
+              setExistingTutorId(tutorData.id)
+              
+              // Set badge based on status
+              const result = evaluateTutorApplication({
+                fullName: data.name,
+                email: data.email,
+                degreeProgram: tutorData.degree_program,
+                cgpa: tutorData.cgpa,
+                experienceYears: tutorData.experience_years,
+                bio: tutorData.bio,
+                expertiseAreas: tutorData.expertise_areas,
+              })
+              setBadgeState(result.badge)
+            }
+            
+            setIsLoading(false)
+            return
+          }
+        }
+        
+        // Fallback: try the regular endpoint
+        const response = await fetch('/api/user/me')
+        
+        if (response.status === 401) {
+          setAuthError('Please log in first to become a tutor')
+          setIsLoading(false)
+          return
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch user data')
+        }
+        
+        const data = await response.json()
+        
+        // Set user data and auto-fill form
+        setUserData({
+          name: data.name,
+          email: data.email,
+        })
+        
+        form.setValue('fullName', data.name)
+        form.setValue('email', data.email)
+        setAuthError(null)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Error fetching user data:', error)
+        const errorMsg = error instanceof Error ? error.message : 'Failed to load your profile'
+        setAuthError(errorMsg)
+        setIsLoading(false)
       }
     }
 
-    setIsSubmitting(false)
+    fetchUserData()
+  }, [form])
+
+  const onSubmit = async (values: TutorFormValues) => {
+    setIsSubmitting(true)
+
+    try {
+      // Get studentId from localStorage
+      const studentId = typeof window !== 'undefined' ? localStorage.getItem('studentId') : null
+      
+      if (!studentId) {
+        toast.error('Authentication required. Please log in again.')
+        setIsSubmitting(false)
+        return
+      }
+
+      // Call the tutor submission API
+      const response = await fetch('/api/tutor/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: studentId,
+          fullName: values.fullName,
+          email: values.email,
+          degreeProgram: values.degreeProgram,
+          cgpa: values.cgpa,
+          experienceYears: values.experienceYears,
+          bio: values.bio,
+          expertiseAreas: values.expertiseAreas,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to submit form')
+      }
+
+      const result = evaluateTutorApplication(values)
+      setIsVerified(result.approved)
+      setBadgeState(result.badge)
+      setIsEditing(false)
+
+      if (result.approved) {
+        const messageText = isVerified ? 'Profile updated successfully!' : "✅ Verification successful! You're now a tutor!"
+        toast.success(messageText, { duration: 3000 })
+        
+        if (!isVerified) {
+          setTimeout(() => window.location.reload(), 2000)
+        }
+      } else {
+        const { cgpa, bio } = values
+        const bioLength = bio.trim().length
+        const missing: string[] = []
+
+        if (cgpa < 1.5) missing.push(`CGPA ${cgpa} (minimum 1.5 required)`)
+        if (bioLength < 20) missing.push(`Bio characters ${bioLength} (minimum 20 required)`)
+
+        if (missing.length) {
+          toast.warning(
+            `Required updates to verify: ${missing.join(', ')}.`,
+            { duration: 8000 }
+          )
+        } else {
+          toast.success(
+            '✅ Profile updated!',
+            { duration: 5000 }
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit form'
+      toast.error(errorMessage)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteProfile = async () => {
+    if (!window.confirm('Are you sure you want to delete your tutor profile? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const studentId = typeof window !== 'undefined' ? localStorage.getItem('studentId') : null
+      
+      if (!studentId) {
+        toast.error('Authentication required.')
+        return
+      }
+
+      const response = await fetch('/api/tutor/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: studentId }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete profile')
+      }
+
+      const data = await response.json()
+      console.log('✅ Profile deleted:', data.message)
+      
+      toast.success('Your tutor profile has been deleted', { duration: 3000 })
+      
+      // Refresh the page after 1.5 seconds to show clean state
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (error) {
+      console.error('Error deleting profile:', error)
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete profile'
+      toast.error(errorMsg)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const currentBadge =
@@ -183,7 +363,7 @@ export default function TutorFormPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <div className="w-full p-6 space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
             Become a Tutor on UniHub
@@ -226,9 +406,38 @@ export default function TutorFormPage() {
           </Tooltip>
         </section>
 
+        {authError && (
+          <section className="border border-amber-500/50 rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="size-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p className="font-medium text-amber-900 dark:text-amber-100">{authError}</p>
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  You can still fill out the form below to prepare your tutor profile.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/auth/login')}
+                  className="mt-2"
+                >
+                  Go to Login
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="border border-border rounded-lg bg-card p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {isLoading && (
+                <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading your profile...
+                </div>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -240,10 +449,17 @@ export default function TutorFormPage() {
                         <Input
                           placeholder="E.g. Kavindu Perera"
                           {...field}
-                          disabled={isVerified}
+                          disabled={authError ? false : true}
+                          className={authError ? '' : 'bg-muted/50 cursor-not-allowed'}
+                          title={authError ? 'Enter your full name' : 'Your name is auto-filled from your university profile'}
                         />
                       </FormControl>
                       <FormMessage />
+                      <FormDescription className="text-xs">
+                        {authError 
+                          ? 'Please enter your full name manually' 
+                          : 'Auto-filled from your university account (read-only)'}
+                      </FormDescription>
                     </FormItem>
                   )}
                 />
@@ -259,10 +475,17 @@ export default function TutorFormPage() {
                           placeholder="itXXXXXXX@my.sliit.lk"
                           type="email"
                           {...field}
-                          disabled={isVerified}
+                          disabled={authError ? false : true}
+                          className={authError ? '' : 'bg-muted/50 cursor-not-allowed'}
+                          title={authError ? 'Enter your university email' : 'Your email is auto-filled from your university profile'}
                         />
                       </FormControl>
                       <FormMessage />
+                      <FormDescription className="text-xs">
+                        {authError 
+                          ? 'Please enter your SLIIT email (itXXXXXXXX@my.sliit.lk)' 
+                          : 'Auto-filled from your university account (read-only)'}
+                      </FormDescription>
                     </FormItem>
                   )}
                 />
@@ -279,7 +502,7 @@ export default function TutorFormPage() {
                         <Input
                           placeholder="E.g. BSc in Computer Science"
                           {...field}
-                          disabled={isVerified}
+                          disabled={isLoading || (isVerified && !isEditing)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -304,7 +527,7 @@ export default function TutorFormPage() {
                           placeholder="E.g. 3.45"
                           value={field.value || ''}
                           onChange={(e) => field.onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                          disabled={isVerified}
+                          disabled={isLoading || (isVerified && !isEditing)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -337,7 +560,7 @@ export default function TutorFormPage() {
                               field.onChange(parseFloat(val))
                             }
                           }}
-                          disabled={isVerified}
+                          disabled={isLoading || (isVerified && !isEditing)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -360,7 +583,7 @@ export default function TutorFormPage() {
                         rows={4}
                         placeholder="Tell students who you are, how you like to teach, and what kind of help they can expect from you."
                         {...field}
-                        disabled={isVerified}
+                        disabled={isLoading || (isVerified && !isEditing)}
                       />
                     </FormControl>
                     <FormDescription>
@@ -381,7 +604,7 @@ export default function TutorFormPage() {
                       <Input
                         placeholder="E.g. Data Structures, Calculus, Physics 1"
                         {...field}
-                        disabled={isVerified}
+                        disabled={isLoading || (isVerified && !isEditing)}
                       />
                     </FormControl>
                     <FormDescription>
@@ -404,22 +627,82 @@ export default function TutorFormPage() {
                   </div>
                 )}
 
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || isVerified}
-                  variant={isVerified ? 'outline' : 'default'}
-                >
-                  {isVerified ? (
-                    <>
-                      <CheckCircle2 className="size-4 text-emerald-500" />
-                      Verified Tutor
-                    </>
-                  ) : isSubmitting ? (
-                    'Checking with system...'
-                  ) : (
-                    'Submit for verification'
+                <div className="flex gap-2 ml-auto">
+                  {/* Delete Button - Always visible when verified */}
+                  {isVerified && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleDeleteProfile}
+                      disabled={isSubmitting || isDeleting || isEditing}
+                      className="min-w-[140px] text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin mr-2" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          Delete Profile
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                  
+                  {/* Edit Button */}
+                  {isVerified && !isEditing && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditing(true)}
+                      disabled={isSubmitting || isDeleting}
+                    >
+                      Edit Profile
+                    </Button>
+                  )}
+                  
+                  {/* Cancel Edit Button */}
+                  {isEditing && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditing(false)}
+                      disabled={isSubmitting}
+                    >
+                      Cancel Edit
+                    </Button>
+                  )}
+                  
+                  {/* Submit/Update Button */}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || isLoading}
+                    variant={isVerified && !isEditing ? 'outline' : 'default'}
+                    className="min-w-[140px]"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        Loading...
+                      </>
+                    ) : isSubmitting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        {isVerified ? 'Updating...' : 'Checking...'}
+                      </>
+                    ) : isVerified && isEditing ? (
+                      'Update Profile'
+                    ) : isVerified ? (
+                      <>
+                        <CheckCircle2 className="size-4 mr-2" />
+                        Verified Tutor
+                      </>
+                    ) : (
+                      'Submit for verification'
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>
