@@ -193,7 +193,8 @@ export function TakeQuiz({
           </div>
         </div>
 
-        {/* Results breakdown */}
+        {/* Results breakdown - HIDDEN */}
+        {false && (
         <div className="space-y-4 mb-6">
           <h3 className="font-semibold text-foreground mb-4">Review Answers</h3>
           {quiz.questions.map((question, index) => {
@@ -242,6 +243,7 @@ export function TakeQuiz({
             )
           })}
         </div>
+        )}
 
         <div className="border border-border rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -478,6 +480,8 @@ export function TakeQuiz({
         </div>
       </div>
 
+      {/* Question display - HIDDEN */}
+      {false && (
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
           {question.question}
@@ -513,6 +517,7 @@ export function TakeQuiz({
           ))}
         </div>
       </div>
+      )}
 
       {/* Navigation */}
       <div className="flex items-center justify-between gap-4">
