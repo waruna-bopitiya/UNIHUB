@@ -2378,8 +2378,8 @@ export default function QuizPage() {
                   <p className="text-muted-foreground">No course score data for the selected year.</p>
                 </div>
               ) : (
-                searchedCategorizedScoreData.map((group) => (
-                  <div key={`${group.year}-${group.semester}`} className="bg-card border border-border rounded-lg p-4">
+                searchedCategorizedScoreData.map((group, index) => (
+                  <div key={`category-score-${group.year}-${group.semester}-${index}`} className="bg-card border border-border rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-foreground mb-1">
                       Year {group.year} - Semester {group.semester}
                     </h4>
@@ -2387,7 +2387,7 @@ export default function QuizPage() {
                       Course-wise participants, attempts, and average scores.
                     </p>
                     <ChartContainer
-                      id={`score-${group.year}-${group.semester}`}
+                      id={`score-${group.year}-${group.semester}-${index}`}
                       config={scoreChartConfig}
                       className="h-[360px] w-full"
                     >
@@ -2430,9 +2430,9 @@ export default function QuizPage() {
                 </p>
 
                 <div className="space-y-4">
-                  {searchedCourseTakerScoreByYearSemester.map((yearGroup) => (
+                  {searchedCourseTakerScoreByYearSemester.map((yearGroup, index) => (
                     <div
-                      key={`${yearGroup.year}-${yearGroup.semester}`}
+                      key={`taker-score-${yearGroup.year}-${yearGroup.semester}-${index}`}
                       className="border border-border rounded-lg p-4"
                     >
                       <h5 className="text-base font-semibold text-foreground mb-3">
