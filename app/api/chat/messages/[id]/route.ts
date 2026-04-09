@@ -119,7 +119,7 @@ export async function DELETE(
     console.log('✅ Soft-deleted from sender chat:', deletedFromSender.length, 'row(s)')
 
     // Soft-delete the same message from recipient's chat (by matching sender, content, and timestamp)
-    let deletedFromRecipient = []
+    let deletedFromRecipient: any[] = []
     if (recipientChatId) {
       try {
         console.log(`🔍 Looking for message in recipient chat ${recipientChatId}`)
