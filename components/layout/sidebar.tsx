@@ -7,11 +7,11 @@ import { Home, Video, BookOpen, Users, Settings, MessageCircle  , GraduationCap 
 const navItems = [
   { href: '/', label: 'Home Feed', icon: Home },
   { href: '/live', label: 'Kuppi Live', icon: Video },
-  { href: '/library', label: 'Library', icon: BookOpen },
-  { href: '/quiz', label: 'quiz', icon: BookOpen },
+  // { href: '/library', label: 'Library', icon: BookOpen },
+  { href: '/quiz', label: 'Quiz', icon: BookOpen },
   { href: '/library/resources', label: 'Resources', icon: BookOpen },
   { href: '/community', label: 'Community', icon: Users },
-   { href: '/TutorForm1', label: 'Be a Tutor', icon: GraduationCap },
+  //  { href: '/TutorForm1', label: 'Be a Tutor', icon: GraduationCap },
 ]
 
 interface SidebarProps {
