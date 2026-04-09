@@ -41,9 +41,10 @@ export async function POST(
       sql`SELECT id, title FROM quizzes WHERE id = ${quizId}`
     )
 
-    if (quizzes.length === 0) {
+    if (!quizzes || quizzes.length === 0) {
+      console.error('❌ Quiz not found with ID:', quizId)
       return NextResponse.json(
-        { status: 'error', message: 'Quiz not found' },
+        { status: 'error', message: `Quiz not found (ID: ${quizId})` },
         { status: 404 }
       )
     }
@@ -63,7 +64,8 @@ export async function POST(
       `
     )
 
-    if (questions.length === 0) {
+    if (!questions || questions.length === 0) {
+      console.error('❌ Quiz has no questions with ID:', quizId)
       return NextResponse.json(
         { status: 'error', message: 'Quiz has no questions' },
         { status: 400 }

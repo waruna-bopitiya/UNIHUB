@@ -1191,17 +1191,19 @@ export default function QuizPage() {
       const result = await response.json()
       
       if (result.status === 'success' && result.data) {
+        console.log('📚 Quiz data received:', { id: result.data.id, title: result.data.title })
         const quizWithQuestions = {
           ...result.data,
-          id: result.data.id.toString(),
+          id: (result.data.id || quizId).toString(),
           questions: result.data.questions || [],
         }
+        console.log('✅ Quiz prepared for taking:', { id: quizWithQuestions.id, title: quizWithQuestions.title })
         setPreviewQuiz(quizWithQuestions as Quiz)
         // Load ratings and comments from database
         fetchQuizRatings(quizId)
         fetchQuizComments(quizId)
       } else {
-        console.error('Failed to fetch quiz details')
+        console.error('Failed to fetch quiz details:', result.message)
         // Fallback to quiz from list if API fails
         const quiz = quizzes.find((q) => q.id === quizId)
         if (quiz) {
