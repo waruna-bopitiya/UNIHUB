@@ -865,28 +865,29 @@ export default function QuizPage() {
           }))
         
         console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
-        // For Year 1, Semester 1: Merge mock quizzes to ensure all courses are available
+        // Merge mock quizzes to ensure Year 1 courses are always available
         let finalQuizzes = dbQuizzes
         if (dbQuizzes.length > 0) {
-          // Check if Year 1, Semester 1 looks complete in database
-          const year1Sem1DbCourses = new Set(
+          // Check database courses for Year 1
+          const year1DbCourses = new Set(
             dbQuizzes
-              .filter((q: any) => q.year === 1 && q.semester === 1)
+              .filter((q: any) => q.year === 1)
               .map((q: any) => q.course)
           )
           
-          // Add mock quizzes for Year 1, Semester 1 to ensure these courses are available:
-          // - Communication Skills
-          // - Mathematics for Computing
-          // - Introduction to Computer Systems
-          // - Introduction to Programming
-          const year1Sem1MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 1 && q.semester === 1
+          // Add mock quizzes for Year 1 to ensure these courses are available:
+          // Semester 1: Communication Skills, Mathematics for Computing, 
+          //            Introduction to Computer Systems, Introduction to Programming
+          // Semester 2: Internet & Web Technology, Information System & Data Modeling,
+          //            English for Academic Purposes, Software Process Modeling,
+          //            Object Oriented Concept
+          const year1MockQuizzes = normalizedQuizzes.filter(
+            (q) => q.year === 1
           )
           
           // Add mock quizzes only if they fill gaps in the database
-          const mockQuizzesToAdd = year1Sem1MockQuizzes.filter(
-            (mock) => !year1Sem1DbCourses.has(mock.course)
+          const mockQuizzesToAdd = year1MockQuizzes.filter(
+            (mock) => !year1DbCourses.has(mock.course)
           )
           
           finalQuizzes = [...dbQuizzes, ...mockQuizzesToAdd]
