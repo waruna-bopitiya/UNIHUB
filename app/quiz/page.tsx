@@ -1175,13 +1175,41 @@ export default function QuizPage() {
     }
   }
 
-  const handleTakeQuiz = (quizId: string) => {
-    const quiz = quizzes.find((q) => q.id === quizId)
-    if (quiz) {
-      setPreviewQuiz(quiz)
-      // Load ratings and comments from database
-      fetchQuizRatings(quizId)
-      fetchQuizComments(quizId)
+  const handleTakeQuiz = async (quizId: string) => {
+    try {
+      // Fetch full quiz details with questions from API
+      const response = await fetch(`/api/quiz/${quizId}`)
+      const result = await response.json()
+      
+      if (result.status === 'success' && result.data) {
+        const quizWithQuestions = {
+          ...result.data,
+          id: result.data.id.toString(),
+          questions: result.data.questions || [],
+        }
+        setPreviewQuiz(quizWithQuestions as Quiz)
+        // Load ratings and comments from database
+        fetchQuizRatings(quizId)
+        fetchQuizComments(quizId)
+      } else {
+        console.error('Failed to fetch quiz details')
+        // Fallback to quiz from list if API fails
+        const quiz = quizzes.find((q) => q.id === quizId)
+        if (quiz) {
+          setPreviewQuiz(quiz)
+          fetchQuizRatings(quizId)
+          fetchQuizComments(quizId)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching quiz details:', error)
+      // Fallback to quiz from list if API fails
+      const quiz = quizzes.find((q) => q.id === quizId)
+      if (quiz) {
+        setPreviewQuiz(quiz)
+        fetchQuizRatings(quizId)
+        fetchQuizComments(quizId)
+      }
     }
   }
 
