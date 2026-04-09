@@ -132,7 +132,9 @@ export function TakeQuiz({
 
     let correctCount = 0
     quiz.questions.forEach((question, index) => {
-      if (answers[index] === question.correctAnswer) {
+      const userAnswer = answers[index]
+      const correctAnswer = parseInt(question.correctAnswer) || 0
+      if (userAnswer === correctAnswer) {
         correctCount++
       }
     })
@@ -193,13 +195,13 @@ export function TakeQuiz({
           </div>
         </div>
 
-        {/* Results breakdown - HIDDEN */}
-        {false && (
+        {/* Results breakdown */}
         <div className="space-y-4 mb-6">
           <h3 className="font-semibold text-foreground mb-4">Review Answers</h3>
           {quiz.questions.map((question, index) => {
             const userAnswer = answers[index]
-            const isCorrect = userAnswer === question.correctAnswer
+            const correctAnswer = parseInt(question.correctAnswer) || 0
+            const isCorrect = userAnswer === correctAnswer
             return (
               <div
                 key={question.id}
@@ -218,7 +220,7 @@ export function TakeQuiz({
                     <div className="space-y-2">
                       {question.options.map((option, optIndex) => {
                         const isUserAnswer = userAnswer === optIndex
-                        const isCorrectAnswer = question.correctAnswer === optIndex
+                        const isCorrectAnswer = correctAnswer === optIndex
                         return (
                           <div
                             key={optIndex}
@@ -243,7 +245,6 @@ export function TakeQuiz({
             )
           })}
         </div>
-        )}
 
         <div className="border border-border rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -488,32 +489,66 @@ export function TakeQuiz({
 
         {/* Options */}
         <div className="space-y-3">
-          {question.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => handleAnswerSelect(index)}
-              className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                answers[currentQuestion] === index
-                  ? 'border-primary bg-primary/10 text-foreground font-medium'
-                  : 'border-border bg-background text-foreground hover:border-primary/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    answers[currentQuestion] === index
-                      ? 'border-primary bg-primary'
-                      : 'border-border'
-                  }`}
-                >
-                  {answers[currentQuestion] === index && (
-                    <div className="w-3 h-3 rounded-full bg-primary-foreground" />
+          {question.options.map((option, index) => {
+            const isSelected = answers[currentQuestion] === index
+            const isCorrectAnswer = index === question.correctAnswer
+            const hasAnswered = answers[currentQuestion] !== null
+            
+            return (
+              <button
+                key={index}
+                onClick={() => handleAnswerSelect(index)}
+                disabled={hasAnswered}
+                className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
+                  isSelected && hasAnswered
+                    ? isCorrectAnswer
+                      ? 'border-green-500 bg-green-500/10 text-foreground font-medium'
+                      : 'border-red-500 bg-red-500/10 text-foreground font-medium'
+                    : isSelected
+                    ? 'border-primary bg-primary/10 text-foreground font-medium'
+                    : hasAnswered && isCorrectAnswer
+                    ? 'border-green-500/50 bg-green-500/5 text-foreground'
+                    : 'border-border bg-background text-foreground hover:border-primary/50'
+                } ${hasAnswered ? 'cursor-not-allowed' : ''}`}
+              >
+                <div className="flex items-center gap-3 justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold ${
+                        isSelected && hasAnswered
+                          ? isCorrectAnswer
+                            ? 'border-green-500 bg-green-500 text-white'
+                            : 'border-red-500 bg-red-500 text-white'
+                          : isSelected
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : hasAnswered && isCorrectAnswer
+                          ? 'border-green-500 bg-green-500/20 text-green-600'
+                          : 'border-border'
+                      }`}
+                    >
+                      {isSelected && hasAnswered ? (
+                        isCorrectAnswer ? '✓' : '✗'
+                      ) : hasAnswered && isCorrectAnswer ? (
+                        '✓'
+                      ) : (
+                        isSelected && <div className="w-3 h-3 rounded-full bg-primary-foreground" />
+                      )}
+                    </div>
+                    <span>{option}</span>
+                  </div>
+                  {hasAnswered && isCorrectAnswer && !isSelected && (
+                    <span className="text-xs text-green-600 font-medium">Correct Answer</span>
+                  )}
+                  {isSelected && hasAnswered && isCorrectAnswer && (
+                    <span className="text-xs text-green-600 font-medium">✓ Correct</span>
+                  )}
+                  {isSelected && hasAnswered && !isCorrectAnswer && (
+                    <span className="text-xs text-red-600 font-medium">✗ Wrong</span>
                   )}
                 </div>
-                <span>{option}</span>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
 

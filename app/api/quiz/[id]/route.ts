@@ -78,8 +78,8 @@ export async function GET(
         questions: (questions || []).map((q) => ({
           id: q.id.toString(),
           question: q.question,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
+          options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+          correctAnswer: parseInt(q.correctAnswer) || 0,
         })),
       },
     })
