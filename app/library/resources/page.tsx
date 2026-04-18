@@ -657,7 +657,7 @@ export default function ResourcesPage() {
                   name="shareableLink"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Shareable Link</FormLabel>
+                      <FormLabel>Shareable Link in past hear</FormLabel>
                       <div className="flex gap-2">
                         <FormControl className="flex-1">
                           <Input 
