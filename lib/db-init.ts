@@ -264,6 +264,20 @@ export async function ensureTablesExist() {
 
   await sql`CREATE INDEX IF NOT EXISTS idx_resources_uploader_id ON resources(uploader_id)`
 
+  // Add missing columns to resources table (for backward compatibility)
+  try {
+    await sql`
+      ALTER TABLE resources 
+      ADD COLUMN IF NOT EXISTS uploader_name VARCHAR(255) DEFAULT 'Anonymous',
+      ADD COLUMN IF NOT EXISTS description TEXT,
+      ADD COLUMN IF NOT EXISTS shareable_link TEXT,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
+    `
+    console.log('✅ Added missing columns to resources table')
+  } catch (e: any) {
+    console.log('ℹ️ Resources columns already exist or cannot be added:', e?.message)
+  }
+
   await sql`
     CREATE TABLE IF NOT EXISTS resource_downloads (
       id              SERIAL PRIMARY KEY,
