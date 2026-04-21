@@ -86,27 +86,6 @@ const mockQuizzes: Quiz[] = [
     course: 'Communication Skills',
   },
   {
-    id: '2',
-    title: 'Mathematics - Algebra Fundamentals',
-    description: 'Test your understanding of algebraic concepts',
-    creator: 'Dr. James Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the solution to 2x + 5 = 13?',
-        options: ['2', '4', '6', '8'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 189,
-    category: 'Mathematics',
-    difficulty: 'Medium',
-    year: 1,
-    semester: 1,
-    course: 'Mathematics for Computing',
-  },
-  {
     id: '3',
     title: 'Computer Systems - Hardware Basics',
     description: 'Learn about computer hardware components',
@@ -131,32 +110,6 @@ const mockQuizzes: Quiz[] = [
     year: 1,
     semester: 1,
     course: 'Introduction to Computer Systems',
-  },
-  {
-    id: '4',
-    title: 'Computing Systems - Operating Systems',
-    description: 'Understand operating systems and their functions',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the main role of an operating system?',
-        options: [
-          'To provide user entertainment',
-          'To manage hardware and software resources',
-          'To create programs',
-          'To store files only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 12,
-    participants: 356,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Introduction to Computing Systems',
   },
   {
     id: '5',
@@ -551,30 +504,134 @@ const mockQuizzes: Quiz[] = [
     course: 'Object Oriented Concept',
   },
   {
-    id: '18',
-    title: 'Mobile Application Development - Fundamentals',
-    description: 'Test core concepts in modern mobile application development',
-    creator: 'Prof. Michael Rodriguez',
+    id: '31',
+    title: 'Information Technology Project - Project Planning',
+    description: 'Master IT project planning and execution strategies',
+    creator: 'Prof. Catherine Liu',
     questions: [
       {
         id: '1',
-        question: 'Which is a common concern in mobile app development?',
+        question: 'What is the first step in IT project planning?',
         options: [
-          'Battery and performance optimization',
-          'Desktop BIOS updates',
-          'Server rack layout',
-          'Printer driver installation',
+          'Executing tasks immediately',
+          'Defining project scope and objectives',
+          'Allocating maximum budget',
+          'Starting without documentation',
         ],
-        correctAnswer: 0,
+        correctAnswer: 1,
       },
     ],
-    duration: 19,
-    participants: 209,
-    category: 'Computer Science',
+    duration: 18,
+    participants: 156,
+    category: 'Project Management',
     difficulty: 'Medium',
     year: 2,
     semester: 2,
-    course: 'Mobile Application Development',
+    course: 'Information Technology Project',
+  },
+  {
+    id: '32',
+    title: 'Probability & Statistics - Data Analysis',
+    description: 'Understand probability concepts and statistical analysis methods',
+    creator: 'Dr. Mark Thompson',
+    questions: [
+      {
+        id: '1',
+        question: 'What does a probability distribution represent?',
+        options: [
+          'The schedule of events',
+          'How likely different outcomes are to occur',
+          'The cost breakdown of a project',
+          'The organizational hierarchy',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 20,
+    participants: 142,
+    category: 'Mathematics',
+    difficulty: 'Hard',
+    year: 2,
+    semester: 2,
+    course: 'Probability & Statistics',
+  },
+  {
+    id: '33',
+    title: 'Employability Skills Development - Workplace Competencies',
+    description: 'Develop essential employability and workplace skills',
+    creator: 'Dr. Lisa Anderson',
+    questions: [
+      {
+        id: '1',
+        question: 'Which skill is most valuable in the modern workplace?',
+        options: [
+          'Only technical expertise',
+          'Teamwork and communication combined with technical skills',
+          'Avoiding collaboration',
+          'Working in isolation only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 16,
+    participants: 168,
+    category: 'Professional Development',
+    difficulty: 'Easy',
+    year: 2,
+    semester: 2,
+    course: 'Employability Skills Development',
+  },
+  {
+    id: '34',
+    title: 'Professional Skills - Career Development',
+    description: 'Enhance professional skills for career advancement',
+    creator: 'Prof. James Norton',
+    questions: [
+      {
+        id: '1',
+        question: 'What is essential for professional growth?',
+        options: [
+          'Avoiding new challenges',
+          'Continuous learning and skill development',
+          'Staying in the same role indefinitely',
+          'Ignoring feedback from supervisors',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 17,
+    participants: 151,
+    category: 'Professional Development',
+    difficulty: 'Medium',
+    year: 2,
+    semester: 2,
+    course: 'Professional Skills',
+  },
+  {
+    id: '35',
+    title: 'Data Structures & Algorithms - Core Concepts',
+    description: 'Master fundamental data structures and algorithm design',
+    creator: 'Dr. Robert Chen',
+    questions: [
+      {
+        id: '1',
+        question: 'Why is understanding algorithms important in programming?',
+        options: [
+          'They are not important',
+          'They help write efficient and optimized code',
+          'They make code longer',
+          'They eliminate the need for testing',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 21,
+    participants: 189,
+    category: 'Computer Science',
+    difficulty: 'Hard',
+    year: 2,
+    semester: 2,
+    course: 'Data Structures & Algorithms',
   },
   {
     id: '27',
@@ -679,6 +736,370 @@ const mockQuizzes: Quiz[] = [
     year: 3,
     semester: 2,
     course: 'Human Computer Interaction',
+  },
+  {
+    id: '36',
+    title: 'Industry Placement - Professional Practice',
+    description: 'Real-world industry experience and professional development',
+    creator: 'Industry Partners',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary benefit of industry placement?',
+        options: [
+          'To avoid learning theory',
+          'To gain practical experience and industry exposure',
+          'To reduce tuition costs',
+          'To skip final exams',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 20,
+    participants: 156,
+    category: 'Professional Development',
+    difficulty: 'Medium',
+    year: 4,
+    semester: 1,
+    course: 'Industry Placement',
+  },
+  {
+    id: '37',
+    title: 'Image Understanding & Processing - Visual Analysis',
+    description: 'Master image processing and computer vision techniques',
+    creator: 'Dr. Lisa Anderson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary goal of image preprocessing?',
+        options: [
+          'To increase image file size',
+          'To enhance image quality and prepare for analysis',
+          'To reduce color depth',
+          'To add noise to images',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 23,
+    participants: 134,
+    category: 'Computer Science',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 1,
+    course: 'Image Understanding & Processing',
+  },
+  {
+    id: '38',
+    title: 'Computer Systems and Network Administration - System Management',
+    description: 'Network design, administration, and system infrastructure management',
+    creator: 'Prof. David Kumar',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary responsibility of a network administrator?',
+        options: [
+          'To write application code',
+          'To maintain network security and ensure system availability',
+          'To design user interfaces',
+          'To manage databases only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 22,
+    participants: 145,
+    category: 'Networks',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 1,
+    course: 'Computer Systems and Network Administration',
+  },
+  {
+    id: '39',
+    title: 'Software Quality Assurance - Quality Management',
+    description: 'Testing strategies, quality assurance methodologies, and software validation',
+    creator: 'Prof. Jennifer White',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the main objective of software quality assurance?',
+        options: [
+          'To write code faster',
+          'To ensure software meets quality standards and user requirements',
+          'To reduce testing time',
+          'To eliminate all bugs automatically',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 21,
+    participants: 167,
+    category: 'Software Engineering',
+    difficulty: 'Medium',
+    year: 4,
+    semester: 1,
+    course: 'Software Quality Assurance',
+  },
+  {
+    id: '40',
+    title: 'Preparation for the Professional World - Career Readiness',
+    description: 'Develop skills for success in IT career and professional environment',
+    creator: 'Career Services',
+    questions: [
+      {
+        id: '1',
+        question: 'What is essential for success in the professional IT world?',
+        options: [
+          'Only technical skills matter',
+          'Communication, teamwork, and continuous learning are equally important',
+          'Experience is not needed',
+          'Networking is irrelevant',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 19,
+    participants: 198,
+    category: 'Professional Development',
+    difficulty: 'Medium',
+    year: 4,
+    semester: 1,
+    course: 'Preparation for the Professional World',
+  },
+  {
+    id: '41',
+    title: 'Machine Learning - Algorithms and Applications',
+    description: 'Deep dive into machine learning algorithms and practical applications',
+    creator: 'Dr. Nathan Lee',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary purpose of machine learning?',
+        options: [
+          'To replace human thinking',
+          'To enable systems to learn from data and make predictions',
+          'To eliminate the need for programming',
+          'To process data faster only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 24,
+    participants: 209,
+    category: 'Artificial Intelligence',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 1,
+    course: 'Machine Learning',
+  },
+  {
+    id: '42',
+    title: 'Modern Topics in IT - Emerging Technologies',
+    description: 'Explore cutting-edge technologies and contemporary IT trends',
+    creator: 'Prof. Rachel Green',
+    questions: [
+      {
+        id: '1',
+        question: 'Why is staying updated with modern IT topics important?',
+        options: [
+          'It is not important',
+          'To understand and adapt to rapidly changing technology landscapes',
+          'To avoid using older technologies only',
+          'Technology never changes',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 20,
+    participants: 176,
+    category: 'Technology Trends',
+    difficulty: 'Medium',
+    year: 4,
+    semester: 1,
+    course: 'Modern Topics in IT',
+  },
+  {
+    id: '43',
+    title: 'Deep Learning - Neural Networks & Advanced AI',
+    description: 'Master deep learning techniques and neural network architectures',
+    creator: 'Dr. Marcus Chen',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary advantage of deep learning over traditional machine learning?',
+        options: [
+          'Faster processing only',
+          'Ability to automatically learn hierarchical feature representations',
+          'Lower computational cost',
+          'No need for training data',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 25,
+    participants: 187,
+    category: 'Artificial Intelligence',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 2,
+    course: 'Deep Learning',
+  },
+  {
+    id: '44',
+    title: 'Industry Placement Part II - Advanced Professional Practice',
+    description: 'Advanced industry experience and continued professional development',
+    creator: 'Industry Partners',
+    questions: [
+      {
+        id: '1',
+        question: 'What skills are most valuable in extended industry placements?',
+        options: [
+          'Only coding skills',
+          'Leadership, problem-solving, and collaboration with diverse teams',
+          'Memorization only',
+          'Avoiding responsibility',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 20,
+    participants: 142,
+    category: 'Professional Development',
+    difficulty: 'Medium',
+    year: 4,
+    semester: 2,
+    course: 'Industry Placement',
+  },
+  {
+    id: '45',
+    title: 'Cloud Computing - Architecture and Services',
+    description: 'Cloud platforms, architecture patterns, and cloud service deployment',
+    creator: 'Prof. Thomas Brown',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary benefits of cloud computing?',
+        options: [
+          'Higher upfront costs only',
+          'Scalability, flexibility, and reduced infrastructure management burden',
+          'Reduced speed',
+          'Limited storage capacity',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 23,
+    participants: 201,
+    category: 'Cloud Computing',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 2,
+    course: 'Cloud Computing',
+  },
+  {
+    id: '46',
+    title: 'Innovation Management & Entrepreneurship - Building Ventures',
+    description: 'Managing innovation, entrepreneurship, and business development strategies',
+    creator: 'Dr. Patricia Ross',
+    questions: [
+      {
+        id: '1',
+        question: 'What is essential for successful entrepreneurship?',
+        options: [
+          'Unlimited funding only',
+          'Vision, innovation, risk management, and persistence',
+          'Avoiding all risks',
+          'Following traditional methods only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 21,
+    participants: 178,
+    category: 'Business',
+    difficulty: 'Medium',
+    year: 4,
+    semester: 2,
+    course: 'Innovation Management & Enterpreneurship',
+  },
+  {
+    id: '47',
+    title: 'Database Administration - Advanced Database Management',
+    description: 'Database optimization, administration, security, and performance tuning',
+    creator: 'Prof. Steven Davis',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary responsibility of a database administrator?',
+        options: [
+          'Writing user-facing applications only',
+          'Ensuring data integrity, security, performance, and availability',
+          'Designing user interfaces',
+          'Managing social media accounts',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 22,
+    participants: 156,
+    category: 'Databases',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 2,
+    course: 'Database Administration',
+  },
+  {
+    id: '48',
+    title: 'Internet of Things - Connected Devices and Systems',
+    description: 'IoT architecture, connected devices, sensors, and IoT application development',
+    creator: 'Dr. Rebecca Wilson',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary focus of Internet of Things?',
+        options: [
+          'Only the internet itself',
+          'Connecting physical devices and enabling data exchange for smart systems',
+          'Mobile phones only',
+          'Traditional computing only',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 23,
+    participants: 174,
+    category: 'Emerging Technologies',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 2,
+    course: 'Internet of Things',
+  },
+  {
+    id: '49',
+    title: 'Research Project - Independent Investigation',
+    description: 'Conduct independent research, develop research methodology, and present findings',
+    creator: 'Academic Supervisors',
+    questions: [
+      {
+        id: '1',
+        question: 'What is the primary objective of a research project?',
+        options: [
+          'To avoid learning',
+          'To develop research skills and contribute new knowledge in your field',
+          'To copy existing work',
+          'To minimize effort required',
+        ],
+        correctAnswer: 1,
+      },
+    ],
+    duration: 30,
+    participants: 194,
+    category: 'Research',
+    difficulty: 'Hard',
+    year: 4,
+    semester: 2,
+    course: 'Research Project',
   },
 ]
 
@@ -787,6 +1208,7 @@ export default function QuizPage() {
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
   const [quizComments, setQuizComments] = useState<Record<string, QuizComment[]>>({})
   const [quizRatings, setQuizRatings] = useState<Record<string, QuizRating[]>>({})
+  const [detailedResults, setDetailedResults] = useState<any[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
@@ -866,10 +1288,10 @@ export default function QuizPage() {
           }))
         
         console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
-        // Merge mock quizzes to ensure Year 1 and Year 2 courses are always available
+        // Merge mock quizzes to ensure Year 1, Year 2, Year 3, and Year 4 courses are always available
         let finalQuizzes = dbQuizzes
         if (dbQuizzes.length > 0) {
-          // Check database courses for Year 1 and Year 2
+          // Check database courses for Year 1, Year 2, Year 3, and Year 4
           const year1DbCourses = new Set(
             dbQuizzes
               .filter((q: any) => q.year === 1)
@@ -882,9 +1304,20 @@ export default function QuizPage() {
               .map((q: any) => q.course)
           )
           
+          const year3DbCourses = new Set(
+            dbQuizzes
+              .filter((q: any) => q.year === 3)
+              .map((q: any) => q.course)
+          )
+          
+          const year4DbCourses = new Set(
+            dbQuizzes
+              .filter((q: any) => q.year === 4)
+              .map((q: any) => q.course)
+          )
+          
           // Add mock quizzes for Year 1 to ensure these courses are available:
-          // Semester 1: Communication Skills, Mathematics for Computing, 
-          //            Introduction to Computer Systems, Introduction to Programming
+          // Semester 1: Communication Skills, Introduction to Computer Systems, Introduction to Programming
           // Semester 2: Internet & Web Technology, Information System & Data Modeling,
           //            English for Academic Purposes, Software Process Modeling,
           //            Object Oriented Concept
@@ -902,6 +1335,27 @@ export default function QuizPage() {
             (q) => q.year === 2
           )
           
+          // Add mock quizzes for Year 3 to ensure these courses are available:
+          // Semester 1: Employability Skills Development, IT Project Management,
+          //            Programming Applications and Frameworks, Database Systems,
+          //            Network Design and Management
+          // Semester 2: Business Management for IT, Data Science & Analytics,
+          //            Information Assurance & Security, Human Computer Interaction
+          const year3MockQuizzes = normalizedQuizzes.filter(
+            (q) => q.year === 3
+          )
+          
+          // Add mock quizzes for Year 4 to ensure these courses are available:
+          // Semester 1: Industry Placement, Image Understanding & Processing,
+          //            Computer Systems and Network Administration, Software Quality Assurance,
+          //            Preparation for the Professional World, Machine Learning, Modern Topics in IT
+          // Semester 2: Deep Learning, Industry Placement (Part II), Cloud Computing,
+          //            Innovation Management & Enterpreneurship, Database Administration,
+          //            Internet of Things, Research Project
+          const year4MockQuizzes = normalizedQuizzes.filter(
+            (q) => q.year === 4
+          )
+          
           // Add mock quizzes only if they fill gaps in the database
           const mockQuizzesToAdd = [
             ...year1MockQuizzes.filter(
@@ -909,6 +1363,12 @@ export default function QuizPage() {
             ),
             ...year2MockQuizzes.filter(
               (mock) => !year2DbCourses.has(mock.course)
+            ),
+            ...year3MockQuizzes.filter(
+              (mock) => !year3DbCourses.has(mock.course)
+            ),
+            ...year4MockQuizzes.filter(
+              (mock) => !year4DbCourses.has(mock.course)
             ),
           ]
           
@@ -1328,6 +1788,12 @@ export default function QuizPage() {
       }
 
       console.log('✅ Quiz response saved to database successfully!')
+
+      // Store detailed results from API response
+      if (result.data.results) {
+        setDetailedResults(result.data.results)
+        console.log('✅ Detailed results captured:', result.data.results.length, 'questions')
+      }
 
       // Update local state with actual response from API
       const quizResult: QuizResult = {
@@ -1749,6 +2215,7 @@ export default function QuizPage() {
             quizComments={combinedComments}
             quizRatings={combinedRatings}
             currentUser={currentUser}
+            detailedResults={detailedResults}
             onAddComment={(name, message) =>
               handleAddQuizComment(selectedQuiz.id, name, message)
             }

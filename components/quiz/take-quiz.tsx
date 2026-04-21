@@ -10,6 +10,15 @@ interface Question {
   correctAnswer: number
 }
 
+interface DetailedResult {
+  questionId: string
+  questionText: string
+  userAnswer: number
+  correctAnswer: number
+  options: string[]
+  isCorrect: boolean
+}
+
 interface TakeQuizProps {
   quiz: {
     id: string
@@ -38,6 +47,7 @@ interface TakeQuizProps {
     firstName: string
     email: string
   }
+  detailedResults?: DetailedResult[]
   onAddComment: (name: string, message: string) => void
   onAddRating: (name: string, rating: number) => void
   onComplete: (score: number, answers: number[]) => void
@@ -50,6 +60,7 @@ export function TakeQuiz({
   quizComments,
   quizRatings,
   currentUser,
+  detailedResults,
   onAddComment,
   onAddRating,
   onComplete,
@@ -195,6 +206,7 @@ export function TakeQuiz({
           </div>
         </div>
 
+<<<<<<< Updated upstream
         {/* Results breakdown */}
         <div className="space-y-4 mb-6">
           <h3 className="font-semibold text-foreground mb-4">Review Answers</h3>
@@ -239,11 +251,53 @@ export function TakeQuiz({
                         )
                       })}
                     </div>
+=======
+        {/* Results breakdown - Show detailed answer review */}
+        {detailedResults && detailedResults.length > 0 && (
+        <div className="space-y-4 mb-6">
+          <h3 className="font-semibold text-foreground mb-4">Review Your Answers</h3>
+          {detailedResults.map((result, index) => (
+            <div
+              key={result.questionId}
+              className="border border-border rounded-lg p-4"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                {result.isCorrect ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-500 mt-1 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium text-foreground mb-2">
+                    Question {index + 1}: {result.questionText}
+                  </p>
+                  <div className="space-y-2">
+                    {result.options.map((option, optIndex) => {
+                      const isUserAnswer = result.userAnswer === optIndex
+                      const isCorrectAnswer = result.correctAnswer === optIndex
+                      return (
+                        <div
+                          key={optIndex}
+                          className={`px-3 py-2 rounded text-sm ${
+                            isCorrectAnswer
+                              ? 'bg-green-500/10 text-green-700 dark:text-green-400 font-medium border border-green-500/30'
+                              : isUserAnswer
+                              ? 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/30'
+                              : 'bg-secondary text-muted-foreground'
+                          }`}
+                        >
+                          {option}
+                          {isCorrectAnswer && ' ✓'}
+                          {isUserAnswer && !isCorrectAnswer && ' ✗'}
+                        </div>
+                      )
+                    })}
+>>>>>>> Stashed changes
                   </div>
                 </div>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
 
         <div className="border border-border rounded-lg p-4 mb-6">

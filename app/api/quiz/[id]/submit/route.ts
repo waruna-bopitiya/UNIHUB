@@ -113,43 +113,75 @@ export async function POST(
 
     console.log('📊 Score calculated:', { score, total: questions.length })
 
-    // Store response with retry logic
-    console.log('💾 Attempting to insert quiz response with data:', {
-      quizId,
-      participantName,
-      answersCount: answers.length,
-      questionsCount: questions.length,
-      score,
-      answers: answers.slice(0, 3), // Log first 3 answers for debugging
-    })
-    const result = await sqlWithRetry(() =>
-      sql`
-        INSERT INTO quiz_responses
-          (quiz_id, participant_name, answers, score, total_questions)
-        VALUES
-          (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length})
-        RETURNING id, score, total_questions, date_taken, created_at
-      `
-    )
+    // Build detailed results for each question
+    const detailedResults = []
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i]
+      const userAnswer = answers[i]
+      const correctAnswer = question.correctAnswer
+      const isCorrect = userAnswer === correctAnswer
 
-    if (!result || result.length === 0) {
-      throw new Error('Failed to insert quiz response - no result returned')
+      detailedResults.push({
+        questionId: question.id,
+        questionText: quizData?.questions?.[i]?.question || `Question ${i + 1}`,
+        userAnswer: userAnswer,
+        correctAnswer: correctAnswer,
+        options: quizData?.questions?.[i]?.options || [],
+        isCorrect: isCorrect,
+      })
     }
 
-    const response = result[0]
-    console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
+    console.log('📋 Detailed results prepared:', detailedResults.length, 'questions')
 
-    // Update participants count with retry logic
-    console.log('📈 Updating participants count...')
-    await sqlWithRetry(() =>
-      sql`
-        UPDATE quizzes
-        SET participants = participants + 1
-        WHERE id = ${quizId}
-      `
-    )
+    // Only store response in database if quiz is a real database quiz (not a mock quiz)
+    let response: any = null
+    if (quizzes && quizzes.length > 0) {
+      // This is a database quiz, store the response
+      console.log('💾 Attempting to insert quiz response with data:', {
+        quizId,
+        participantName,
+        answersCount: answers.length,
+        questionsCount: questions.length,
+        score,
+        answers: answers.slice(0, 3), // Log first 3 answers for debugging
+      })
+      const result = await sqlWithRetry(() =>
+        sql`
+          INSERT INTO quiz_responses
+            (quiz_id, participant_name, answers, score, total_questions)
+          VALUES
+            (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length})
+          RETURNING id, score, total_questions, date_taken, created_at
+        `
+      )
 
-    console.log('✅ Participants count updated')
+      if (!result || result.length === 0) {
+        throw new Error('Failed to insert quiz response - no result returned')
+      }
+
+      response = result[0]
+      console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
+
+      // Update participants count with retry logic
+      console.log('📈 Updating participants count...')
+      await sqlWithRetry(() =>
+        sql`
+          UPDATE quizzes
+          SET participants = participants + 1
+          WHERE id = ${quizId}
+        `
+      )
+
+      console.log('✅ Participants count updated')
+    } else {
+      // This is a mock quiz - don't store in database
+      console.log('⚠️  Mock quiz submission - not storing in database')
+      response = {
+        score,
+        total_questions: questions.length,
+        date_taken: new Date().toISOString(),
+      }
+    }
 
     return NextResponse.json({
       status: 'success',
@@ -159,6 +191,7 @@ export async function POST(
         totalQuestions: response.total_questions,
         percentage: Math.round((response.score / response.total_questions) * 100),
         dateTaken: response.date_taken,
+        results: detailedResults,
       },
     })
   } catch (error: any) {

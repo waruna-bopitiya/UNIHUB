@@ -58,9 +58,8 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       allowedYears.push(i)
     }
     
-    // For semesters: all semesters up to user's semester
-    // Since there are only 2 semesters
-    const allowedSemesters = userSemester === 1 ? [1] : [1, 2]
+    // For semesters: users can create quizzes for all semesters (1 & 2)
+    const allowedSemesters = [1, 2]
     
     return { years: allowedYears, semesters: allowedSemesters }
   }
@@ -75,7 +74,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
     : availableCourses
 
   const userPermissionMessage = currentUser 
-    ? `You can create quizzes for: Year${allowedYears.length > 1 ? 's' : ''} ${allowedYears.join(', ')} and Semester${allowedSemesters.length > 1 ? 's' : ''} ${allowedSemesters.join(', ')}`
+    ? `You can create quizzes for: Year${allowedYears.length > 1 ? 's' : ''} ${allowedYears.join(', ')} and All Semesters (1 & 2)`
     : ''
 
   const [title, setTitle] = useState('')
@@ -285,14 +284,10 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
   // Calculate options for year/semester/course dropdowns
   const yearOptions = allowedYears
 
-  // For semester options: depends on which year is selected
-  // - For years below user's year: show both semesters (1 & 2)
-  // - For user's own year: show semesters up to their current semester
+  // For semester options: show all semesters (1 & 2) for any selected year
   const semesterOptions = year === '' 
     ? [] 
-    : currentUser && year < currentUser.year
-      ? [1, 2]  // Years below current year: all semesters
-      : allowedSemesters  // Current year: only up to user's semester
+    : [1, 2]  // Always show both semesters for any selected year
 
   const courseOptions =
     year === '' || semester === ''
