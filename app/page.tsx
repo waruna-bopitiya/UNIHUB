@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { CreatePost } from '@/components/feed/create-post'
 import { PostCard } from '@/components/feed/post-card'
 import QuestionCard from '@/components/qna/QuestionCard'
+import { Badge } from '@/components/ui/badge'
 import Link from "next/link"
 import { MessageCircle, Users, TrendingUp, Award } from "lucide-react"
 
@@ -30,6 +31,7 @@ interface OnlineUser {
   lastLogin: string | null
   logoutTime: string | null
   avatar: string
+  badges?: string[]
 }
 
 function timeAgo(dateStr: string) {
@@ -537,7 +539,21 @@ export default function Home() {
                   sortedOnlineUsers.slice(0, 3).map((user, i) => (
                     <div key={user.id || i} className="flex items-center gap-2">
                       <span>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-                      <span>{user.name || 'Anonymous'}</span>
+                      <div className="flex items-center gap-1">
+                        <span>{user.name || 'Anonymous'}</span>
+                        {/* Display badges */}
+                        {user.badges && user.badges.length > 0 && (
+                          <div className="flex gap-1">
+                            {user.badges.map((badge, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs h-5 px-1">
+                                {badge === 'Gold Scholar' && '🥇'}
+                                {badge === 'Silver Scholar' && '🥈'}
+                                {badge === 'Bronze Scholar' && '🥉'}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (

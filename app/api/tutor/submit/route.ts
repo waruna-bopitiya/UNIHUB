@@ -95,6 +95,13 @@ export async function POST(request: NextRequest) {
 			RETURNING id, status
 		`
 
+		// Also update the users table with the GPA to trigger badge calculation
+		await sql`
+			UPDATE users
+			SET gpa = ${cgpaNum}
+			WHERE id = ${userId}
+		`
+
 		console.log('✅ Tutor form submitted and saved to database:', {
 			userId,
 			fullName,

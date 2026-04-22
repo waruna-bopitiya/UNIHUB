@@ -531,7 +531,7 @@ export default function TutorFormPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        CGPA must be between 1.5 and 4.2. Higher CGPA improves your chance of being auto-verified.
+                        CGPA must be between 1.5 and 4.0. Higher CGPA improves your chance of being auto-verified.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
