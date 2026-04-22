@@ -318,15 +318,9 @@ export function PostCard({
       )}
 
       {streamVideoId && (
-<<<<<<< Updated upstream
-        <div 
-          ref={videoContainerRef} // Ref එක මෙතනට ලබා දී ඇත
-          className="mb-4 rounded-xl overflow-hidden border border-border bg-black relative group/video" 
-=======
         <div
           ref={videoContainerRef}
           className="mb-4 rounded-xl overflow-hidden border border-border bg-card relative group/video"
->>>>>>> Stashed changes
           style={{ aspectRatio: '16/9' }}
         >
           {!isPlaying ? (
@@ -349,14 +343,7 @@ export function PostCard({
               </div>
             </div>
           ) : (
-<<<<<<< Updated upstream
-            // ඔයාගේ අදහසට අනුව සකසන ලද ක්‍රමය
-            <div className="absolute inset-0 overflow-hidden bg-black">
-              
-              {/* Crop Effect Wrapper: උඩින් සහ යටින් වීඩියෝව crop කිරීමට */}
-=======
             <div className="absolute inset-0 overflow-hidden bg-card">
->>>>>>> Stashed changes
               <div className="absolute top-[5%] bottom-[5%] left-0 right-0 overflow-hidden">
                 <div
                   ref={playerContainerRef}
@@ -364,27 +351,11 @@ export function PostCard({
                 ></div>
               </div>
 
-<<<<<<< Updated upstream
-              {/* MASKING LAYERS (යූටියුබ් පාලකයන් වසා දැමීමට) */}
-              <div className="absolute top-0 left-0 right-0 h-[10%] bg-black z-10"></div>
-              <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-black z-10"></div>
-=======
               <div className="absolute top-0 left-0 right-0 h-[10%] bg-card z-10"></div>
               <div className="absolute bottom-0 left-0 right-0 h-[10%] bg-card z-10"></div>
->>>>>>> Stashed changes
 
               <div className="absolute inset-0 z-20 bg-transparent pointer-events-auto"></div>
 
-<<<<<<< Updated upstream
-              {/* Custom Full Screen බොත්තම (Overlay එකට උඩින් z-30 ලෙස ඇත) */}
-              <button 
-                onClick={toggleFullScreen}
-                className="absolute bottom-4 right-4 z-30 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover/video:opacity-100"
-                title="Full Screen"
-              >
-                <Maximize className="w-5 h-5" />
-              </button>
-=======
               <div className="absolute inset-x-4 bottom-4 z-30 flex items-end justify-between gap-3 opacity-0 transition-opacity duration-200 group-hover/video:opacity-100">
                 <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-2 text-xs text-foreground backdrop-blur-md shadow-lg">
                   <Clock className="w-4 h-4 text-muted-foreground" />
@@ -429,7 +400,6 @@ export function PostCard({
                   </button>
                 </div>
               </div>
->>>>>>> Stashed changes
             </div>
           )}
         </div>

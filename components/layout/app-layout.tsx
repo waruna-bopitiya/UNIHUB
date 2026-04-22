@@ -13,13 +13,10 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-<<<<<<< Updated upstream
   const [chatOpen, setChatOpen] = useState(false)
-=======
+  const [isMounted, setIsMounted] = useState(false)
   const lastRightClickNoticeAtRef = useRef(0)
   const { toast } = useToast()
->>>>>>> Stashed changes
 
   useEffect(() => {
     setIsMounted(true)
