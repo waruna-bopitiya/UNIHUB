@@ -15,6 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [chatOpen, setChatOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const lastRightClickNoticeAtRef = useRef(0)
+  const lastShortcutNoticeAtRef = useRef(0)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -42,6 +43,35 @@ export function AppLayout({ children }: AppLayoutProps) {
     document.addEventListener('contextmenu', handleContextMenu)
     return () => document.removeEventListener('contextmenu', handleContextMenu)
   }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase()
+      const blockedShortcut =
+        event.key === 'F12' ||
+        ((event.ctrlKey || event.metaKey) && event.shiftKey && (key === 'i' || key === 'c'))
+
+      if (!blockedShortcut) return
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      const now = Date.now()
+      if (now - lastShortcutNoticeAtRef.current > 1500) {
+        toast({
+          title: 'Shortcut disabled',
+          description: 'Developer tools shortcuts are disabled on this page.',
+          duration: 2500,
+          className:
+            'border-primary/20 bg-gradient-to-r from-card to-secondary/30 text-card-foreground shadow-xl backdrop-blur',
+        })
+        lastShortcutNoticeAtRef.current = now
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [toast])
 
   return (
     <div className="flex h-screen bg-background">
