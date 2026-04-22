@@ -34,6 +34,30 @@ interface Quiz {
   averageScore?: number
 }
 
+interface SubjectCatalogRow {
+  year: number
+  semester: number
+  code: string
+  name: string
+}
+
+interface SubjectParticipant {
+  name: string
+  attempts: number
+  averageScore: number
+}
+
+interface SubjectScoreRow {
+  year: number
+  semester: number
+  code: string
+  name: string
+  takers: number
+  attempts: number
+  averageScore: number
+  participants: SubjectParticipant[]
+}
+
 interface QuizResult {
   quizId: string
   quizTitle: string
@@ -117,7 +141,8 @@ export default function QuizPage() {
   const [scoreView, setScoreView] = useState<'courseByYear' | 'quizTakers'>('courseByYear')
   const [selectedScoreYear, setSelectedScoreYear] = useState<number | 'all'>('all')
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
-  const [availableCourses, setAvailableCourses] = useState<Array<{ year: number; semester: number; course: string; category: string }>>([])
+  const [availableCourses, setAvailableCourses] = useState<Array<{ year: number; semester: number; code: string; course: string; category: string }>>([])
+  const [subjectCatalogRows, setSubjectCatalogRows] = useState<SubjectCatalogRow[]>([])
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null)
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
@@ -250,26 +275,36 @@ export default function QuizPage() {
       if (coursesResult.status === 'success' && Array.isArray(coursesResult.data)) {
         console.log('✅ Courses loaded from database:', coursesResult.data.length, 'courses')
         const courseRows = coursesResult.data as CourseData[]
+        setSubjectCatalogRows(
+          courseRows.map((row) => ({
+            year: row.year,
+            semester: row.semester,
+            code: row.code,
+            name: row.name,
+          })),
+        )
         const courseMap = courseRows.reduce(
-          (map: Map<string, { year: number; semester: number; course: string; category: string }>, c: CourseData) => {
-            const key = `${c.year}-${c.semester}-${c.name}`
+          (map: Map<string, { year: number; semester: number; code: string; course: string; category: string }>, c: CourseData) => {
+            const key = `${c.year}-${c.semester}-${c.code}`
             if (!map.has(key)) {
               map.set(key, {
                 year: c.year,
                 semester: c.semester,
+                code: c.code,
                 course: c.name,
                 category: 'Course',
               })
             }
             return map
           },
-          new Map<string, { year: number; semester: number; course: string; category: string }>(),
+          new Map<string, { year: number; semester: number; code: string; course: string; category: string }>(),
         )
         const uniqueCourses = Array.from(courseMap.values())
         setAvailableCourses(uniqueCourses)
       } else {
         console.log('⚠️ Error loading courses from database')
         setAvailableCourses([])
+        setSubjectCatalogRows([])
       }
 
       // Fetch existing quizzes from database
@@ -360,11 +395,6 @@ export default function QuizPage() {
   useEffect(() => {
     const fetchScoreDataFromDatabase = async () => {
       try {
-        if (!quizResults || quizResults.length === 0) {
-          console.log('⏭️  Skipping score data fetch - no quiz results yet')
-          return
-        }
-
         console.log('📊 Fetching score statistics from database...')
         setLoadingScoreData(true)
         const response = await fetch('/api/quiz/scores')
@@ -375,16 +405,18 @@ export default function QuizPage() {
           setScoreDataFromApi(result.data)
         } else {
           console.log('⚠️ Failed to fetch score data:', result.message)
+          setScoreDataFromApi(null)
         }
       } catch (error) {
         console.error('❌ Error fetching score data from database:', error)
+        setScoreDataFromApi(null)
       } finally {
         setLoadingScoreData(false)
       }
     }
 
     fetchScoreDataFromDatabase()
-  }, [quizResults])
+  }, [])
 
   const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
     const escapeCsv = (value: string | number) => {
@@ -715,8 +747,20 @@ export default function QuizPage() {
 
       // Store detailed results from API response
       if (result.data.results) {
+        console.log('🎯 Received detailed results from API:', {
+          count: result.data.results.length,
+          firstQuestion: result.data.results[0] ? {
+            questionId: result.data.results[0].questionId,
+            userAnswer: result.data.results[0].userAnswer,
+            correctAnswer: result.data.results[0].correctAnswer,
+            isCorrect: result.data.results[0].isCorrect,
+            optionsCount: result.data.results[0].options?.length,
+          } : null,
+        })
         setDetailedResults(result.data.results)
         console.log('✅ Detailed results captured:', result.data.results.length, 'questions')
+      } else {
+        console.warn('⚠️  No results in API response:', result.data)
       }
 
       // Update local state with actual response from API
@@ -858,6 +902,102 @@ export default function QuizPage() {
   const scoreDataFromApiCourseByYear = scoreDataFromApi?.courseByYear || null
   const scoreDataFromApiQuizTakers = scoreDataFromApi?.quizTakers || null
   const scoreDataSummary = scoreDataFromApi?.summary || { totalAttempts: 0, averageScore: 0, totalParticipants: 0 }
+
+  const subjectScoreRows: SubjectScoreRow[] = subjectCatalogRows
+    .map((subject) => {
+      const matchingYearGroup = Array.isArray(scoreDataFromApiCourseByYear)
+        ? scoreDataFromApiCourseByYear.find(
+            (group: any) => group.year === subject.year && group.semester === subject.semester,
+          )
+        : null
+
+      const subjectNameLower = subject.name.trim().toLowerCase()
+      const matchingCourseStats = matchingYearGroup?.chartData?.find((course: any) => {
+        const courseNameLower = String(course.course || '').trim().toLowerCase()
+        return (
+          courseNameLower === subjectNameLower ||
+          courseNameLower.includes(subjectNameLower) ||
+          subjectNameLower.includes(courseNameLower)
+        )
+      })
+
+      const matchingTakerStats = Array.isArray(scoreDataFromApiQuizTakers)
+        ? scoreDataFromApiQuizTakers.find(
+            (group: any) =>
+              group.year === subject.year &&
+              group.semester === subject.semester &&
+              String(group.course || '').trim().toLowerCase() === subjectNameLower,
+          )
+        : null
+
+      const participants: SubjectParticipant[] = Array.isArray(matchingTakerStats?.rows)
+        ? matchingTakerStats.rows.map((row: any) => ({
+            name: row.name,
+            attempts: row.attempts || 0,
+            averageScore: row.averageScore || 0,
+          }))
+        : []
+
+      return {
+        year: subject.year,
+        semester: subject.semester,
+        code: subject.code,
+        name: subject.name,
+        takers: matchingCourseStats?.participants || 0,
+        attempts: matchingCourseStats?.attempts || 0,
+        averageScore: matchingCourseStats?.avgScore || 0,
+        participants,
+      }
+    })
+    .sort((a, b) =>
+      a.year === b.year
+        ? a.semester === b.semester
+          ? a.code.localeCompare(b.code)
+          : a.semester - b.semester
+        : a.year - b.year,
+    )
+
+  const subjectScoreRowsWithScores = subjectScoreRows.filter((row) => row.takers > 0 || row.attempts > 0)
+  const subjectScoreGroups = Array.from(
+    subjectScoreRows.reduce((map, row) => {
+      const key = `${row.year}-${row.semester}`
+      if (!map.has(key)) {
+        map.set(key, { year: row.year, semester: row.semester, rows: [] as typeof subjectScoreRows })
+      }
+      map.get(key)!.rows.push(row)
+      return map
+    }, new Map<string, { year: number; semester: number; rows: typeof subjectScoreRows }>()),
+  )
+    .map(([, value]) => ({
+      ...value,
+      rows: value.rows.sort((a, b) => a.code.localeCompare(b.code)),
+    }))
+    .sort((a, b) => (a.year === b.year ? a.semester - b.semester : a.year - b.year))
+
+  const subjectAvailableScoreYears = Array.from(new Set(subjectScoreRows.map((row) => row.year))).sort((a, b) => a - b)
+  const filteredSubjectScoreGroups =
+    selectedScoreYear === 'all'
+      ? subjectScoreGroups
+      : subjectScoreGroups.filter((group) => group.year === selectedScoreYear)
+
+  const normalizedSubjectScoreSearch = scoreSearch.trim().toLowerCase()
+  const searchedSubjectScoreGroups = filteredSubjectScoreGroups
+    .map((group) => ({
+      ...group,
+      rows: group.rows.filter((row) => {
+        if (!normalizedSubjectScoreSearch) return true
+        return (
+          row.name.toLowerCase().includes(normalizedSubjectScoreSearch) ||
+          row.code.toLowerCase().includes(normalizedSubjectScoreSearch)
+        )
+      }),
+    }))
+    .filter((group) => group.rows.length > 0)
+
+  const topSubject = [...subjectScoreRowsWithScores].sort((a, b) => b.averageScore - a.averageScore)[0]
+  const lowSubject = [...subjectScoreRowsWithScores].sort((a, b) => a.averageScore - b.averageScore)[0]
+  const totalSubjects = subjectCatalogRows.length
+  const subjectsWithScores = subjectScoreRowsWithScores.length
 
   // Fallback calculated data (for backward compatibility if API is not ready)
   const calculatedCategorizedScoreData = yearSemesterBuckets.map((bucket) => {
@@ -1675,10 +1815,48 @@ export default function QuizPage() {
         {activeTab === 'score' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Score Summary Diagram</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Subject4Years Database Details</h3>
               <p className="text-muted-foreground">
-                Categorized summary of courses by year and semester.
+                Live Neon catalog rows from subject4years, joined with quiz score aggregates.
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Subject Rows</p>
+                <p className="text-2xl font-bold text-foreground">{totalSubjects}</p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Subjects With Scores</p>
+                <p className="text-2xl font-bold text-foreground">{subjectsWithScores}</p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
+                <p className="text-2xl font-bold text-foreground">{scoreDataSummary.totalAttempts}</p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Average Score</p>
+                <p className="text-2xl font-bold text-foreground">{scoreDataSummary.averageScore}%</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Top Scoring Subject</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {topSubject
+                    ? `${topSubject.code} - ${topSubject.name} (${topSubject.averageScore}%)`
+                    : 'No scored subjects yet'}
+                </p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Lowest Scoring Subject</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {lowSubject
+                    ? `${lowSubject.code} - ${lowSubject.name} (${lowSubject.averageScore}%)`
+                    : 'No scored subjects yet'}
+                </p>
+              </div>
             </div>
 
             <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1689,7 +1867,7 @@ export default function QuizPage() {
                   onChange={(e) => setScoreView(e.target.value as 'courseByYear' | 'quizTakers')}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
                 >
-                  <option value="courseByYear">Course Scores by Year</option>
+                  <option value="courseByYear">Subject Scores by Year</option>
                   <option value="quizTakers">Quiz Takers Scores</option>
                 </select>
               </div>
@@ -1702,7 +1880,7 @@ export default function QuizPage() {
                     type="text"
                     value={scoreSearch}
                     onChange={(e) => setScoreSearch(e.target.value)}
-                    placeholder="Search by course name"
+                    placeholder="Search by subject code or name"
                     className="w-full pl-10 pr-3 py-2 rounded-lg border border-border bg-background text-foreground"
                   />
                 </div>
@@ -1719,7 +1897,7 @@ export default function QuizPage() {
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
                   >
                     <option value="all">All Years</option>
-                    {availableScoreYears.map((year) => (
+                    {subjectAvailableScoreYears.map((year) => (
                       <option key={year} value={year}>
                         Year {year}
                       </option>
@@ -1729,50 +1907,42 @@ export default function QuizPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-sm text-muted-foreground mb-1">Total Quizzes</p>
-                <p className="text-2xl font-bold text-foreground">{quizzes.length}</p>
+            {loadingScoreData && (
+              <div className="bg-card border border-border rounded-lg p-4 text-sm text-muted-foreground">
+                Loading live score data from Neon...
               </div>
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-sm text-muted-foreground mb-1">Year/Semester Groups</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {scoreView === 'courseByYear'
-                    ? searchedCategorizedScoreData.length
-                    : searchedCourseTakerScoreByYearSemester.length}
-                </p>
-              </div>
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {scoreView === 'courseByYear' ? totalAttempts : participantAttemptRows.length}
-                </p>
-              </div>
-            </div>
+            )}
 
             {scoreView === 'courseByYear' ? (
-              searchedCategorizedScoreData.length === 0 ? (
+              searchedSubjectScoreGroups.length === 0 ? (
                 <div className="bg-card border border-border rounded-lg p-8 text-center">
-                  <p className="text-muted-foreground">No course score data for the selected year.</p>
+                  <p className="text-muted-foreground">No subject score data for the selected year.</p>
                 </div>
               ) : (
-                searchedCategorizedScoreData.map((group, index) => (
-                  <div key={`category-score-${group.year}-${group.semester}-${index}`} className="bg-card border border-border rounded-lg p-4">
+                searchedSubjectScoreGroups.map((group, index) => (
+                  <div key={`subject-score-${group.year}-${group.semester}-${index}`} className="bg-card border border-border rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-foreground mb-1">
                       Year {group.year} - Semester {group.semester}
                     </h4>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Course-wise participants, attempts, and average scores.
+                      Average score diagram for submitted quiz attempts in this year and semester.
                     </p>
                     <ChartContainer
-                      id={`score-${group.year}-${group.semester}-${index}`}
+                      id={`subject-average-score-${group.year}-${group.semester}-${index}`}
                       config={scoreChartConfig}
                       className="h-[360px] w-full"
                     >
-                      <BarChart data={group.chartData} margin={{ left: 12, right: 12, top: 16, bottom: 32 }}>
+                      <BarChart
+                        data={group.rows.map((subjectRow) => ({
+                          code: subjectRow.code,
+                          name: subjectRow.name,
+                          averageScore: subjectRow.averageScore,
+                        }))}
+                        margin={{ left: 12, right: 12, top: 16, bottom: 40 }}
+                      >
                         <CartesianGrid vertical={false} />
                         <XAxis
-                          dataKey="shortCourse"
+                          dataKey="code"
                           tickLine={false}
                           axisLine={false}
                           interval={0}
@@ -1780,21 +1950,20 @@ export default function QuizPage() {
                           textAnchor="end"
                           height={72}
                         />
-                        <YAxis yAxisId="left" tickLine={false} axisLine={false} />
-                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          domain={[0, 100]}
+                        />
                         <ChartTooltip
                           cursor={false}
                           content={
                             <ChartTooltipContent
-                              labelFormatter={(_, payload) =>
-                                payload?.[0]?.payload?.course ?? 'Course summary'
-                              }
+                              labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? 'Subject'}
                             />
                           }
                         />
-                        <Bar yAxisId="left" dataKey="participants" fill="var(--color-participants)" radius={4} />
-                        <Bar yAxisId="left" dataKey="attempts" fill="var(--color-attempts)" radius={4} />
-                        <Bar yAxisId="right" dataKey="avgScore" fill="var(--color-avgScore)" radius={4} />
+                        <Bar dataKey="averageScore" name="Average Score %" fill="var(--color-avgScore)" radius={4} />
                       </BarChart>
                     </ChartContainer>
                   </div>
@@ -1804,11 +1973,11 @@ export default function QuizPage() {
               <div className="bg-card border border-border rounded-lg p-4">
                 <h4 className="text-lg font-semibold text-foreground mb-1">Quiz Takers Score Summary</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Score summary for students who took quizzes across all courses.
+                  Score summary for students who took quizzes across all subjects in subject4years.
                 </p>
 
                 <div className="space-y-4">
-                  {searchedCourseTakerScoreByYearSemester.map((yearGroup, index) => (
+                  {searchedSubjectScoreGroups.map((yearGroup, index) => (
                     <div
                       key={`taker-score-${yearGroup.year}-${yearGroup.semester}-${index}`}
                       className="border border-border rounded-lg p-4"
@@ -1820,86 +1989,24 @@ export default function QuizPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-border">
-                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Course</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Code</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Subject</th>
                               <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Takers</th>
                               <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Attempts</th>
                               <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Average Score</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {yearGroup.rows.map((courseRow) => (
+                            {yearGroup.rows.map((subjectRow) => (
                               <tr
-                                key={`${courseRow.year}-${courseRow.semester}-${courseRow.course}`}
+                                key={`${subjectRow.year}-${subjectRow.semester}-${subjectRow.code}`}
                                 className="border-b border-border/60"
                               >
-                                <td className="py-2 pr-4 text-foreground font-medium">
-                                  <div
-                                    className="relative inline-block"
-                                    onMouseEnter={() =>
-                                      setHoveredCourseKey(
-                                        `${courseRow.year}-${courseRow.semester}-${courseRow.course}`,
-                                      )
-                                    }
-                                    onMouseLeave={() => setHoveredCourseKey(null)}
-                                  >
-                                    <span className="cursor-help underline decoration-dotted underline-offset-4">
-                                      {courseRow.course}
-                                    </span>
-
-                                    {hoveredCourseKey ===
-                                      `${courseRow.year}-${courseRow.semester}-${courseRow.course}` && (
-                                      <div className="absolute left-0 top-full mt-2 z-20 min-w-[420px] max-w-[520px] rounded-lg border border-border bg-card p-3 shadow-xl">
-                                        <p className="text-xs font-semibold text-foreground mb-2">
-                                          Child Scores
-                                        </p>
-                                        {(childScoresByCourseGroup[
-                                          `${courseRow.year}-${courseRow.semester}-${courseRow.course}`
-                                        ] || []).length === 0 ? (
-                                          <p className="text-xs text-muted-foreground">
-                                            No child scores yet.
-                                          </p>
-                                        ) : (
-                                          <div>
-                                            <p className="text-[11px] text-muted-foreground mb-2">
-                                              Student name and score
-                                            </p>
-                                            <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
-                                              {(childScoresByCourseGroup[
-                                                `${courseRow.year}-${courseRow.semester}-${courseRow.course}`
-                                              ] || []).map((child) => (
-                                                <div key={child.name} className="space-y-1">
-                                                  <div className="flex items-center justify-between gap-3 text-[11px]">
-                                                    <span className="text-foreground font-medium truncate">
-                                                      {child.name}
-                                                    </span>
-                                                    <span className="text-foreground font-semibold">
-                                                      {child.averageScore}%
-                                                    </span>
-                                                  </div>
-                                                  <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
-                                                    <div
-                                                      className={`h-full rounded-full transition-all ${
-                                                        child.averageScore >= 75
-                                                          ? 'bg-green-500'
-                                                          : child.averageScore >= 50
-                                                          ? 'bg-yellow-500'
-                                                          : 'bg-red-500'
-                                                      }`}
-                                                      style={{ width: `${Math.max(0, Math.min(100, child.averageScore))}%` }}
-                                                    />
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-2 pr-4 text-foreground">{courseRow.takers}</td>
-                                <td className="py-2 pr-4 text-foreground">{courseRow.attempts}</td>
-                                <td className="py-2 pr-4 text-foreground">{courseRow.averageScore}%</td>
+                                <td className="py-2 pr-4 text-foreground font-medium">{subjectRow.code}</td>
+                                <td className="py-2 pr-4 text-foreground font-medium">{subjectRow.name}</td>
+                                <td className="py-2 pr-4 text-foreground">{subjectRow.takers}</td>
+                                <td className="py-2 pr-4 text-foreground">{subjectRow.attempts}</td>
+                                <td className="py-2 pr-4 text-foreground">{subjectRow.averageScore}%</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1908,34 +2015,6 @@ export default function QuizPage() {
                     </div>
                   ))}
                 </div>
-
-                {participantScoreData.length > 0 && (
-                  <div className="mt-6">
-                    <h5 className="text-base font-semibold text-foreground mb-2">Top Takers</h5>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Name</th>
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Attempts</th>
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Quizzes Taken</th>
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Average Score</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {participantScoreData.slice(0, 8).map((participant) => (
-                            <tr key={participant.name} className="border-b border-border/60">
-                              <td className="py-2 pr-4 text-foreground font-medium">{participant.name}</td>
-                              <td className="py-2 pr-4 text-foreground">{participant.attempts}</td>
-                              <td className="py-2 pr-4 text-foreground">{participant.quizzesTaken}</td>
-                              <td className="py-2 pr-4 text-foreground">{participant.averageScore}%</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

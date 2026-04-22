@@ -99,7 +99,12 @@ export async function POST(
     // Calculate score
     let score = 0
     for (let i = 0; i < questions.length; i++) {
-      if (answers[i] === questions[i].correctAnswer) {
+      const userAnswer = Number(answers[i]) || 0
+      const correctAnswer = typeof questions[i].correctAnswer === 'string'
+        ? Number(questions[i].correctAnswer)
+        : questions[i].correctAnswer
+      console.log(`Question ${i}: userAnswer=${userAnswer} (type: ${typeof userAnswer}), correctAnswer=${correctAnswer} (type: ${typeof correctAnswer}), match=${userAnswer === correctAnswer}`)
+      if (userAnswer === correctAnswer) {
         score++
       }
     }
@@ -112,19 +117,41 @@ export async function POST(
       const question = questions[i]
       const userAnswer = answers[i]
       const correctAnswer = question.correctAnswer
-      const isCorrect = userAnswer === correctAnswer
+      const normalizedUserAnswer = Number(userAnswer) || 0
+      const normalizedCorrectAnswer = typeof correctAnswer === 'string'
+        ? Number(correctAnswer)
+        : correctAnswer
+      const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer
+
+      // Parse options - handle both array and string formats
+      const parsedOptions = Array.isArray(question.options)
+        ? question.options
+        : JSON.parse(question.options || '[]')
+
+      console.log(`Question ${i}:`, {
+        rawCorrectAnswer: question.correctAnswer,
+        correctAnswerType: typeof question.correctAnswer,
+        normalizedCorrectAnswer,
+        userAnswer,
+        normalizedUserAnswer,
+        optionsType: typeof question.options,
+        optionsLength: Array.isArray(parsedOptions) ? parsedOptions.length : 'not-array',
+        parsedOptions: parsedOptions,
+        isCorrect,
+      })
 
       detailedResults.push({
         questionId: question.id,
         questionText: question.questionText || `Question ${i + 1}`,
-        userAnswer: userAnswer,
-        correctAnswer: correctAnswer,
-        options: question.options || [],
+        userAnswer: normalizedUserAnswer,
+        correctAnswer: normalizedCorrectAnswer,
+        options: parsedOptions,
         isCorrect: isCorrect,
       })
     }
 
     console.log('📋 Detailed results prepared:', detailedResults.length, 'questions')
+    console.log('📋 Complete detailed results:', JSON.stringify(detailedResults, null, 2))
 
     console.log('💾 Attempting to insert quiz response with data:', {
       quizId,

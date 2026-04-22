@@ -207,10 +207,18 @@ export function TakeQuiz({
         </div>
 
         {/* Results breakdown - Show detailed answer review */}
-        {detailedResults && detailedResults.length > 0 && (
+        {detailedResults && detailedResults.length > 0 ? (
         <div className="space-y-4 mb-6">
           <h3 className="font-semibold text-foreground mb-4">Review Your Answers</h3>
-          {detailedResults.map((result, index) => (
+          {detailedResults.map((result, index) => {
+            console.log(`Displaying result ${index}:`, {
+              isCorrect: result.isCorrect,
+              userAnswer: result.userAnswer,
+              correctAnswer: result.correctAnswer,
+              optionsType: typeof result.options,
+              optionsLength: Array.isArray(result.options) ? result.options.length : 'not-array',
+            })
+            return (
             <div
               key={result.questionId}
               className="border border-border rounded-lg p-4"
@@ -226,7 +234,7 @@ export function TakeQuiz({
                     Question {index + 1}: {result.questionText}
                   </p>
                   <div className="space-y-2">
-                    {result.options.map((option, optIndex) => {
+                    {Array.isArray(result.options) && result.options.map((option, optIndex) => {
                       const isUserAnswer = result.userAnswer === optIndex
                       const isCorrectAnswer = result.correctAnswer === optIndex
                       return (
@@ -246,12 +254,21 @@ export function TakeQuiz({
                         </div>
                       )
                     })}
+                    {!Array.isArray(result.options) && (
+                      <p className="text-red-500 text-sm">Error: Options are not in array format</p>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
+        ) : (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+            <p className="text-yellow-700 dark:text-yellow-400 text-sm">
+              {detailedResults ? 'No detailed results available' : 'Loading detailed results...'}
+            </p>
+          </div>
         )}
 
         <div className="border border-border rounded-lg p-4 mb-6">

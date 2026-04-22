@@ -216,6 +216,7 @@ export async function ensureTablesExist() {
       creator         VARCHAR(255)  NOT NULL,
       year            INTEGER       NOT NULL CHECK (year BETWEEN 1 AND 4),
       semester        INTEGER       NOT NULL CHECK (semester BETWEEN 1 AND 2),
+      subject_code    VARCHAR(50),
       course          VARCHAR(500)  NOT NULL,
       category        VARCHAR(100)  NOT NULL,
       difficulty      VARCHAR(50)   NOT NULL CHECK (difficulty IN ('Easy', 'Medium', 'Hard')),
@@ -274,6 +275,58 @@ export async function ensureTablesExist() {
       FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
     )
   `
+
+  // Migration: connect quizzes to subject4years via subject_code
+  try {
+    await sql`
+      ALTER TABLE quizzes
+      ADD COLUMN IF NOT EXISTS subject_code VARCHAR(50)
+    `
+    console.log('✅ subject_code column added to quizzes table')
+  } catch (error: any) {
+    if (!error.message.includes('already exists')) {
+      console.warn('⚠️ Could not add subject_code column to quizzes:', error.message)
+    }
+  }
+
+  // Backfill missing subject_code values for existing quizzes where course matches subject name
+  try {
+    await sql`
+      UPDATE quizzes q
+      SET subject_code = s.subject_code
+      FROM subject4years s
+      WHERE q.subject_code IS NULL
+        AND q.year = s.year
+        AND q.semester = s.semester
+        AND LOWER(TRIM(q.course)) = LOWER(TRIM(s.subject_name))
+    `
+    console.log('✅ Backfilled subject_code values for quizzes')
+  } catch (error: any) {
+    console.warn('⚠️ Could not backfill quiz subject_code values:', error.message)
+  }
+
+  try {
+    await sql`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'fk_quizzes_subject4years'
+        ) THEN
+          ALTER TABLE quizzes
+          ADD CONSTRAINT fk_quizzes_subject4years
+          FOREIGN KEY (year, semester, subject_code)
+          REFERENCES subject4years(year, semester, subject_code)
+          ON UPDATE CASCADE
+          ON DELETE RESTRICT;
+        END IF;
+      END $$;
+    `
+    console.log('✅ Foreign key fk_quizzes_subject4years ensured')
+  } catch (error: any) {
+    console.warn('⚠️ Could not add fk_quizzes_subject4years:', error.message)
+  }
 
   // Chat tables
   await sql`
@@ -406,6 +459,8 @@ export async function ensureTablesExist() {
   // Quiz table indexes
   await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_year_semester ON quizzes(year, semester)`
   await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_course ON quizzes(course)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_subject_code ON quizzes(subject_code)`
+  await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_year_semester_subject_code ON quizzes(year, semester, subject_code)`
   await sql`CREATE INDEX IF NOT EXISTS idx_quizzes_created_at ON quizzes(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz_id ON quiz_questions(quiz_id)`
   await sql`CREATE INDEX IF NOT EXISTS idx_quiz_responses_quiz_id ON quiz_responses(quiz_id)`
