@@ -290,9 +290,20 @@ export default function TutorFormPage() {
       setBadgeState(result.badge)
       setIsEditing(false)
 
+      // Determine Scholar badge based on CGPA
+      let badgeMessage = ''
+      if (values.cgpa >= 4.0) {
+        badgeMessage = '🥇 You earned the Gold Scholar badge!'
+      } else if (values.cgpa > 3.7) {
+        badgeMessage = '🥈 You earned the Silver Scholar badge!'
+      } else if (values.cgpa > 3.5) {
+        badgeMessage = '🥉 You earned the Bronze Scholar badge!'
+      }
+
       if (result.approved) {
-        const messageText = isVerified ? 'Profile updated successfully!' : "✅ Verification successful! You're now a tutor!"
-        toast.success(messageText, { duration: 3000 })
+        const baseMessage = isVerified ? 'Profile updated successfully!' : "✅ Verification successful! You're now a tutor!"
+        const fullMessage = badgeMessage ? `${baseMessage} ${badgeMessage}` : baseMessage
+        toast.success(fullMessage, { duration: 4000 })
         
         if (!isVerified) {
           setTimeout(() => window.location.reload(), 2000)
@@ -311,10 +322,8 @@ export default function TutorFormPage() {
             { duration: 8000 }
           )
         } else {
-          toast.success(
-            '✅ Profile updated!',
-            { duration: 5000 }
-          )
+          const updateMessage = badgeMessage ? `✅ Profile updated! ${badgeMessage}` : '✅ Profile updated!'
+          toast.success(updateMessage, { duration: 5000 })
         }
       }
     } catch (error) {
@@ -514,7 +523,7 @@ export default function TutorFormPage() {
                   name="degreeProgram"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Degree / Major</FormLabel>
+                      <FormLabel>Degree</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="E.g. BSc in Computer Science"
@@ -616,7 +625,7 @@ export default function TutorFormPage() {
                 name="expertiseAreas"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subjects / expertise areas</FormLabel>
+                    <FormLabel>Subjects</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="E.g. Data Structures, Calculus, Physics 1"

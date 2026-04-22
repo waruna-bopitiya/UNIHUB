@@ -34,6 +34,26 @@ interface OnlineUser {
   badges?: string[]
 }
 
+interface TopHelper {
+  id: string
+  name: string
+  avatar: string
+  answerCount: number
+  badges: string[]
+  rank: number
+  medal: string
+}
+
+interface TopHelper {
+  id: string
+  name: string
+  avatar: string
+  answerCount: number
+  badges: string[]
+  rank: number
+  medal: string
+}
+
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000
   if (diff < 60) return 'just now'
@@ -61,6 +81,7 @@ export default function Home() {
   const [semestersLoading, setSemestersLoading] = useState(false)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date())
   const [onlineUsersSearch, setOnlineUsersSearch] = useState('')
+  const [topHelpers, setTopHelpers] = useState<TopHelper[]>([])
 
   // Get real-time status based on last_login and logouttime (Facebook-style)
   // User is ONLINE if they haven't logged out, or if they logged in after logging out
@@ -134,18 +155,45 @@ export default function Home() {
 
   const fetchOnlineUsers = async () => {
     try {
-      const res = await fetch('/api/online-users')
+      console.log('🔄 Fetching online users from /api/online-users...')
+      const res = await fetch('/api/online-users', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      console.log('📊 Response status:', res.status, res.statusText)
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        console.error('❌ API returned error:', res.status, errorData)
+        throw new Error(`API error: ${res.status} - ${JSON.stringify(errorData)}`)
+      }
+      
+      const data = await res.json()
+      console.log('✅ Fetched online users:', data)
+      setOnlineUsers(data)
+      setLastRefreshTime(new Date())
+    } catch (error) {
+      console.error('❌ Error fetching online users:', error instanceof Error ? error.message : error)
+      setOnlineUsers([])
+    }
+  }
+
+  const fetchTopHelpers = async () => {
+    try {
+      const res = await fetch('/api/top-helpers')
       if (res.ok) {
         const data = await res.json()
-        console.log('✅ Fetched online users:', data)
-        setOnlineUsers(data)
-        setLastRefreshTime(new Date())
+        console.log('✅ Fetched top helpers:', data)
+        setTopHelpers(data)
       } else {
         const error = await res.json()
         console.error('API Error:', error.details || error.error)
       }
     } catch (error) {
-      console.error('Error fetching online users:', error)
+      console.error('Error fetching top helpers:', error)
     }
   }
 
@@ -325,6 +373,7 @@ export default function Home() {
     fetchCurrentUser() // Fetch current user info
     fetchQuestions()
     fetchYears()
+    fetchTopHelpers()
     
     // Set up auto-refresh interval for online users only (no full page refresh)
     const onlineUsersInterval = setInterval(() => {
@@ -528,33 +577,26 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Top Contributors */}
+            {/* Top Helpers - Sorted by Answer Count */}
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-medium mb-3 flex items-center gap-2">
                 <Award className="w-4 h-4" />
                 Top Helpers
               </h3>
               <div className="space-y-2 text-sm">
-                {filteredQuestions.length > 0 ? (
-                  sortedOnlineUsers.slice(0, 3).map((user, i) => (
-                    <div key={user.id || i} className="flex items-center gap-2">
-                      <span>{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
-                      <div className="flex items-center gap-1">
-                        <span>{user.name || 'Anonymous'}</span>
-                        {/* Display badges */}
-                        {user.badges && user.badges.length > 0 && (
-                          <div className="flex gap-1">
-                            {user.badges.map((badge, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs h-5 px-1">
-                                {badge === 'Gold Scholar' && '🥇'}
-                                {badge === 'Silver Scholar' && '🥈'}
-                                {badge === 'Bronze Scholar' && '🥉'}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                {topHelpers.length > 0 ? (
+                  topHelpers.map((helper) => (
+                    <Link
+                      key={helper.id}
+                      href={`/qna/profile/${helper.id}`}
+                      className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 transition-colors"
+                    >
+                      <span>{helper.medal}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-foreground hover:text-primary">{helper.name}</span>
                       </div>
-                    </div>
+                      <span className="text-xs text-muted-foreground ml-1 whitespace-nowrap">{helper.answerCount}</span>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-xs text-muted-foreground">No helpers yet</p>

@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { CreatePost } from '@/components/feed/create-post'
 import { PostCard } from '@/components/feed/post-card'
 import QuestionCard from '@/components/qna/QuestionCard'
+import { Badge } from '@/components/ui/badge'
 import Link from "next/link"
 import { MessageCircle, Users, TrendingUp, Award } from "lucide-react"
 
@@ -22,6 +23,16 @@ interface Post {
   stream_video_id: string | null
   stream_title: string | null
   created_at: string
+}
+
+interface TopHelper {
+  id: string
+  name: string
+  avatar: string
+  answerCount: number
+  badges: string[]
+  rank: number
+  medal: string
 }
 
 // Mock Online Peers
@@ -75,6 +86,7 @@ export default function HomePageContent() {
   const [activeTab, setActiveTab] = useState<"feed" | "qna">("feed")
   const [filterType, setFilterType] = useState<"recent" | "unanswered" | "trending">("recent")
   const [filteredQuestions, setFilteredQuestions] = useState<any[]>([])
+  const [topHelpers, setTopHelpers] = useState<TopHelper[]>([])
   const searchParams = useSearchParams()
 
   const fetchPosts = async () => {
@@ -103,9 +115,26 @@ export default function HomePageContent() {
     }
   }
 
+  const fetchTopHelpers = async () => {
+    try {
+      const res = await fetch('/api/top-helpers')
+      if (res.ok) {
+        const data = await res.json()
+        console.log('✅ Fetched top helpers:', data)
+        setTopHelpers(data)
+      } else {
+        const error = await res.json()
+        console.error('API Error:', error.details || error.error)
+      }
+    } catch (error) {
+      console.error('Error fetching top helpers:', error)
+    }
+  }
+
   useEffect(() => { 
     fetchPosts()
     fetchQuestions()
+    fetchTopHelpers()
     // Auto-select Q&A tab if section=qna in query params
     const section = searchParams.get('section')
     if (section === 'qna') {
@@ -224,20 +253,30 @@ export default function HomePageContent() {
               </div>
             </div>
 
-            {/* Top Contributors */}
+            {/* Top Helpers - Sorted by Answer Count */}
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-medium mb-3 flex items-center gap-2">
                 <Award className="w-4 h-4" />
                 Top Helpers
               </h3>
               <div className="space-y-2 text-sm">
-                {mockTopHelpers.map((helper, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span>{helper.medal}</span>
-                    <span>{helper.name}</span>
-                    <span className="ml-auto text-muted-foreground">{helper.points} pts</span>
-                  </div>
-                ))}
+                {topHelpers.length > 0 ? (
+                  topHelpers.map((helper) => (
+                    <Link
+                      key={helper.id}
+                      href={`/qna/profile/${helper.id}`}
+                      className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50 transition-colors"
+                    >
+                      <span>{helper.medal}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-foreground hover:text-primary">{helper.name}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground ml-1 whitespace-nowrap">{helper.answerCount}</span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">No helpers yet</p>
+                )}
               </div>
             </div>
           </div>
