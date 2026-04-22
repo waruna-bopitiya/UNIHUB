@@ -11,6 +11,8 @@ import {
   Play, Square, AlertCircle, Edit3, Trash2, ChevronRight
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase = 'form' | 'streaming';
 type StreamTab = 'browser' | 'external';
