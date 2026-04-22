@@ -20,13 +20,12 @@ export async function POST(
     }
 
     const body = await req.json()
-    const { answers, participantName = 'Anonymous', quizData } = body
+    const { answers, participantName = 'Anonymous' } = body
 
     console.log('📝 Quiz submission received:', {
       quizId,
       participantName,
       answersCount: answers?.length,
-      hasQuizData: !!quizData,
     })
 
     if (!Array.isArray(answers)) {
@@ -61,6 +60,8 @@ export async function POST(
         sql`
           SELECT 
             id,
+            question_text as questionText,
+            options,
             correct_answer as correctAnswer,
             question_order
           FROM quiz_questions
@@ -76,14 +77,6 @@ export async function POST(
           { status: 400 }
         )
       }
-    } else if (quizData && Array.isArray(quizData.questions)) {
-      // Quiz not in database - use quiz data from request (for mock quizzes)
-      console.log('⚠️  Quiz not found in database, using quiz data from request (mock quiz)')
-      quiz = { id: quizId, title: quizData.title || 'Quiz' }
-      questions = quizData.questions.map((q: any) => ({
-        id: q.id,
-        correctAnswer: q.correctAnswer,
-      }))
     } else {
       console.error('❌ Quiz not found with ID:', quizId)
       console.error('⚠️  Available quizzes:', allQuizzes.length > 0 ? allQuizzes : 'No quizzes in database')
@@ -123,65 +116,52 @@ export async function POST(
 
       detailedResults.push({
         questionId: question.id,
-        questionText: quizData?.questions?.[i]?.question || `Question ${i + 1}`,
+        questionText: question.questionText || `Question ${i + 1}`,
         userAnswer: userAnswer,
         correctAnswer: correctAnswer,
-        options: quizData?.questions?.[i]?.options || [],
+        options: question.options || [],
         isCorrect: isCorrect,
       })
     }
 
     console.log('📋 Detailed results prepared:', detailedResults.length, 'questions')
 
-    // Only store response in database if quiz is a real database quiz (not a mock quiz)
-    let response: any = null
-    if (quizzes && quizzes.length > 0) {
-      // This is a database quiz, store the response
-      console.log('💾 Attempting to insert quiz response with data:', {
-        quizId,
-        participantName,
-        answersCount: answers.length,
-        questionsCount: questions.length,
-        score,
-        answers: answers.slice(0, 3), // Log first 3 answers for debugging
-      })
-      const result = await sqlWithRetry(() =>
-        sql`
-          INSERT INTO quiz_responses
-            (quiz_id, participant_name, answers, score, total_questions)
-          VALUES
-            (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length})
-          RETURNING id, score, total_questions, date_taken, created_at
-        `
-      )
+    console.log('💾 Attempting to insert quiz response with data:', {
+      quizId,
+      participantName,
+      answersCount: answers.length,
+      questionsCount: questions.length,
+      score,
+      answers: answers.slice(0, 3),
+    })
+    const result = await sqlWithRetry(() =>
+      sql`
+        INSERT INTO quiz_responses
+          (quiz_id, participant_name, answers, score, total_questions)
+        VALUES
+          (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length})
+        RETURNING id, score, total_questions, date_taken, created_at
+      `
+    )
 
-      if (!result || result.length === 0) {
-        throw new Error('Failed to insert quiz response - no result returned')
-      }
-
-      response = result[0]
-      console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
-
-      // Update participants count with retry logic
-      console.log('📈 Updating participants count...')
-      await sqlWithRetry(() =>
-        sql`
-          UPDATE quizzes
-          SET participants = participants + 1
-          WHERE id = ${quizId}
-        `
-      )
-
-      console.log('✅ Participants count updated')
-    } else {
-      // This is a mock quiz - don't store in database
-      console.log('⚠️  Mock quiz submission - not storing in database')
-      response = {
-        score,
-        total_questions: questions.length,
-        date_taken: new Date().toISOString(),
-      }
+    if (!result || result.length === 0) {
+      throw new Error('Failed to insert quiz response - no result returned')
     }
+
+    const response = result[0]
+    console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
+
+    // Update participants count with retry logic
+    console.log('📈 Updating participants count...')
+    await sqlWithRetry(() =>
+      sql`
+        UPDATE quizzes
+        SET participants = participants + 1
+        WHERE id = ${quizId}
+      `
+    )
+
+    console.log('✅ Participants count updated')
 
     return NextResponse.json({
       status: 'success',

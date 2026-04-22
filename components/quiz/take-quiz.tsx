@@ -144,7 +144,7 @@ export function TakeQuiz({
     let correctCount = 0
     quiz.questions.forEach((question, index) => {
       const userAnswer = answers[index]
-      const correctAnswer = parseInt(question.correctAnswer) || 0
+      const correctAnswer = typeof question.correctAnswer === 'string' ? parseInt(question.correctAnswer) : question.correctAnswer
       if (userAnswer === correctAnswer) {
         correctCount++
       }
@@ -206,52 +206,6 @@ export function TakeQuiz({
           </div>
         </div>
 
-<<<<<<< Updated upstream
-        {/* Results breakdown */}
-        <div className="space-y-4 mb-6">
-          <h3 className="font-semibold text-foreground mb-4">Review Answers</h3>
-          {quiz.questions.map((question, index) => {
-            const userAnswer = answers[index]
-            const correctAnswer = parseInt(question.correctAnswer) || 0
-            const isCorrect = userAnswer === correctAnswer
-            return (
-              <div
-                key={question.id}
-                className="border border-border rounded-lg p-4"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  {isCorrect ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500 mt-1 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground mb-2">
-                      Question {index + 1}: {question.question}
-                    </p>
-                    <div className="space-y-2">
-                      {question.options.map((option, optIndex) => {
-                        const isUserAnswer = userAnswer === optIndex
-                        const isCorrectAnswer = correctAnswer === optIndex
-                        return (
-                          <div
-                            key={optIndex}
-                            className={`px-3 py-2 rounded text-sm ${
-                              isCorrectAnswer
-                                ? 'bg-green-500/10 text-green-500 font-medium'
-                                : isUserAnswer
-                                ? 'bg-red-500/10 text-red-500'
-                                : 'bg-secondary text-muted-foreground'
-                            }`}
-                          >
-                            {option}
-                            {isCorrectAnswer && ' ✓ Correct'}
-                            {isUserAnswer && !isCorrectAnswer && ' ✗ Your answer'}
-                          </div>
-                        )
-                      })}
-                    </div>
-=======
         {/* Results breakdown - Show detailed answer review */}
         {detailedResults && detailedResults.length > 0 && (
         <div className="space-y-4 mb-6">
@@ -292,13 +246,13 @@ export function TakeQuiz({
                         </div>
                       )
                     })}
->>>>>>> Stashed changes
                   </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        )}
 
         <div className="border border-border rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -521,9 +475,7 @@ export function TakeQuiz({
                 key={index}
                 onClick={() => setCurrentQuestion(index)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                  answers[index] !== null
-                    ? 'bg-green-500/20 border-2 border-green-500 text-green-600'
-                    : currentQuestion === index
+                  currentQuestion === index
                     ? 'bg-primary border-2 border-primary text-primary-foreground'
                     : 'bg-secondary border-2 border-border text-muted-foreground hover:border-primary'
                 }`}
@@ -545,7 +497,6 @@ export function TakeQuiz({
         <div className="space-y-3">
           {question.options.map((option, index) => {
             const isSelected = answers[currentQuestion] === index
-            const isCorrectAnswer = index === question.correctAnswer
             const hasAnswered = answers[currentQuestion] !== null
             
             return (
@@ -554,14 +505,8 @@ export function TakeQuiz({
                 onClick={() => handleAnswerSelect(index)}
                 disabled={hasAnswered}
                 className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                  isSelected && hasAnswered
-                    ? isCorrectAnswer
-                      ? 'border-green-500 bg-green-500/10 text-foreground font-medium'
-                      : 'border-red-500 bg-red-500/10 text-foreground font-medium'
-                    : isSelected
+                  isSelected
                     ? 'border-primary bg-primary/10 text-foreground font-medium'
-                    : hasAnswered && isCorrectAnswer
-                    ? 'border-green-500/50 bg-green-500/5 text-foreground'
                     : 'border-border bg-background text-foreground hover:border-primary/50'
                 } ${hasAnswered ? 'cursor-not-allowed' : ''}`}
               >
@@ -569,36 +514,15 @@ export function TakeQuiz({
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold ${
-                        isSelected && hasAnswered
-                          ? isCorrectAnswer
-                            ? 'border-green-500 bg-green-500 text-white'
-                            : 'border-red-500 bg-red-500 text-white'
-                          : isSelected
+                        isSelected
                           ? 'border-primary bg-primary text-primary-foreground'
-                          : hasAnswered && isCorrectAnswer
-                          ? 'border-green-500 bg-green-500/20 text-green-600'
                           : 'border-border'
                       }`}
                     >
-                      {isSelected && hasAnswered ? (
-                        isCorrectAnswer ? '✓' : '✗'
-                      ) : hasAnswered && isCorrectAnswer ? (
-                        '✓'
-                      ) : (
-                        isSelected && <div className="w-3 h-3 rounded-full bg-primary-foreground" />
-                      )}
+                      {isSelected && <div className="w-3 h-3 rounded-full bg-primary-foreground" />}
                     </div>
                     <span>{option}</span>
                   </div>
-                  {hasAnswered && isCorrectAnswer && !isSelected && (
-                    <span className="text-xs text-green-600 font-medium">Correct Answer</span>
-                  )}
-                  {isSelected && hasAnswered && isCorrectAnswer && (
-                    <span className="text-xs text-green-600 font-medium">✓ Correct</span>
-                  )}
-                  {isSelected && hasAnswered && !isCorrectAnswer && (
-                    <span className="text-xs text-red-600 font-medium">✗ Wrong</span>
-                  )}
                 </div>
               </button>
             )

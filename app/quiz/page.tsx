@@ -29,6 +29,9 @@ interface Quiz {
   year: number
   semester: number
   course: string
+  takers?: number
+  attempts?: number
+  averageScore?: number
 }
 
 interface QuizResult {
@@ -58,1101 +61,12 @@ interface QuizRating {
   date: string
 }
 
-const mockQuizzes: Quiz[] = [
-  {
-    id: '1',
-    title: 'Communication Skills - Written Communication',
-    description: 'Test your knowledge on written communication techniques',
-    creator: 'Prof. Sarah Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary goal of written communication?',
-        options: [
-          'To entertain the reader',
-          'To clearly convey information and ideas',
-          'To use complex vocabulary',
-          'To make the text longer',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 15,
-    participants: 234,
-    category: 'Communication',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Communication Skills',
-  },
-  {
-    id: '3',
-    title: 'Computer Systems - Hardware Basics',
-    description: 'Learn about computer hardware components',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'What does CPU stand for?',
-        options: [
-          'Central Process Unit',
-          'Central Processing Unit',
-          'Computer Personal Unit',
-          'Central Processor Utility',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 10,
-    participants: 412,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Introduction to Computer Systems',
-  },
-  {
-    id: '5',
-    title: 'Programming - Variables and Data Types',
-    description: 'Master variables and data types in programming',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is a variable in programming?',
-        options: [
-          'A named container for storing data values',
-          'A type of loop',
-          'A function parameter',
-          'A conditional statement',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 18,
-    participants: 298,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Introduction to Programming',
-  },
-  {
-    id: '6',
-    title: 'Software Architecture Patterns',
-    description: 'Understand common software architecture patterns',
-    creator: 'Prof. Michael Rodriguez',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the MVC pattern?',
-        options: [
-          'Model-View-Controller',
-          'Multiple-Version-Control',
-          'Memory-Virtual-Cache',
-          'Module-Variable-Container',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 20,
-    participants: 245,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 2,
-    semester: 1,
-    course: 'Software Engineering',
-  },
-  {
-    id: '19',
-    title: 'Operating Systems and System Administration - Fundamentals',
-    description: 'Test key concepts in operating systems and system administration',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'Which component is responsible for process scheduling?',
-        options: ['Compiler', 'Kernel', 'Database engine', 'Network card'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 201,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 1,
-    course: 'Operating Systems and System Administration',
-  },
-  {
-    id: '20',
-    title: 'Computer Neteorks - Network Basics',
-    description: 'Assess understanding of foundational computer networking concepts',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'Which device forwards packets between networks?',
-        options: ['Switch', 'Router', 'Hub', 'Repeater'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 16,
-    participants: 187,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 2,
-    semester: 1,
-    course: 'Computer Neteorks',
-  },
-  {
-    id: '21',
-    title: 'Database Mangement Systems - Relational Design',
-    description: 'Evaluate database management system and relational model basics',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What does SQL primarily manage?',
-        options: ['Network routes', 'Relational data', 'Operating system logs', 'Hardware drivers'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 17,
-    participants: 214,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 1,
-    course: 'Database Mangement Systems',
-  },
-  {
-    id: '22',
-    title: 'Object Oriented Programming - Core Principles',
-    description: 'Practice core principles of object-oriented programming',
-    creator: 'Dr. James Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which OOP principle hides implementation details?',
-        options: ['Inheritance', 'Abstraction', 'Recursion', 'Compilation'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 19,
-    participants: 226,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 2,
-    semester: 1,
-    course: 'Object Oriented Programming',
-  },
-  {
-    id: '7',
-    title: 'Employability Skills Development - Advanced Career Skills',
-    description: 'Assess advanced communication and workplace readiness skills',
-    creator: 'Dr. Lisa Anderson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which practice improves interview performance the most?',
-        options: [
-          'No preparation',
-          'Practicing role-specific questions and communication',
-          'Arriving late intentionally',
-          'Ignoring feedback',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 16,
-    participants: 188,
-    category: 'Professional Development',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 1,
-    course: 'Employability Skills Development',
-  },
-  {
-    id: '23',
-    title: 'IT Project Mnagement - Planning and Execution',
-    description: 'Test core project management concepts in IT environments',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'Which process helps identify potential project risks early?',
-        options: ['Risk assessment', 'Code refactoring', 'UI prototyping only', 'Database seeding'],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 17,
-    participants: 175,
-    category: 'Project Management',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 1,
-    course: 'IT Project Mnagement',
-  },
-  {
-    id: '24',
-    title: 'Programming Applications and Frameworks - Practical Development',
-    description: 'Evaluate your understanding of frameworks and application architecture',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is a key benefit of using frameworks?',
-        options: [
-          'No need for structure',
-          'Reusable patterns and faster development',
-          'Eliminates testing entirely',
-          'Removes need for documentation',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 211,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 1,
-    course: 'Programming Applications and Frameworks',
-  },
-  {
-    id: '25',
-    title: 'Database Systems - Advanced Concepts',
-    description: 'Assess understanding of transactions, indexing, and performance',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'What does ACID primarily ensure in databases?',
-        options: ['Styling consistency', 'Reliable transactions', 'Faster internet speed', 'Mobile responsiveness'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 204,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 1,
-    course: 'Database Systems',
-  },
-  {
-    id: '26',
-    title: 'Neywork Design and Mnagement - Enterprise Networking',
-    description: 'Test enterprise network design and management fundamentals',
-    creator: 'Prof. Michael Rodriguez',
-    questions: [
-      {
-        id: '1',
-        question: 'Which is essential when designing scalable enterprise networks?',
-        options: ['No redundancy', 'Single point of failure', 'Capacity planning and segmentation', 'Random IP allocation'],
-        correctAnswer: 2,
-      },
-    ],
-    duration: 19,
-    participants: 193,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 1,
-    course: 'Neywork Design and Mnagement',
-  },
-  {
-    id: '8',
-    title: 'Advanced Cloud Computing',
-    description: 'Explore advanced cloud computing technologies and strategies',
-    creator: 'Prof. David Thompson',
-    questions: [
-      {
-        id: '1',
-        question: 'What are the three main cloud service models?',
-        options: [
-          'IaaS, PaaS, SaaS',
-          'Mac, Linux, Windows',
-          'HTTP, FTP, SMTP',
-          'SQL, NoSQL, GraphQL',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 22,
-    participants: 167,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Cloud Computing',
-  },
-  {
-    id: '13',
-    title: 'Internet & Web Technology - Core Concepts',
-    description: 'Test your understanding of internet and web technology fundamentals',
-    creator: 'Dr. James Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which protocol is primarily used to securely load web pages?',
-        options: ['FTP', 'SMTP', 'HTTPS', 'SSH'],
-        correctAnswer: 2,
-      },
-    ],
-    duration: 18,
-    participants: 191,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 2,
-    course: 'Internet & Web Technology',
-  },
-  {
-    id: '14',
-    title: 'Information System & Data Modeling - Foundations',
-    description: 'Assess practical concepts in information systems and data modeling',
-    creator: 'Prof. Sarah Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'Which model is commonly used for relational database design?',
-        options: [
-          'ER model',
-          'OSI model',
-          'Waterfall model',
-          'MVC model',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 14,
-    participants: 170,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 2,
-    course: 'Information System & Data Modeling',
-  },
-  {
-    id: '15',
-    title: 'English for Academic Purposes - Academic Writing',
-    description: 'Practice English skills needed for academic communication',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'Which is most important in academic writing?',
-        options: [
-          'Informal slang usage',
-          'Clear structure and evidence-based arguments',
-          'Very long sentences only',
-          'No references',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 15,
-    participants: 177,
-    category: 'Professional Development',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 2,
-    course: 'English for Academic Purposes',
-  },
-  {
-    id: '16',
-    title: 'Software Process Modeling - Process Lifecycle',
-    description: 'Understand software process models and lifecycle practices',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'Which model is iterative and risk-driven?',
-        options: ['Waterfall', 'Spiral', 'Big Bang', 'V-Model only'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 17,
-    participants: 183,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 1,
-    semester: 2,
-    course: 'Software Process Modeling',
-  },
-  {
-    id: '17',
-    title: 'Object Oriented Concept - Core Principles',
-    description: 'Evaluate your understanding of object-oriented concepts and design',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'Which OOP concept allows one interface with many implementations?',
-        options: ['Encapsulation', 'Polymorphism', 'Compilation', 'Serialization'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 239,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 1,
-    semester: 2,
-    course: 'Object Oriented Concept',
-  },
-  {
-    id: '31',
-    title: 'Information Technology Project - Project Planning',
-    description: 'Master IT project planning and execution strategies',
-    creator: 'Prof. Catherine Liu',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the first step in IT project planning?',
-        options: [
-          'Executing tasks immediately',
-          'Defining project scope and objectives',
-          'Allocating maximum budget',
-          'Starting without documentation',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 156,
-    category: 'Project Management',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 2,
-    course: 'Information Technology Project',
-  },
-  {
-    id: '32',
-    title: 'Probability & Statistics - Data Analysis',
-    description: 'Understand probability concepts and statistical analysis methods',
-    creator: 'Dr. Mark Thompson',
-    questions: [
-      {
-        id: '1',
-        question: 'What does a probability distribution represent?',
-        options: [
-          'The schedule of events',
-          'How likely different outcomes are to occur',
-          'The cost breakdown of a project',
-          'The organizational hierarchy',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 142,
-    category: 'Mathematics',
-    difficulty: 'Hard',
-    year: 2,
-    semester: 2,
-    course: 'Probability & Statistics',
-  },
-  {
-    id: '33',
-    title: 'Employability Skills Development - Workplace Competencies',
-    description: 'Develop essential employability and workplace skills',
-    creator: 'Dr. Lisa Anderson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which skill is most valuable in the modern workplace?',
-        options: [
-          'Only technical expertise',
-          'Teamwork and communication combined with technical skills',
-          'Avoiding collaboration',
-          'Working in isolation only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 16,
-    participants: 168,
-    category: 'Professional Development',
-    difficulty: 'Easy',
-    year: 2,
-    semester: 2,
-    course: 'Employability Skills Development',
-  },
-  {
-    id: '34',
-    title: 'Professional Skills - Career Development',
-    description: 'Enhance professional skills for career advancement',
-    creator: 'Prof. James Norton',
-    questions: [
-      {
-        id: '1',
-        question: 'What is essential for professional growth?',
-        options: [
-          'Avoiding new challenges',
-          'Continuous learning and skill development',
-          'Staying in the same role indefinitely',
-          'Ignoring feedback from supervisors',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 17,
-    participants: 151,
-    category: 'Professional Development',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 2,
-    course: 'Professional Skills',
-  },
-  {
-    id: '35',
-    title: 'Data Structures & Algorithms - Core Concepts',
-    description: 'Master fundamental data structures and algorithm design',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'Why is understanding algorithms important in programming?',
-        options: [
-          'They are not important',
-          'They help write efficient and optimized code',
-          'They make code longer',
-          'They eliminate the need for testing',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 21,
-    participants: 189,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 2,
-    semester: 2,
-    course: 'Data Structures & Algorithms',
-  },
-  {
-    id: '27',
-    title: 'Business Management for IT - Strategic IT Management',
-    description: 'Understand IT management and strategic business alignment',
-    creator: 'Dr. Sarah Johnson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary goal of IT management in organizations?',
-        options: [
-          'To maximize hardware spending',
-          'To align IT strategy with business objectives',
-          'To eliminate all technology costs',
-          'To prevent all system updates',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 198,
-    category: 'Business',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 2,
-    course: 'Business Management for IT',
-  },
-  {
-    id: '28',
-    title: 'Data Science & Analytics - Advanced Analytics',
-    description: 'Explore data science techniques and analytics methodologies',
-    creator: 'Prof. Michael Zhang',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary purpose of exploratory data analysis?',
-        options: [
-          'To delete data',
-          'To understand data patterns and characteristics',
-          'To encrypt sensitive information',
-          'To increase data size',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 22,
-    participants: 215,
-    category: 'Data Science',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 2,
-    course: 'Data Science & Analytics',
-  },
-  {
-    id: '29',
-    title: 'Information Assurance & Security - Security Fundamentals',
-    description: 'Master information security principles and assurance practices',
-    creator: 'Prof. James McCarthy',
-    questions: [
-      {
-        id: '1',
-        question: 'What are the three pillars of information security (CIA triad)?',
-        options: [
-          'Confidentiality, Integrity, Availability',
-          'Computer, Internet, Application',
-          'Centralized, Integrated, Automated',
-          'Capability, Implementation, Assessment',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 21,
-    participants: 187,
-    category: 'Security',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 2,
-    course: 'Information Assurance & Security',
-  },
-  {
-    id: '30',
-    title: 'Human Computer Interaction - User Experience Design',
-    description: 'Learn HCI principles and user experience design methodologies',
-    creator: 'Dr. Emma Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary focus of user-centered design?',
-        options: [
-          'Maximizing technical complexity',
-          'Understanding user needs and designing accordingly',
-          'Reducing design costs',
-          'Using the latest technologies only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 172,
-    category: 'Design',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 2,
-    course: 'Human Computer Interaction',
-  },
-  {
-    id: '36',
-    title: 'Industry Placement - Professional Practice',
-    description: 'Real-world industry experience and professional development',
-    creator: 'Industry Partners',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary benefit of industry placement?',
-        options: [
-          'To avoid learning theory',
-          'To gain practical experience and industry exposure',
-          'To reduce tuition costs',
-          'To skip final exams',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 156,
-    category: 'Professional Development',
-    difficulty: 'Medium',
-    year: 4,
-    semester: 1,
-    course: 'Industry Placement',
-  },
-  {
-    id: '37',
-    title: 'Image Understanding & Processing - Visual Analysis',
-    description: 'Master image processing and computer vision techniques',
-    creator: 'Dr. Lisa Anderson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary goal of image preprocessing?',
-        options: [
-          'To increase image file size',
-          'To enhance image quality and prepare for analysis',
-          'To reduce color depth',
-          'To add noise to images',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 23,
-    participants: 134,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 1,
-    course: 'Image Understanding & Processing',
-  },
-  {
-    id: '38',
-    title: 'Computer Systems and Network Administration - System Management',
-    description: 'Network design, administration, and system infrastructure management',
-    creator: 'Prof. David Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary responsibility of a network administrator?',
-        options: [
-          'To write application code',
-          'To maintain network security and ensure system availability',
-          'To design user interfaces',
-          'To manage databases only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 22,
-    participants: 145,
-    category: 'Networks',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 1,
-    course: 'Computer Systems and Network Administration',
-  },
-  {
-    id: '39',
-    title: 'Software Quality Assurance - Quality Management',
-    description: 'Testing strategies, quality assurance methodologies, and software validation',
-    creator: 'Prof. Jennifer White',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the main objective of software quality assurance?',
-        options: [
-          'To write code faster',
-          'To ensure software meets quality standards and user requirements',
-          'To reduce testing time',
-          'To eliminate all bugs automatically',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 21,
-    participants: 167,
-    category: 'Software Engineering',
-    difficulty: 'Medium',
-    year: 4,
-    semester: 1,
-    course: 'Software Quality Assurance',
-  },
-  {
-    id: '40',
-    title: 'Preparation for the Professional World - Career Readiness',
-    description: 'Develop skills for success in IT career and professional environment',
-    creator: 'Career Services',
-    questions: [
-      {
-        id: '1',
-        question: 'What is essential for success in the professional IT world?',
-        options: [
-          'Only technical skills matter',
-          'Communication, teamwork, and continuous learning are equally important',
-          'Experience is not needed',
-          'Networking is irrelevant',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 19,
-    participants: 198,
-    category: 'Professional Development',
-    difficulty: 'Medium',
-    year: 4,
-    semester: 1,
-    course: 'Preparation for the Professional World',
-  },
-  {
-    id: '41',
-    title: 'Machine Learning - Algorithms and Applications',
-    description: 'Deep dive into machine learning algorithms and practical applications',
-    creator: 'Dr. Nathan Lee',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary purpose of machine learning?',
-        options: [
-          'To replace human thinking',
-          'To enable systems to learn from data and make predictions',
-          'To eliminate the need for programming',
-          'To process data faster only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 24,
-    participants: 209,
-    category: 'Artificial Intelligence',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 1,
-    course: 'Machine Learning',
-  },
-  {
-    id: '42',
-    title: 'Modern Topics in IT - Emerging Technologies',
-    description: 'Explore cutting-edge technologies and contemporary IT trends',
-    creator: 'Prof. Rachel Green',
-    questions: [
-      {
-        id: '1',
-        question: 'Why is staying updated with modern IT topics important?',
-        options: [
-          'It is not important',
-          'To understand and adapt to rapidly changing technology landscapes',
-          'To avoid using older technologies only',
-          'Technology never changes',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 176,
-    category: 'Technology Trends',
-    difficulty: 'Medium',
-    year: 4,
-    semester: 1,
-    course: 'Modern Topics in IT',
-  },
-  {
-    id: '43',
-    title: 'Deep Learning - Neural Networks & Advanced AI',
-    description: 'Master deep learning techniques and neural network architectures',
-    creator: 'Dr. Marcus Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary advantage of deep learning over traditional machine learning?',
-        options: [
-          'Faster processing only',
-          'Ability to automatically learn hierarchical feature representations',
-          'Lower computational cost',
-          'No need for training data',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 25,
-    participants: 187,
-    category: 'Artificial Intelligence',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Deep Learning',
-  },
-  {
-    id: '44',
-    title: 'Industry Placement Part II - Advanced Professional Practice',
-    description: 'Advanced industry experience and continued professional development',
-    creator: 'Industry Partners',
-    questions: [
-      {
-        id: '1',
-        question: 'What skills are most valuable in extended industry placements?',
-        options: [
-          'Only coding skills',
-          'Leadership, problem-solving, and collaboration with diverse teams',
-          'Memorization only',
-          'Avoiding responsibility',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 142,
-    category: 'Professional Development',
-    difficulty: 'Medium',
-    year: 4,
-    semester: 2,
-    course: 'Industry Placement',
-  },
-  {
-    id: '45',
-    title: 'Cloud Computing - Architecture and Services',
-    description: 'Cloud platforms, architecture patterns, and cloud service deployment',
-    creator: 'Prof. Thomas Brown',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary benefits of cloud computing?',
-        options: [
-          'Higher upfront costs only',
-          'Scalability, flexibility, and reduced infrastructure management burden',
-          'Reduced speed',
-          'Limited storage capacity',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 23,
-    participants: 201,
-    category: 'Cloud Computing',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Cloud Computing',
-  },
-  {
-    id: '46',
-    title: 'Innovation Management & Entrepreneurship - Building Ventures',
-    description: 'Managing innovation, entrepreneurship, and business development strategies',
-    creator: 'Dr. Patricia Ross',
-    questions: [
-      {
-        id: '1',
-        question: 'What is essential for successful entrepreneurship?',
-        options: [
-          'Unlimited funding only',
-          'Vision, innovation, risk management, and persistence',
-          'Avoiding all risks',
-          'Following traditional methods only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 21,
-    participants: 178,
-    category: 'Business',
-    difficulty: 'Medium',
-    year: 4,
-    semester: 2,
-    course: 'Innovation Management & Enterpreneurship',
-  },
-  {
-    id: '47',
-    title: 'Database Administration - Advanced Database Management',
-    description: 'Database optimization, administration, security, and performance tuning',
-    creator: 'Prof. Steven Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary responsibility of a database administrator?',
-        options: [
-          'Writing user-facing applications only',
-          'Ensuring data integrity, security, performance, and availability',
-          'Designing user interfaces',
-          'Managing social media accounts',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 22,
-    participants: 156,
-    category: 'Databases',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Database Administration',
-  },
-  {
-    id: '48',
-    title: 'Internet of Things - Connected Devices and Systems',
-    description: 'IoT architecture, connected devices, sensors, and IoT application development',
-    creator: 'Dr. Rebecca Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary focus of Internet of Things?',
-        options: [
-          'Only the internet itself',
-          'Connecting physical devices and enabling data exchange for smart systems',
-          'Mobile phones only',
-          'Traditional computing only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 23,
-    participants: 174,
-    category: 'Emerging Technologies',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Internet of Things',
-  },
-  {
-    id: '49',
-    title: 'Research Project - Independent Investigation',
-    description: 'Conduct independent research, develop research methodology, and present findings',
-    creator: 'Academic Supervisors',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary objective of a research project?',
-        options: [
-          'To avoid learning',
-          'To develop research skills and contribute new knowledge in your field',
-          'To copy existing work',
-          'To minimize effort required',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 30,
-    participants: 194,
-    category: 'Research',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Research Project',
-  },
-]
-
-const ensureThreeQuestions = (quiz: Quiz): Quiz => {
-  if (quiz.questions.length >= 3) {
-    return quiz
-  }
-
-  const topic = quiz.course || quiz.category
-  const generatedQuestions = [
-    {
-      id: `auto-${quiz.id}-1`,
-      question: `Which statement best describes a core concept in ${topic}?`,
-      options: [
-        'Only memorizing definitions matters',
-        'Understanding concepts and applying them to problems is essential',
-        'There is always only one way to solve tasks',
-        'Practice is not required if theory is known',
-      ],
-      correctAnswer: 1,
-    },
-    {
-      id: `auto-${quiz.id}-2`,
-      question: `Which practice most improves performance in ${topic}?`,
-      options: [
-        'Skipping revision',
-        'Ignoring feedback',
-        'Regular practice with feedback and reflection',
-        'Studying only the night before',
-      ],
-      correctAnswer: 2,
-    },
-    {
-      id: `auto-${quiz.id}-3`,
-      question: `When solving a ${topic} problem, what should you do first?`,
-      options: [
-        'Guess an answer immediately',
-        'Identify requirements and constraints',
-        'Avoid reading the full question',
-        'Pick the longest option',
-      ],
-      correctAnswer: 1,
-    },
-  ]
-
-  const needed = 3 - quiz.questions.length
-  return {
-    ...quiz,
-    questions: [...quiz.questions, ...generatedQuestions.slice(0, needed)],
-  }
+interface CourseData {
+  year: number
+  semester: number
+  code: string
+  name: string
 }
-
-const normalizedQuizzes: Quiz[] = mockQuizzes.map(ensureThreeQuestions)
 
 const studentNames = [
   'Nimal Perera',
@@ -1202,7 +116,8 @@ export default function QuizPage() {
   const [activeTab, setActiveTab] = useState<'browse' | 'create' | 'results' | 'score'>('browse')
   const [scoreView, setScoreView] = useState<'courseByYear' | 'quizTakers'>('courseByYear')
   const [selectedScoreYear, setSelectedScoreYear] = useState<number | 'all'>('all')
-  const [quizzes, setQuizzes] = useState<Quiz[]>(normalizedQuizzes)
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [availableCourses, setAvailableCourses] = useState<Array<{ year: number; semester: number; course: string; category: string }>>([])
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null)
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
@@ -1259,25 +174,119 @@ export default function QuizPage() {
     fetchCurrentUser()
   }, [])
 
+  // Function to fetch and merge statistics with quiz data
+  const fetchAndMergeStatistics = async (quizzes: Quiz[]) => {
+    try {
+      console.log('Fetching quiz statistics...')
+      
+      const response = await fetch('/api/quiz/scores')
+      const result = await response.json()
+      
+      if (result.status === 'success' && result.data) {
+        console.log('Statistics fetched successfully')
+        
+        // Merge statistics with quiz data
+        const quizzesWithStats = quizzes.map(quiz => {
+          const stats = result.data.courseByYear?.find((stat: any) => 
+            stat.year === quiz.year && stat.semester === quiz.semester
+          )
+          const courseStats = stats?.chartData?.find((course: any) => course.course === quiz.course)
+          
+          return {
+            ...quiz,
+            takers: courseStats?.participants || 0,
+            attempts: courseStats?.attempts || 0,
+            averageScore: courseStats?.avgScore || 0,
+          }
+        })
+        
+        setQuizzes(quizzesWithStats)
+        console.log('Statistics merged with quiz data')
+      }
+    } catch (error) {
+      console.error('Error fetching statistics:', error)
+      // Still set quizzes without stats if stats fetch fails
+      setQuizzes(quizzes)
+    }
+  }
+
   // Fetch quizzes from database on page load
+  // Function to generate courses for all years and semesters
+  const generateCoursesForAllYears = async () => {
+    try {
+      console.log('🎓 Generating courses for all years and semesters...')
+      
+      const response = await fetch('/api/quiz/generate-courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      const result = await response.json()
+      
+      if (result.status === 'success') {
+        console.log('✅ Courses generated successfully:', result.data)
+        return result.data
+      } else {
+        console.error('❌ Failed to generate courses:', result.message)
+        return null
+      }
+    } catch (error) {
+      console.error('❌ Error generating courses:', error)
+      return null
+    }
+  } // Added closing brace here
+
   // Function to fetch quizzes from database
   const fetchQuizzesFromDatabase = async () => {
     try {
-      console.log('📚 Fetching quizzes from database...')
-      const response = await fetch('/api/quiz')
-      const result = await response.json()
+      console.log('Fetching courses from subject4years table...')
+      
+      // Fetch courses from the database (only use existing categorized courses)
+      const coursesResponse = await fetch('/api/quiz/courses')
+      const coursesResult = await coursesResponse.json()
 
-      if (result.status === 'success' && Array.isArray(result.data)) {
-        console.log('✅ Quizzes loaded from database:', result.data.length, 'quizzes')
-        // Map database quizzes to Quiz type and merge with mock data with null checks
-        const dbQuizzes = result.data
-          .filter((q: any) => q && q.id) // Filter out any quizzes with missing id
+      if (coursesResult.status === 'success' && Array.isArray(coursesResult.data)) {
+        console.log('✅ Courses loaded from database:', coursesResult.data.length, 'courses')
+        const courseRows = coursesResult.data as CourseData[]
+        const courseMap = courseRows.reduce(
+          (map: Map<string, { year: number; semester: number; course: string; category: string }>, c: CourseData) => {
+            const key = `${c.year}-${c.semester}-${c.name}`
+            if (!map.has(key)) {
+              map.set(key, {
+                year: c.year,
+                semester: c.semester,
+                course: c.name,
+                category: 'Course',
+              })
+            }
+            return map
+          },
+          new Map<string, { year: number; semester: number; course: string; category: string }>(),
+        )
+        const uniqueCourses = Array.from(courseMap.values())
+        setAvailableCourses(uniqueCourses)
+      } else {
+        console.log('⚠️ Error loading courses from database')
+        setAvailableCourses([])
+      }
+
+      // Fetch existing quizzes from database
+      const quizzesResponse = await fetch('/api/quiz')
+      const quizzesResult = await quizzesResponse.json()
+
+      let dbQuizzes: Quiz[] = []
+      if (quizzesResult.status === 'success' && Array.isArray(quizzesResult.data)) {
+        console.log('✅ Quizzes loaded from database:', quizzesResult.data.length)
+        dbQuizzes = quizzesResult.data
+          .filter((q: any) => q && q.id)
           .map((q: any) => ({
             id: (q.id || '').toString(),
             title: q.title || 'Untitled Quiz',
             description: q.description || '',
             creator: q.creator || 'Unknown',
-            questions: [], // Questions will be loaded separately if needed
+            questions: [],
             duration: q.duration || 0,
             participants: q.participants || 0,
             category: q.category || 'General',
@@ -1285,103 +294,18 @@ export default function QuizPage() {
             year: q.year || 1,
             semester: q.semester || 1,
             course: q.course || 'Unknown Course',
+            takers: q.takers || 0,
+            attempts: q.attempts || 0,
+            averageScore: q.averageScore || 0,
           }))
-        
-        console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
-        // Merge mock quizzes to ensure Year 1, Year 2, Year 3, and Year 4 courses are always available
-        let finalQuizzes = dbQuizzes
-        if (dbQuizzes.length > 0) {
-          // Check database courses for Year 1, Year 2, Year 3, and Year 4
-          const year1DbCourses = new Set(
-            dbQuizzes
-              .filter((q: any) => q.year === 1)
-              .map((q: any) => q.course)
-          )
-          
-          const year2DbCourses = new Set(
-            dbQuizzes
-              .filter((q: any) => q.year === 2)
-              .map((q: any) => q.course)
-          )
-          
-          const year3DbCourses = new Set(
-            dbQuizzes
-              .filter((q: any) => q.year === 3)
-              .map((q: any) => q.course)
-          )
-          
-          const year4DbCourses = new Set(
-            dbQuizzes
-              .filter((q: any) => q.year === 4)
-              .map((q: any) => q.course)
-          )
-          
-          // Add mock quizzes for Year 1 to ensure these courses are available:
-          // Semester 1: Communication Skills, Introduction to Computer Systems, Introduction to Programming
-          // Semester 2: Internet & Web Technology, Information System & Data Modeling,
-          //            English for Academic Purposes, Software Process Modeling,
-          //            Object Oriented Concept
-          const year1MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 1
-          )
-          
-          // Add mock quizzes for Year 2, Semester 1 to ensure these courses are available:
-          // - Operating Systems and System Administration
-          // - Computer Networks
-          // - Database Management Systems
-          // - Object Oriented Programming
-          // - Software Engineering
-          const year2MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 2
-          )
-          
-          // Add mock quizzes for Year 3 to ensure these courses are available:
-          // Semester 1: Employability Skills Development, IT Project Management,
-          //            Programming Applications and Frameworks, Database Systems,
-          //            Network Design and Management
-          // Semester 2: Business Management for IT, Data Science & Analytics,
-          //            Information Assurance & Security, Human Computer Interaction
-          const year3MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 3
-          )
-          
-          // Add mock quizzes for Year 4 to ensure these courses are available:
-          // Semester 1: Industry Placement, Image Understanding & Processing,
-          //            Computer Systems and Network Administration, Software Quality Assurance,
-          //            Preparation for the Professional World, Machine Learning, Modern Topics in IT
-          // Semester 2: Deep Learning, Industry Placement (Part II), Cloud Computing,
-          //            Innovation Management & Enterpreneurship, Database Administration,
-          //            Internet of Things, Research Project
-          const year4MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 4
-          )
-          
-          // Add mock quizzes only if they fill gaps in the database
-          const mockQuizzesToAdd = [
-            ...year1MockQuizzes.filter(
-              (mock) => !year1DbCourses.has(mock.course)
-            ),
-            ...year2MockQuizzes.filter(
-              (mock) => !year2DbCourses.has(mock.course)
-            ),
-            ...year3MockQuizzes.filter(
-              (mock) => !year3DbCourses.has(mock.course)
-            ),
-            ...year4MockQuizzes.filter(
-              (mock) => !year4DbCourses.has(mock.course)
-            ),
-          ]
-          
-          finalQuizzes = [...dbQuizzes, ...mockQuizzesToAdd]
-        }
-        setQuizzes(finalQuizzes.length > 0 ? finalQuizzes : normalizedQuizzes)
-      } else {
-        console.log('⚠️ No quizzes found in database, using mock data')
-        setQuizzes(normalizedQuizzes)
       }
+
+      // Fetch and merge statistics with real quizzes only
+      await fetchAndMergeStatistics(dbQuizzes)
     } catch (error) {
-      console.error('❌ Error fetching quizzes from database:', error)
-      setQuizzes(normalizedQuizzes)
+      console.error('❌ Error fetching courses from database:', error)
+      setAvailableCourses([])
+      setQuizzes([])
     }
   }
 
@@ -2144,20 +1068,7 @@ export default function QuizPage() {
     return acc
   }, {} as Record<string, Array<{ name: string; attempts: number; totalPercentage: number; averageScore: number }>>)
 
-  const createQuizCourseOptions = Array.from(
-    quizzes.reduce((map, quiz) => {
-      const key = `${quiz.year}-${quiz.semester}-${quiz.course}`
-      if (!map.has(key)) {
-        map.set(key, {
-          year: quiz.year,
-          semester: quiz.semester,
-          course: quiz.course,
-          category: quiz.category,
-        })
-      }
-      return map
-    }, new Map<string, { year: number; semester: number; course: string; category: string }>()),
-  ).map(([, value]) => value)
+  const createQuizCourseOptions = availableCourses
 
   const normalizedScoreSearch = scoreSearch.trim().toLowerCase()
   const searchedCategorizedScoreData = filteredCategorizedScoreData
@@ -2424,9 +1335,9 @@ export default function QuizPage() {
                 {(() => {
                   const courses = Array.from(
                     new Set(
-                      quizzes
-                        .filter((q) => q.year === selectedYear && q.semester === selectedSemester)
-                        .map((q) => q.course)
+                      availableCourses
+                        .filter((c) => c.year === selectedYear && c.semester === selectedSemester)
+                        .map((c) => c.course)
                     )
                   ).filter((course) =>
                     browseCourseSearch.trim() === ''
@@ -3114,3 +2025,4 @@ export default function QuizPage() {
     </AppLayout>
   )
 }
+
