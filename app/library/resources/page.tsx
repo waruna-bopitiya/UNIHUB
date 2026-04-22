@@ -199,6 +199,8 @@ export default function ResourcesPage() {
             resource_type: res.resource_type,
             file_path: res.file_path,
             created_at: res.created_at,
+
+            uploadMethod: res.file_path ? "file" : "link"
           })))
           
           await fetchFeedbackStats()
