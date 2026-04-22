@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout } from '@/components/layout/app-layout';
 import { AcademicSelector, type AcademicData } from '@/components/shared/academic-selector';
@@ -39,7 +39,8 @@ function toBase64(file: File): Promise<string> {
   });
 }
 
-export default function CreateLiveStreamPage() {
+// මෙතන තමයි ප්‍රධාන වෙනස - මේක වෙනම Component එකක් විදියට ගත්තා
+function CreateLiveStreamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editStreamId = searchParams.get('id');
@@ -1166,5 +1167,19 @@ export default function CreateLiveStreamPage() {
         </div>
       )}
     </AppLayout>
+  );
+}
+
+// ── මෙන්න මෙතන තමයි ප්‍රධාන පිටුව Suspense කරලා තියෙන්නේ ────────────────────────────────────────────────────────
+export default function CreateLiveStreamPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen text-muted-foreground gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p>Loading form...</p>
+      </div>
+    }>
+      <CreateLiveStreamContent />
+    </Suspense>
   );
 }
