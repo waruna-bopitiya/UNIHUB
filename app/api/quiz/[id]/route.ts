@@ -72,6 +72,17 @@ export async function GET(
 
     console.log('✅ Questions fetched:', questions.length, 'questions')
 
+    // Log all questions for debugging
+    questions.forEach((q: any, idx: number) => {
+      console.log(`  Question ${idx}:`, {
+        id: q.id,
+        rawCorrectAnswer: q.correct_answer,
+        parsedCorrectAnswer: parseInt(q.correctAnswer) || 0,
+        optionsType: typeof q.options,
+        options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+      })
+    })
+
     return NextResponse.json({
       status: 'success',
       data: {

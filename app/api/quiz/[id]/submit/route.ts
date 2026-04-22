@@ -77,6 +77,17 @@ export async function POST(
           { status: 400 }
         )
       }
+
+      // Log all questions for debugging
+      console.log('📚 Questions fetched from database:')
+      questions.forEach((q: any, idx: number) => {
+        console.log(`  Question ${idx}:`, {
+          id: q.id,
+          rawCorrectAnswer: q.correctAnswer,
+          correctAnswerType: typeof q.correctAnswer,
+          parsedAsNumber: Number(q.correctAnswer),
+        })
+      })
     } else {
       console.error('❌ Quiz not found with ID:', quizId)
       console.error('⚠️  Available quizzes:', allQuizzes.length > 0 ? allQuizzes : 'No quizzes in database')

@@ -115,8 +115,16 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
   }
 
   const updateQuestion = (id: string, field: string, value: any) => {
+    console.log(`Updating question ${id}, field '${field}' to:`, value, `(type: ${typeof value})`)
     setQuestions(
-      questions.map((q) => (q.id === id ? { ...q, [field]: value } : q))
+      questions.map((q) => {
+        if (q.id === id) {
+          const updated = { ...q, [field]: value }
+          console.log(`  After update, question correctAnswer is:`, updated.correctAnswer, `(type: ${typeof updated.correctAnswer})`)
+          return updated
+        }
+        return q
+      })
     )
   }
 
@@ -202,6 +210,13 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
         questionError.correctAnswer = 'Select a valid correct answer option.'
       }
 
+      console.log(`Question ${questions.indexOf(question)} validation:`, {
+        correctAnswer: question.correctAnswer,
+        correctAnswerType: typeof question.correctAnswer,
+        optionsCount: question.options.length,
+        selectedOption: question.options[question.correctAnswer],
+      })
+
       if (questionError.question || questionError.options || questionError.correctAnswer) {
         nextErrors.questionErrors[question.id] = questionError
       }
@@ -256,6 +271,17 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       category: quizData.category,
       difficulty: quizData.difficulty,
       questionsCount: quizData.questions.length,
+    })
+
+    // Log all questions to verify correctAnswer is set
+    quizData.questions.forEach((q: any, idx: number) => {
+      console.log(`  Question ${idx}:`, {
+        question: q.question.substring(0, 50),
+        correctAnswer: q.correctAnswer,
+        correctAnswerType: typeof q.correctAnswer,
+        selectedOption: q.options[q.correctAnswer],
+        optionsCount: q.options.length,
+      })
     })
 
     try {

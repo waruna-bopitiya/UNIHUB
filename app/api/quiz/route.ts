@@ -359,6 +359,12 @@ export async function POST(req: NextRequest) {
     try {
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i]
+        console.log(`Question ${i}:`, {
+          question: q.question.substring(0, 50),
+          correctAnswerValue: q.correctAnswer,
+          correctAnswerType: typeof q.correctAnswer,
+          optionsCount: q.options.length,
+        })
         await sql`
           INSERT INTO quiz_questions
             (quiz_id, question_text, options, correct_answer, question_order)
