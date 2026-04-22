@@ -62,21 +62,48 @@ const isValidShareableLink = (url: string): boolean => {
   }
 };
 
+// Conditional schema - allows either file upload OR shareable link
 const resourceSchema = z.object({
   year: z.string().min(1, 'Year is required'),
   semester: z.string().min(1, 'Semester is required'),
   module_name: z.string().min(1, 'Module is required'),
   name: z.string().min(1, 'Resource name is required'),
   resourceType: z.enum(RESOURCE_TYPES, { errorMap: () => ({ message: 'Please select a resource type' }) }),
-  shareableLink: z.string()
-    .url('Please enter a valid URL')
-    .min(1, 'Shareable link is required')
-    .refine(
-      (url) => isValidShareableLink(url),
-      'Only Google Drive, Microsoft OneDrive/SharePoint, and GitHub links are allowed'
-    ),
+  uploadMethod: z.enum(['link', 'file'] as const).default('link'),
+  shareableLink: z.string().optional().or(z.literal('')),
+  file: z.instanceof(File).optional(),
   description: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // Either shareableLink or file must be provided
+    if (data.uploadMethod === 'link') {
+      return data.shareableLink && data.shareableLink.trim() !== '';
+    } else {
+      return data.file instanceof File;
+    }
+  },
+  {
+    message: 'Please provide either a shareable link or upload a file',
+    path: ['shareableLink'], // Show error on the link field by default
+  }
+).refine(
+  (data) => {
+    // If using link method, validate the URL format
+    if (data.uploadMethod === 'link' && data.shareableLink && data.shareableLink.trim() !== '') {
+      try {
+        new URL(data.shareableLink);
+        return isValidShareableLink(data.shareableLink);
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  },
+  {
+    message: 'Only Google Drive, Microsoft OneDrive/SharePoint, and GitHub links are allowed',
+    path: ['shareableLink'],
+  }
+);
 
 type Resource = z.infer<typeof resourceSchema> & { 
   id: number;
@@ -113,6 +140,8 @@ export default function ResourcesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
+  const [uploadMethod, setUploadMethod] = useState<'link' | 'file'>('link')
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   // Get current user ID from localStorage
   useEffect(() => {
@@ -196,6 +225,7 @@ export default function ResourcesPage() {
       module_name: '',
       name: '',
       resourceType: 'PDF',
+      uploadMethod: 'link',
       shareableLink: '',
       description: '',
     },
@@ -245,6 +275,7 @@ export default function ResourcesPage() {
   function onSubmit(values: z.infer<typeof resourceSchema>) {
     console.log('=== FORM SUBMISSION START ===')
     console.log('Form values:', values)
+    console.log('Upload method:', uploadMethod)
     
     if (!currentUserId) {
       console.error('❌ USER NOT LOGGED IN')
@@ -254,7 +285,18 @@ export default function ResourcesPage() {
     }
     
     setSubmitting(true)
-    
+    setUploadProgress(0)
+
+    if (uploadMethod === 'link') {
+      // Handle shareable link upload
+      submitShareableLink(values)
+    } else {
+      // Handle file upload
+      submitFileUpload(values)
+    }
+  }
+
+  async function submitShareableLink(values: z.infer<typeof resourceSchema>) {
     const payload = {
       year: values.year,
       semester: values.semester,
@@ -267,7 +309,7 @@ export default function ResourcesPage() {
       uploader_name: currentUserName,
     }
 
-    console.log('📤 Sending POST request to /api/resources...')
+    console.log('📤 Sending shareable link resource to /api/resources...')
     fetch('/api/resources', {
       method: 'POST',
       headers: {
@@ -318,6 +360,7 @@ export default function ResourcesPage() {
         
         form.reset()
         setShowForm(false)
+        setUploadProgress(0)
         
       })
       .catch((err) => {
@@ -330,18 +373,118 @@ export default function ResourcesPage() {
       })
   }
 
-  // Handle open resource link
-  const handleOpenLink = (shareableLink: string, resourceName: string) => {
-    // Validate link
-    if (!shareableLink || shareableLink.trim() === '') {
-      console.error('❌ No shareable link available')
-      toast.error('This resource does not have a shareable link')
+  async function submitFileUpload(values: z.infer<typeof resourceSchema>) {
+    const file = values.file
+
+    if (!file) {
+      toast.error('No file selected')
+      setSubmitting(false)
       return
     }
 
     try {
-      // Ensure URL has protocol
-      let url = shareableLink.trim()
+      const formData = new FormData()
+      formData.append('year', values.year)
+      formData.append('semester', values.semester)
+      formData.append('module_name', values.module_name)
+      formData.append('name', values.name)
+      formData.append('resourceType', values.resourceType)
+      formData.append('description', values.description || '')
+      formData.append('uploaderId', currentUserId)
+      formData.append('uploaderName', currentUserName || 'Anonymous')
+      formData.append('file', file)
+
+      console.log('📤 Sending file upload to /api/resources/upload...')
+      console.log('File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      })
+
+      const xhr = new XMLHttpRequest()
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100
+          setUploadProgress(percentComplete)
+          console.log(`📊 Upload progress: ${percentComplete.toFixed(2)}%`)
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 201) {
+          const response = JSON.parse(xhr.responseText)
+          console.log('✅ SUCCESS! File uploaded:', response)
+
+          const resourceWithId: Resource = {
+            id: response.id as number,
+            uploader_id: response.uploader_id || currentUserId,
+            uploader_name: response.uploader_name || currentUserName,
+            year: response.year,
+            semester: response.semester,
+            module_name: response.module_name,
+            name: response.name,
+            resourceType: response.resource_type,
+            shareableLink: response.shareable_link || '',
+            description: response.description || values.description,
+            ratings: [],
+            download_count: 0,
+            resource_type: response.resource_type,
+            file_path: response.file_path,
+            created_at: response.created_at,
+          }
+
+          setResources((prev) => [resourceWithId, ...prev])
+          toast.success(`"${values.name}" has been uploaded successfully!`)
+
+          form.reset()
+          setShowForm(false)
+          setUploadProgress(0)
+        } else {
+          const response = JSON.parse(xhr.responseText)
+          const errorMsg = response.error || `Server error: ${xhr.status}`
+          console.error('❌ Upload error:', errorMsg)
+          toast.error(errorMsg)
+        }
+        setSubmitting(false)
+      })
+
+      xhr.addEventListener('error', () => {
+        console.error('❌ Upload error:', xhr.statusText)
+        toast.error('Failed to upload file. Please try again.')
+        setSubmitting(false)
+      })
+
+      xhr.addEventListener('abort', () => {
+        console.log('⏸️ Upload cancelled')
+        toast.error('Upload cancelled')
+        setSubmitting(false)
+      })
+
+      xhr.open('POST', '/api/resources/upload')
+      xhr.send(formData)
+    } catch (error) {
+      console.error('❌ Error preparing file upload:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to upload file')
+      setSubmitting(false)
+    }
+  }
+
+  // Handle open resource link
+  const handleOpenLink = (shareableLink: string, filePath: string | undefined, resourceName: string) => {
+    // Try shareable link first, then file path
+    const linkToOpen = shareableLink?.trim() || filePath?.trim()
+    
+    if (!linkToOpen) {
+      console.error('❌ No shareable link or file path available')
+      toast.error('This resource does not have a link or file available')
+      return
+    }
+
+    try {
+      // Ensure URL has protocol (only for non-Supabase URLs)
+      let url = linkToOpen
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url
       }
@@ -651,73 +794,178 @@ export default function ResourcesPage() {
                   )}
                 />
 
-                {/* Shareable Link */}
+                {/* Upload Method Toggle */}
                 <FormField
                   control={form.control}
-                  name="shareableLink"
+                  name="uploadMethod"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Shareable Link in past hear</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl className="flex-1">
-                          <Input 
-                            placeholder="https://drive.google.com/file/d/..." 
-                            type="url"
-                            {...field} 
-                          />
-                        </FormControl>
+                      <FormLabel>Upload Method</FormLabel>
+                      <div className="flex gap-2 border border-border rounded-lg p-1 bg-muted">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant={uploadMethod === 'link' ? 'default' : 'ghost'}
+                          size="sm"
+                          className="flex-1"
                           onClick={() => {
-                            field.onChange('')
-                            toast.success('Link cleared')
+                            setUploadMethod('link')
+                            field.onChange('link')
+                            form.clearErrors('file')
                           }}
-                          disabled={!field.value}
-                          className="shrink-0"
-                          title="Clear field"
                         >
-                          🗑️ Clear
+                          🔗 Shareable Link
                         </Button>
                         <Button
                           type="button"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const text = await navigator.clipboard.readText()
-                              field.onChange(text)
-                              toast.success('Link pasted successfully')
-                            } catch (err) {
-                              console.error('Failed to read clipboard:', err)
-                              toast.error('Failed to paste from clipboard')
-                            }
+                          variant={uploadMethod === 'file' ? 'default' : 'ghost'}
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            setUploadMethod('file')
+                            field.onChange('file')
+                            form.clearErrors('shareableLink')
                           }}
-                          className="shrink-0"
-                          title="Paste from clipboard"
                         >
-                          📋 Paste
+                          📤 Upload File
                         </Button>
                       </div>
-                      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Allowed platforms:</p>
-                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
-                          <li>✅ Google Drive (drive.google.com)</li>
-                          <li>✅ Microsoft OneDrive (onedrive.live.com)</li>
-                          <li>✅ SharePoint (sharepoint.com)</li>
-                          <li>✅ GitHub (github.com)</li>
-                        </ul>
-                      </div>
-                      {field.value && (
-                        <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                          <p className="text-xs font-semibold text-green-900 dark:text-green-100">
-                            ✅ Detected: {detectLinkPlatform(field.value) || 'Unknown platform'}
-                          </p>
-                        </div>
-                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {/* Shareable Link OR File Upload */}
+                {uploadMethod === 'link' ? (
+                  <FormField
+                    control={form.control}
+                    name="shareableLink"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Shareable Link</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl className="flex-1">
+                            <Input 
+                              placeholder="https://drive.google.com/file/d/..." 
+                              type="url"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              field.onChange('')
+                              toast.success('Link cleared')
+                            }}
+                            disabled={!field.value}
+                            className="shrink-0"
+                            title="Clear field"
+                          >
+                            🗑️ Clear
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                const text = await navigator.clipboard.readText()
+                                field.onChange(text)
+                                toast.success('Link pasted successfully')
+                              } catch (err) {
+                                console.error('Failed to read clipboard:', err)
+                                toast.error('Failed to paste from clipboard')
+                              }
+                            }}
+                            className="shrink-0"
+                            title="Paste from clipboard"
+                          >
+                            📋 Paste
+                          </Button>
+                        </div>
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-2">Allowed platforms:</p>
+                          <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                            <li>✅ Google Drive (drive.google.com)</li>
+                            <li>✅ Microsoft OneDrive (onedrive.live.com)</li>
+                            <li>✅ SharePoint (sharepoint.com)</li>
+                            <li>✅ GitHub (github.com)</li>
+                          </ul>
+                        </div>
+                        {field.value && (
+                          <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                            <p className="text-xs font-semibold text-green-900 dark:text-green-100">
+                              ✅ Detected: {detectLinkPlatform(field.value) || 'Unknown platform'}
+                            </p>
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="file"
+                    render={() => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Select Document</FormLabel>
+                        <FormControl>
+                          <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer" 
+                            onClick={() => {
+                              const input = document.getElementById('file-input') as HTMLInputElement
+                              input?.click()
+                            }}>
+                            <input
+                              id="file-input"
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.ppt,.pptx,.doc,.docx,.txt,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mpeg,.mp3,.wav,.webm"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  form.setValue('file', file)
+                                  console.log('📁 File selected:', { name: file.name, size: file.size, type: file.type })
+                                }
+                              }}
+                            />
+                            {form.watch('file') ? (
+                              <div className="space-y-2">
+                                <p className="text-sm font-semibold text-green-600 dark:text-green-400">✅ File selected</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {(form.watch('file') as File)?.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {((form.watch('file') as File)?.size || 0) / 1024 / 1024 > 0 
+                                    ? `${(((form.watch('file') as File)?.size || 0) / 1024 / 1024).toFixed(2)}MB`
+                                    : `${(((form.watch('file') as File)?.size || 0) / 1024).toFixed(2)}KB`
+                                  }
+                                </p>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    form.setValue('file', undefined)
+                                    console.log('🗑️ File cleared')
+                                  }}
+                                >
+                                  🗑️ Clear
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <p className="text-sm font-semibold text-foreground">Click to upload or drag & drop</p>
+                                <p className="text-xs text-muted-foreground">PDF, PPT, Word, Excel, Images, Video, Audio (Max 50MB)</p>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Description (Optional) */}
                 <FormField
@@ -736,6 +984,22 @@ export default function ResourcesPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Upload Progress Bar */}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="md:col-span-2 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span>Uploading...</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-6 border-t border-border/30">
@@ -744,7 +1008,7 @@ export default function ResourcesPage() {
                   disabled={submitting}
                   className="flex-1 h-11 text-base font-semibold"
                 >
-                  {submitting ? '⏳ Saving...' : '✓ Save Resource'}
+                  {submitting ? (uploadMethod === 'file' ? '📤 Uploading...' : '⏳ Saving...') : (uploadMethod === 'file' ? '📤 Upload Document' : '✓ Save Resource')}
                 </Button>
                 <Button 
                   type="button" 
@@ -978,7 +1242,7 @@ export default function ResourcesPage() {
                     {/* Action Buttons */}
                     <div className="flex gap-2 mt-4 pt-4 border-t flex-wrap">
                       <Button
-                        onClick={() => handleOpenLink(res.shareableLink, res.name)}
+                        onClick={() => handleOpenLink(res.shareableLink || '', res.file_path, res.name)}
                         size="sm"
                         className="flex-1 gap-2 min-w-0"
                       >
