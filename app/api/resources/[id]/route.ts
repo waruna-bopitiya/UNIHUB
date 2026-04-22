@@ -8,12 +8,14 @@ import { ensureTablesExist } from '@/lib/db-init'
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // params දැන් Promise එකක් ලෙස වෙනස් කළා
 ) {
   try {
     await ensureTablesExist()
 
-    const resourceId = parseInt(params.id, 10)
+    // 1. params මුලින්ම await කරන්න
+    const resolvedParams = await params
+    const resourceId = parseInt(resolvedParams.id, 10)
 
     if (isNaN(resourceId)) {
       return NextResponse.json(
