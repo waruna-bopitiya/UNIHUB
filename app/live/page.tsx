@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Clock, Eye, Loader2, Play, Radio, Share2, Users, Edit2, Trash2 } from 'lucide-react'
+import { AlertCircle, Clock, Eye, Loader2, Play, Radio, Share2, Users, Edit2, Trash2, Pause, Rewind, FastForward, Maximize, Minimize } from 'lucide-react'
 
 import { AppLayout } from '@/components/layout/app-layout'
 import { ChatPanel } from '@/components/live/chat-panel'
@@ -46,6 +46,106 @@ function formatScheduledTime(value: string | null) {
 
 function MainStreamPlayer({ stream }: { stream: LiveStream | null }) {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isPlayerReady, setIsPlayerReady] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  
+  const playerRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  // Reset state when a new stream is selected
+  useEffect(() => {
+    if (!stream) return
+    setIsPlaying(false)
+    setIsPlayerReady(false)
+    if (playerRef.current) {
+      playerRef.current.destroy()
+      playerRef.current = null
+    }
+  }, [stream?.id])
+
+  // Initialize YouTube Iframe API when playing starts
+  useEffect(() => {
+    const showPlayer = isPlaying
+
+    if (!showPlayer || !stream) return
+
+    const initPlayer = () => {
+      if (!containerRef.current) return
+      playerRef.current = new (window as any).YT.Player(containerRef.current, {
+        videoId: stream.video_id,
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          disablekb: 1,
+        },
+        events: {
+          onReady: () => {
+            setIsPlayerReady(true)
+          },
+        },
+      })
+    }
+
+    if (!(window as any).YT) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      const firstScriptTag = document.getElementsByTagName('script')[0]
+      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag)
+
+      ;(window as any).onYouTubeIframeAPIReady = initPlayer
+    } else {
+      initPlayer()
+    }
+
+    return () => {}
+  }, [isPlaying, stream])
+
+  // Full Screen Event Listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  const handlePlay = () => playerRef.current?.playVideo()
+  const handlePause = () => playerRef.current?.pauseVideo()
+  
+  const handleBackward = () => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.getCurrentTime()
+      playerRef.current.seekTo(currentTime - 10, true)
+    }
+  }
+  
+  const handleForward = () => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.getCurrentTime()
+      playerRef.current.seekTo(currentTime + 10, true)
+    }
+  }
+
+  // Full Screen Toggle Function
+  const toggleFullScreen = async () => {
+    if (!wrapperRef.current) return
+
+    if (!document.fullscreenElement) {
+      try {
+        await wrapperRef.current.requestFullscreen()
+      } catch (err) {
+        console.error("Error attempting to enable fullscreen:", err)
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      }
+    }
+  }
 
   if (!stream) {
     return (
@@ -60,16 +160,24 @@ function MainStreamPlayer({ stream }: { stream: LiveStream | null }) {
   }
 
   const isLive = stream.status === 'live'
+  const isScheduled = stream.status !== 'live' && new Date(stream.scheduled_start_time || '') > new Date()
+  const isCompleted = stream.status !== 'live' && !isScheduled
+  
   const thumbnailUrl = stream.thumbnail_url ?? `https://img.youtube.com/vi/${stream.video_id}/maxresdefault.jpg`
-  const showPlayer = isLive && isPlaying
+  const showPlayer = isPlaying && !isScheduled
 
   return (
-    <div className="w-full rounded-xl overflow-hidden border border-border bg-black relative" style={{ aspectRatio: '16/9' }}>
+    <div 
+      ref={wrapperRef}
+      // මෙතන group/player වෙනුවට සාමාන්‍ය 'group' එක දැම්මා 
+      className={`w-full overflow-hidden bg-black relative group ${!isFullscreen ? 'rounded-xl border border-border' : ''}`} 
+      style={{ aspectRatio: isFullscreen ? 'auto' : '16/9', height: isFullscreen ? '100%' : 'auto' }}
+    >
       {!showPlayer ? (
         <div
-          className={`w-full h-full relative group ${isLive ? 'cursor-pointer' : 'cursor-default'}`}
+          className={`w-full h-full relative group ${!isScheduled ? 'cursor-pointer' : 'cursor-default'}`}
           onClick={() => {
-            if (isLive) {
+            if (!isScheduled) {
               setIsPlaying(true)
             }
           }}
@@ -77,23 +185,44 @@ function MainStreamPlayer({ stream }: { stream: LiveStream | null }) {
           <img src={thumbnailUrl} alt={stream.title} className="w-full h-full object-cover" />
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/30 transition-colors">
             <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg transform group-hover:scale-105 transition-transform">
-              <Play className="w-4 h-4 fill-white" /> {isLive ? 'Watch Live' : 'Coming Soon'}
+              <Play className="w-4 h-4 fill-white" /> 
+              {isLive ? 'Watch Live' : isCompleted ? 'Watch Replay' : 'Coming Soon'}
             </div>
           </div>
           <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600/90 text-white text-xs px-2.5 py-1 rounded-full font-bold">
-            <Radio className="w-3 h-3" /> {isLive ? 'LIVE NOW' : 'SCHEDULED'}
+            <Radio className="w-3 h-3" /> 
+            {isLive ? 'LIVE NOW' : isCompleted ? 'PREVIOUS' : 'SCHEDULED'}
           </div>
         </div>
       ) : (
         <div className="absolute inset-0 overflow-hidden bg-black">
-          <iframe
-            className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-auto"
-            src={`https://www.youtube.com/embed/${stream.video_id}?autoplay=1&controls=0&modestbranding=1&rel=0&showinfo=0&disablekb=1`}
-            title={stream.title}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+          <div className="absolute top-1/2 left-1/2 w-[300%] h-[300%] -translate-x-1/2 -translate-y-1/2 scale-[0.35] pointer-events-none">
+            <div ref={containerRef} className="w-full h-full"></div>
+          </div>
+
+          {isPlayerReady && (
+            // මෙතන group-hover:opacity-100 සහ z-[100] හැදුවා
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/70 backdrop-blur-md px-8 py-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-[100] border border-white/10 shadow-2xl">
+              <button onClick={handleBackward} className="text-white hover:text-red-500 transition-transform hover:scale-110 p-2" title="Backward 10s">
+                <Rewind className="w-5 h-5" />
+              </button>
+              <button onClick={handlePlay} className="text-white hover:text-red-500 transition-transform hover:scale-110 p-2" title="Play">
+                <Play className="w-6 h-6 fill-current" />
+              </button>
+              <button onClick={handlePause} className="text-white hover:text-red-500 transition-transform hover:scale-110 p-2" title="Pause">
+                <Pause className="w-6 h-6 fill-current" />
+              </button>
+              <button onClick={handleForward} className="text-white hover:text-red-500 transition-transform hover:scale-110 p-2" title="Forward 10s">
+                <FastForward className="w-5 h-5" />
+              </button>
+              
+              <div className="w-[1px] h-6 bg-white/20 mx-2"></div> 
+              
+              <button onClick={toggleFullScreen} className="text-white hover:text-red-500 transition-transform hover:scale-110 p-2" title="Full Screen">
+                {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
