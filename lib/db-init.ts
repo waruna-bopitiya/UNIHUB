@@ -67,33 +67,50 @@ export async function ensureTablesExist() {
   // Create function to automatically update badges based on GPA
   try {
     await sql`
-      CREATE OR REPLACE FUNCTION update_user_badges()
+      DROP FUNCTION IF EXISTS update_user_badges() CASCADE;
+    `
+    console.log('✅ Dropped old update_user_badges function')
+  } catch (e: any) {
+    // Function might not exist, that's fine
+  }
+
+  try {
+    await sql`
+      CREATE FUNCTION update_user_badges()
       RETURNS TRIGGER AS $$
+      DECLARE
+        badge_array TEXT[];
       BEGIN
-        NEW.badges := '{}';
+        -- Clear badges first
+        badge_array := '{}';
         
-        IF NEW.gpa = 4.0 THEN
-          NEW.badges := array_append(NEW.badges, 'Gold Scholar');
-        ELSIF NEW.gpa > 3.7 THEN
-          NEW.badges := array_append(NEW.badges, 'Silver Scholar');
-        ELSIF NEW.gpa > 3.5 THEN
-          NEW.badges := array_append(NEW.badges, 'Bronze Scholar');
+        -- Only add badges if GPA is not NULL
+        IF NEW.gpa IS NOT NULL THEN
+          IF NEW.gpa >= 4.0 THEN
+            badge_array := array_append(badge_array, 'Gold Scholar');
+          ELSIF NEW.gpa > 3.7 THEN
+            badge_array := array_append(badge_array, 'Silver Scholar');
+          ELSIF NEW.gpa > 3.5 THEN
+            badge_array := array_append(badge_array, 'Bronze Scholar');
+          END IF;
         END IF;
         
+        NEW.badges := badge_array;
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
     `
-    console.log('✅ Created/updated update_user_badges function')
+    console.log('✅ Created update_user_badges function')
   } catch (e: any) {
-    console.log('ℹ️ update_user_badges function already exists or error:', e?.message)
+    console.log('ℹ️ update_user_badges function error:', e?.message)
   }
 
   // Create trigger to automatically update badges when GPA changes
   try {
     await sql`
-      DROP TRIGGER IF EXISTS trigger_update_user_badges ON users;
+      DROP TRIGGER IF EXISTS trigger_update_user_badges ON users CASCADE;
     `
+    console.log('✅ Dropped old trigger_update_user_badges')
   } catch (e: any) {
     // Trigger might not exist, that's fine
   }
@@ -107,7 +124,7 @@ export async function ensureTablesExist() {
     `
     console.log('✅ Created trigger_update_user_badges')
   } catch (e: any) {
-    console.log('ℹ️ trigger already exists or error:', e?.message)
+    console.log('ℹ️ trigger creation error:', e?.message)
   }
 
   // Table for storing OTP for password reset

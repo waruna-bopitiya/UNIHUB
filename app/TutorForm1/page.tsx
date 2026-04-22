@@ -245,6 +245,13 @@ export default function TutorFormPage() {
         return
       }
 
+      console.log('📝 Submitting tutor form with:', {
+        studentId,
+        cgpa: values.cgpa,
+        fullName: values.fullName,
+        email: values.email,
+      })
+
       // Call the tutor submission API
       const response = await fetch('/api/tutor/submit', {
         method: 'POST',
@@ -263,10 +270,20 @@ export default function TutorFormPage() {
         }),
       })
 
+      console.log('📨 Response status:', response.status)
+
       if (!response.ok) {
         const error = await response.json()
+        console.error('❌ API Error:', error)
         throw new Error(error.message || 'Failed to submit form')
       }
+
+      const responseData = await response.json()
+      console.log('✅ API Response:', {
+        success: responseData.success,
+        message: responseData.message,
+        badges: responseData.badges,
+      })
 
       const result = evaluateTutorApplication(values)
       setIsVerified(result.approved)

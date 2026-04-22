@@ -604,7 +604,13 @@ export default function Home() {
                     <PostCard
                       key={post.id}
                       id={String(post.id)}
-                      author={{ name: post.author_name, avatar: post.author_avatar, role: post.author_role }}
+                      author={{ 
+                        name: post.author_name, 
+                        avatar: post.author_avatar, 
+                        role: post.author_role,
+                        id: post.creator_id,
+                        badges: post.badges || []
+                      }}
                       timestamp={timeAgo(post.created_at)}
                       content={post.content}
                       category={post.category}

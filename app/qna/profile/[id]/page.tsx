@@ -5,6 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Calendar, Award, MessageCircle, TrendingUp, Download, Trash2, Star, X, User, Clock } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
+import { Badge } from "@/components/ui/badge"
 import QuestionCard from "@/components/qna/QuestionCard"
 import AnswerCard from "@/components/qna/AnswerCard"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -201,9 +202,23 @@ export default function ProfilePage() {
 
           {/* User Info */}
           <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold">
-              {user.first_name} {user.second_name || ''}
-            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl md:text-3xl font-bold">
+                {user.first_name} {user.second_name || ''}
+              </h1>
+              {/* Display badges next to name */}
+              {user.badges && user.badges.length > 0 && (
+                <div className="flex gap-1">
+                  {user.badges.map((badge: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-xs h-5 px-1">
+                      {badge === 'Gold Scholar' && '🥇'}
+                      {badge === 'Silver Scholar' && '🥈'}
+                      {badge === 'Bronze Scholar' && '🥉'}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
             <p className="text-muted-foreground mt-1">{user.email}</p>
             
             {user.bio && (
@@ -233,13 +248,12 @@ export default function ProfilePage() {
 
             {/* Badges */}
             {user.badges && user.badges.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-4 text-sm text-muted-foreground">
                 {user.badges.map((badge: string, i: number) => (
-                  <span 
-                    key={i} 
-                    className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
-                  >
-                    🏆 {badge}
+                  <span key={i}>
+                    {badge === 'Gold Scholar' && '🥇 Gold Scholar (GPA: 4.0)'}
+                    {badge === 'Silver Scholar' && '🥈 Silver Scholar (GPA > 3.7)'}
+                    {badge === 'Bronze Scholar' && '🥉 Bronze Scholar (GPA > 3.5)'}
                   </span>
                 ))}
               </div>
@@ -260,6 +274,35 @@ export default function ProfilePage() {
               <div className="bg-secondary/50 rounded-lg p-3 text-center">
                 <div className="text-xl font-bold">{resources.length}</div>
                 <div className="text-xs text-muted-foreground">Resources</div>
+              </div>
+              {/* Badges Card - showing actual badges instead of count */}
+              <div className="bg-orange-100/20 border border-orange-200/30 rounded-lg p-3">
+                <div className="text-xs font-semibold text-orange-700 mb-2">Badges</div>
+                {user.badges && user.badges.length > 0 ? (
+                  <div className="space-y-1">
+                    {user.badges.map((badge: string, i: number) => (
+                      <div key={i} className="text-xs">
+                        {badge === 'Gold Scholar' && '🥇 Gold'}
+                        {badge === 'Silver Scholar' && '🥈 Silver'}
+                        {badge === 'Bronze Scholar' && '🥉 Bronze'}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-xs text-muted-foreground mb-2">No badges yet</div>
+                    {currentUserId === user.id ? (
+                      <Link
+                        href="/TutorForm1"
+                        className="inline-flex items-center justify-center w-full px-2 py-1.5 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded transition-colors font-semibold"
+                      >
+                        Complete Be a Tutor
+                      </Link>
+                    ) : (
+                      <div className="text-xs text-muted-foreground italic">User has not completed tutor profile</div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

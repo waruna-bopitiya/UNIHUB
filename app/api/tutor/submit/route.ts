@@ -96,10 +96,11 @@ export async function POST(request: NextRequest) {
 		`
 
 		// Also update the users table with the GPA to trigger badge calculation
-		await sql`
+		const updateResult = await sql`
 			UPDATE users
 			SET gpa = ${cgpaNum}
 			WHERE id = ${userId}
+			RETURNING id, gpa, badges
 		`
 
 		console.log('✅ Tutor form submitted and saved to database:', {
@@ -112,11 +113,85 @@ export async function POST(request: NextRequest) {
 			submittedAt: new Date().toISOString(),
 		})
 
+		// Log the updated user record to verify badges were calculated by trigger
+		if (updateResult.length > 0) {
+			console.log('📊 User record updated with GPA:', {
+				userId: updateResult[0].id,
+				gpa: updateResult[0].gpa,
+				badgesFromTrigger: updateResult[0].badges,
+				badgesType: typeof updateResult[0].badges,
+				badgesIsArray: Array.isArray(updateResult[0].badges),
+				badgesLength: Array.isArray(updateResult[0].badges) ? updateResult[0].badges.length : 0,
+			})
+			
+			// If badges are empty but GPA qualifies, manually calculate and update
+			if ((!updateResult[0].badges || updateResult[0].badges.length === 0) && cgpaNum >= 3.5) {
+				console.log('⚠️ WARNING: Badges not calculated by trigger, manually updating...')
+				
+				let badgeString = ''
+				if (cgpaNum >= 4.0) {
+					badgeString = 'Gold Scholar'
+				} else if (cgpaNum > 3.7) {
+					badgeString = 'Silver Scholar'
+				} else if (cgpaNum > 3.5) {
+					badgeString = 'Bronze Scholar'
+				}
+				
+				// Try multiple ways to set the badge array
+				try {
+					console.log(`💾 Attempting to insert badge: "${badgeString}"`)
+					
+					const manualUpdate = await sql`
+						UPDATE users
+						SET badges = ARRAY[${badgeString}]::TEXT[]
+						WHERE id = ${userId}
+						RETURNING id, gpa, badges
+					`
+					
+					console.log('✅ Manual badge update succeeded:', {
+						userId: manualUpdate[0]?.id,
+						gpa: manualUpdate[0]?.gpa,
+						badges: manualUpdate[0]?.badges,
+						badgesLength: Array.isArray(manualUpdate[0]?.badges) ? manualUpdate[0].badges.length : 0,
+					})
+				} catch (manualError: any) {
+					console.error('❌ Manual badge update failed:', manualError?.message)
+					// Try alternative syntax
+					const altUpdate = await sql`
+						UPDATE users
+						SET badges = CONCAT(ARRAY[${badgeString}])
+						WHERE id = ${userId}
+						RETURNING id, gpa, badges
+					`
+					console.log('✅ Alternative badge update (using CONCAT):', {
+						userId: altUpdate[0]?.id,
+						gpa: altUpdate[0]?.gpa,
+						badges: altUpdate[0]?.badges,
+					})
+				}
+			}
+		}
+
+		// Fetch the final user record to confirm badges are saved
+		const finalUser = await sql`
+			SELECT id, gpa, badges FROM users WHERE id = ${userId}
+		`
+		
+		console.log('🔍 FINAL VERIFICATION - user badges in database:', {
+			userId: finalUser[0]?.id,
+			gpa: finalUser[0]?.gpa,
+			badges: finalUser[0]?.badges,
+			badgesIsArray: Array.isArray(finalUser[0]?.badges),
+			badgesLength: Array.isArray(finalUser[0]?.badges) ? finalUser[0].badges.length : 0,
+		})
+
 		return NextResponse.json(
 			{
 				message: 'Tutor form submitted successfully',
 				success: true,
 				tutorId: result[0]?.id,
+				badges: finalUser[0]?.badges || [],
+				gpa: finalUser[0]?.gpa,
 			},
 			{ status: 200 }
 		)

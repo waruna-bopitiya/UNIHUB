@@ -28,12 +28,14 @@ export async function GET(req: NextRequest) {
           p.comments_count,
           p.created_at,
           p.updated_at,
+          u.badges,
           COALESCE(COUNT(DISTINCT pl.id), 0)::INTEGER as likes_count,
           COALESCE(SUM(CASE WHEN pl.user_id = ${userId || null} THEN 1 ELSE 0 END), 0)::INTEGER as user_liked
         FROM posts p
         LEFT JOIN post_likes pl ON p.id = pl.post_id
+        LEFT JOIN users u ON p.creator_id = u.id
         WHERE p.creator_id = ${userId}
-        GROUP BY p.id
+        GROUP BY p.id, u.badges
         ORDER BY p.created_at DESC
         LIMIT 100
       `
@@ -58,12 +60,14 @@ export async function GET(req: NextRequest) {
         p.likes_count,
         p.comments_count,
         p.created_at,
+        u.badges,
         COALESCE(COUNT(DISTINCT pl.id), 0)::INTEGER as likes_count,
         COALESCE(SUM(CASE WHEN pl.user_id = ${userId || null} THEN 1 ELSE 0 END), 0)::INTEGER as user_liked
       FROM posts p
       LEFT JOIN post_likes pl ON p.id = pl.post_id
+      LEFT JOIN users u ON p.creator_id = u.id
       WHERE p.is_private = FALSE
-      GROUP BY p.id
+      GROUP BY p.id, u.badges
       ORDER BY p.created_at DESC
       LIMIT 50
     `
