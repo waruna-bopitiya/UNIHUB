@@ -2,10 +2,11 @@
 
 import { useState, useRef } from 'react'
 import Link from 'next/link'
-import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio, Maximize, Check } from 'lucide-react'
+import { Heart, MessageCircle, Share2, MoreVertical, Play, Radio, Maximize, Check, Rewind, Pause, FastForward, Minimize, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Comments } from './comments'
 import { useToast } from '@/hooks/use-toast'
+import { useEffect } from 'react'
 
 interface PostCardProps {
   id: string
