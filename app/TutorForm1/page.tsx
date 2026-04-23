@@ -245,6 +245,13 @@ export default function TutorFormPage() {
         return
       }
 
+      console.log('📝 Submitting tutor form with:', {
+        studentId,
+        cgpa: values.cgpa,
+        fullName: values.fullName,
+        email: values.email,
+      })
+
       // Call the tutor submission API
       const response = await fetch('/api/tutor/submit', {
         method: 'POST',
@@ -263,19 +270,40 @@ export default function TutorFormPage() {
         }),
       })
 
+      console.log('📨 Response status:', response.status)
+
       if (!response.ok) {
         const error = await response.json()
+        console.error('❌ API Error:', error)
         throw new Error(error.message || 'Failed to submit form')
       }
+
+      const responseData = await response.json()
+      console.log('✅ API Response:', {
+        success: responseData.success,
+        message: responseData.message,
+        badges: responseData.badges,
+      })
 
       const result = evaluateTutorApplication(values)
       setIsVerified(result.approved)
       setBadgeState(result.badge)
       setIsEditing(false)
 
+      // Determine Scholar badge based on CGPA
+      let badgeMessage = ''
+      if (values.cgpa >= 4.0) {
+        badgeMessage = '🥇 You earned the Gold Scholar badge!'
+      } else if (values.cgpa > 3.7) {
+        badgeMessage = '🥈 You earned the Silver Scholar badge!'
+      } else if (values.cgpa > 3.5) {
+        badgeMessage = '🥉 You earned the Bronze Scholar badge!'
+      }
+
       if (result.approved) {
-        const messageText = isVerified ? 'Profile updated successfully!' : "✅ Verification successful! You're now a tutor!"
-        toast.success(messageText, { duration: 3000 })
+        const baseMessage = isVerified ? 'Profile updated successfully!' : "✅ Verification successful! You're now a tutor!"
+        const fullMessage = badgeMessage ? `${baseMessage} ${badgeMessage}` : baseMessage
+        toast.success(fullMessage, { duration: 4000 })
         
         if (!isVerified) {
           setTimeout(() => window.location.reload(), 2000)
@@ -294,10 +322,8 @@ export default function TutorFormPage() {
             { duration: 8000 }
           )
         } else {
-          toast.success(
-            '✅ Profile updated!',
-            { duration: 5000 }
-          )
+          const updateMessage = badgeMessage ? `✅ Profile updated! ${badgeMessage}` : '✅ Profile updated!'
+          toast.success(updateMessage, { duration: 5000 })
         }
       }
     } catch (error) {
@@ -497,7 +523,7 @@ export default function TutorFormPage() {
                   name="degreeProgram"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Degree / Major</FormLabel>
+                      <FormLabel>Degree</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="E.g. BSc in Computer Science"
@@ -531,7 +557,7 @@ export default function TutorFormPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        CGPA must be between 1.5 and 4.2. Higher CGPA improves your chance of being auto-verified.
+                        CGPA must be between 1.5 and 4.0. Higher CGPA improves your chance of being auto-verified.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -599,7 +625,7 @@ export default function TutorFormPage() {
                 name="expertiseAreas"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subjects / expertise areas</FormLabel>
+                    <FormLabel>Subjects</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="E.g. Data Structures, Calculus, Physics 1"

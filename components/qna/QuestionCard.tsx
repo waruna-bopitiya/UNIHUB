@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns"
 import { MessageCircle, Edit2, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import VoteButtons from "./VoteButtons"
 
 interface QuestionCardProps {
@@ -16,6 +17,7 @@ interface QuestionCardProps {
       name: string
       avatar: string
       id?: string
+      badges?: string[]
     }
     upvotes: number
     downvotes: number
@@ -150,13 +152,36 @@ export default function QuestionCard({ question, onVoteComplete, onDelete }: Que
           
           {/* Meta info */}
           <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <img 
                 src={question.author.avatar} 
                 alt={question.author.name}
                 className="w-5 h-5 rounded-full"
               />
-              <span>{question.author.name}</span>
+              <div className="flex items-center gap-1">
+                {question.author.id ? (
+                  <Link 
+                    href={`/qna/profile/${question.author.id}`}
+                    className="hover:text-primary transition-colors font-medium"
+                  >
+                    {question.author.name}
+                  </Link>
+                ) : (
+                  <span>{question.author.name}</span>
+                )}
+                {/* Display badges */}
+                {question.author.badges && question.author.badges.length > 0 && (
+                  <div className="flex gap-1">
+                    {question.author.badges.map((badge, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs h-5 px-1">
+                        {badge === 'Gold Scholar' && '🥇'}
+                        {badge === 'Silver Scholar' && '🥈'}
+                        {badge === 'Bronze Scholar' && '🥉'}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <span>•</span>
             <span>{formatDistanceToNow(typeof question.createdAt === 'string' ? new Date(question.createdAt) : question.createdAt, { addSuffix: true })}</span>
