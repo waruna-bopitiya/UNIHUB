@@ -14,14 +14,18 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+
   const lastRightClickNoticeAtRef = useRef(0)
   const lastShortcutNoticeAtRef = useRef(0)
+
   const { toast } = useToast()
 
+  // Fix hydration issues
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
+  // Disable right click
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault()
@@ -41,15 +45,24 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
 
     document.addEventListener('contextmenu', handleContextMenu)
-    return () => document.removeEventListener('contextmenu', handleContextMenu)
-  }, [])
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu)
+    }
+  }, [toast])
 
+  // Disable dev tool shortcuts (FIXED)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase()
+      const key = event.key?.toLowerCase() // ✅ FIX
+
+      // If key is undefined and not F12 → ignore
+      if (!key && event.key !== 'F12') return
+
       const blockedShortcut =
         event.key === 'F12' ||
-        ((event.ctrlKey || event.metaKey) && event.shiftKey && (key === 'i' || key === 'c'))
+        ((event.ctrlKey || event.metaKey) &&
+          event.shiftKey &&
+          (key === 'i' || key === 'c'))
 
       if (!blockedShortcut) return
 
@@ -70,7 +83,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
 
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [toast])
 
   return (
@@ -90,9 +105,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <Sidebar 
-            onClose={() => setSidebarOpen(false)}
-          />
+          <Sidebar onClose={() => setSidebarOpen(false)} />
         </div>
       )}
 
@@ -103,7 +116,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <TopBar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
         )}
 
-        {/* Content Area */}
+        {/* Content */}
         <main className="flex-1 overflow-y-auto">
           {isMounted ? children : null}
         </main>
