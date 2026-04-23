@@ -366,21 +366,23 @@ export default function QuizPage() {
         }
 
         console.log('📊 Fetching quiz results from database for user ID:', currentUser.id)
-        const response = await fetch(`/api/quiz/results?participantId=${encodeURIComponent(currentUser.id)}`)
+        const response = await fetch(
+          `/api/quiz/results?participantId=${encodeURIComponent(currentUser.id)}&participantName=${encodeURIComponent(currentUser.firstName || '')}`,
+        )
         const result = await response.json()
 
         if (result.status === 'success' && Array.isArray(result.data)) {
           console.log('✅ Quiz results loaded from database:', result.data.length, 'results')
           // Map results to QuizResult type with null checks
           const dbResults = result.data
-            .filter((r: any) => r && r.quizId) // Filter out any results with missing data
+            .filter((r: any) => r && (r.quizId || r.quiz_id)) // Filter out any results with missing data
             .map((r: any) => ({
-              quizId: r.quizId.toString(),
-              quizTitle: r.quizTitle || 'Unknown Quiz',
-              participantName: r.participantName || 'Anonymous',
+              quizId: (r.quizId || r.quiz_id).toString(),
+              quizTitle: r.quizTitle || r.title || 'Unknown Quiz',
+              participantName: r.participantName || r.participant_name || 'Anonymous',
               score: r.score || 0,
-              totalQuestions: r.totalQuestions || 0,
-              dateTaken: r.dateTaken ? new Date(r.dateTaken).toLocaleDateString() : 'Unknown Date',
+              totalQuestions: r.totalQuestions || r.total_questions || 0,
+              dateTaken: r.dateTaken || r.date_taken ? new Date(r.dateTaken || r.date_taken).toLocaleDateString() : 'Unknown Date',
             }))
           
           console.log('✅ Processed', dbResults.length, 'quiz results')
@@ -1290,7 +1292,7 @@ export default function QuizPage() {
   return (
     <AppLayout>
       <div className="w-full py-6 px-4 md:px-6 lg:px-8">
-        {/* Header */}
+        Header
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Quiz Platform
