@@ -50,7 +50,7 @@ interface TakeQuizProps {
   detailedResults?: DetailedResult[]
   onAddComment: (name: string, message: string) => void
   onAddRating: (name: string, rating: number) => void
-  onComplete: (score: number, answers: number[]) => void
+  onComplete: (score: number, answers: number[]) => Promise<{ score: number; totalQuestions: number } | null>
   onCancel: () => void
 }
 
@@ -133,7 +133,7 @@ export function TakeQuiz({
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Check if all questions are answered
     const unansweredQuestions = answers.filter((a) => a === null).length
     if (unansweredQuestions > 0) {
@@ -141,17 +141,16 @@ export function TakeQuiz({
       return
     }
 
-    let correctCount = 0
-    quiz.questions.forEach((question, index) => {
+    // Server is the source of truth for scoring.
+    const fallbackScore = quiz.questions.reduce((acc, question, index) => {
       const userAnswer = answers[index]
-      const correctAnswer = typeof question.correctAnswer === 'string' ? parseInt(question.correctAnswer) : question.correctAnswer
-      if (userAnswer === correctAnswer) {
-        correctCount++
-      }
-    })
-    setScore(correctCount)
+      const correctAnswer = typeof question.correctAnswer === 'string' ? Number.parseInt(question.correctAnswer, 10) : question.correctAnswer
+      return userAnswer === correctAnswer ? acc + 1 : acc
+    }, 0)
+
+    const completionResult = await onComplete(fallbackScore, answers as number[])
+    setScore(completionResult?.score ?? fallbackScore)
     setShowResults(true)
-    onComplete(correctCount, answers as number[])
   }
 
   const formatTime = (seconds: number) => {

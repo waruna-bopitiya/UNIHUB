@@ -60,9 +60,9 @@ export async function GET(
       sql`
         SELECT 
           id,
-          question_text as question,
+          question_text,
           options,
-          correct_answer as correctAnswer,
+          correct_answer,
           question_order
         FROM quiz_questions
         WHERE quiz_id = ${quizId}
@@ -89,9 +89,9 @@ export async function GET(
         ...quiz,
         questions: (questions || []).map((q) => ({
           id: q.id.toString(),
-          question: q.question,
+          question: q.question_text,
           options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
-          correctAnswer: parseInt(q.correctAnswer) || 0,
+          correctAnswer: Number.isFinite(Number(q.correct_answer)) ? Number(q.correct_answer) : 0,
         })),
       },
     })

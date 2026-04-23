@@ -12,7 +12,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { useState, useEffect } from 'react'
-import { BookOpen, Download, Search, Star, Trophy } from 'lucide-react'
+import { BookOpen, Download, Loader2, Search, Star, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { jsPDF } from 'jspdf'
 
@@ -158,6 +158,9 @@ export default function QuizPage() {
   const [scoreSearch, setScoreSearch] = useState('')
   const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
   const [isCreatingQuiz, setIsCreatingQuiz] = useState(false)
+  const [loadingBrowseData, setLoadingBrowseData] = useState(true)
+  const [loadingResultsData, setLoadingResultsData] = useState(false)
+  const [loadingQuizPreview, setLoadingQuizPreview] = useState(false)
 
   // Score data from API
   const [scoreDataFromApi, setScoreDataFromApi] = useState<any>(null)
@@ -265,6 +268,7 @@ export default function QuizPage() {
 
   // Function to fetch quizzes from database
   const fetchQuizzesFromDatabase = async () => {
+    setLoadingBrowseData(true)
     try {
       console.log('Fetching courses from subject4years table...')
       
@@ -341,6 +345,8 @@ export default function QuizPage() {
       console.error('❌ Error fetching courses from database:', error)
       setAvailableCourses([])
       setQuizzes([])
+    } finally {
+      setLoadingBrowseData(false)
     }
   }
 
@@ -352,13 +358,15 @@ export default function QuizPage() {
   useEffect(() => {
     const fetchQuizResultsFromDatabase = async () => {
       try {
-        if (!currentUser?.firstName) {
+        setLoadingResultsData(true)
+        if (!currentUser?.id) {
           console.log('⏭️  Skipping results fetch - no user logged in')
+          setLoadingResultsData(false)
           return
         }
 
-        console.log('📊 Fetching quiz results from database for user:', currentUser.firstName)
-        const response = await fetch(`/api/quiz/results?participantName=${encodeURIComponent(currentUser.firstName)}`)
+        console.log('📊 Fetching quiz results from database for user ID:', currentUser.id)
+        const response = await fetch(`/api/quiz/results?participantId=${encodeURIComponent(currentUser.id)}`)
         const result = await response.json()
 
         if (result.status === 'success' && Array.isArray(result.data)) {
@@ -385,6 +393,8 @@ export default function QuizPage() {
       } catch (error) {
         console.error('❌ Error fetching quiz results from database:', error)
         setQuizResults([])
+      } finally {
+        setLoadingResultsData(false)
       }
     }
 
@@ -658,6 +668,7 @@ export default function QuizPage() {
   }
 
   const handleTakeQuiz = async (quizId: string) => {
+    setLoadingQuizPreview(true)
     try {
       // Fetch full quiz details with questions from API
       const response = await fetch(`/api/quiz/${quizId}`)
@@ -677,28 +688,19 @@ export default function QuizPage() {
         fetchQuizComments(quizId)
       } else {
         console.error('Failed to fetch quiz details:', result.message)
-        // Fallback to quiz from list if API fails
-        const quiz = quizzes.find((q) => q.id === quizId)
-        if (quiz) {
-          setPreviewQuiz(quiz)
-          fetchQuizRatings(quizId)
-          fetchQuizComments(quizId)
-        }
+        alert('Failed to load quiz questions. Please try again.')
       }
     } catch (error) {
       console.error('Error fetching quiz details:', error)
-      // Fallback to quiz from list if API fails
-      const quiz = quizzes.find((q) => q.id === quizId)
-      if (quiz) {
-        setPreviewQuiz(quiz)
-        fetchQuizRatings(quizId)
-        fetchQuizComments(quizId)
-      }
+      alert('Failed to load quiz questions. Please try again.')
+    } finally {
+      setLoadingQuizPreview(false)
     }
   }
 
   const handleStartQuizFromPreview = () => {
     if (previewQuiz) {
+      setDetailedResults([])
       setSelectedQuiz(previewQuiz)
       setPreviewQuiz(null)
       // Load ratings and comments from database
@@ -711,8 +713,8 @@ export default function QuizPage() {
     setPreviewQuiz(null)
   }
 
-  const handleQuizComplete = async (score: number, answers: number[]) => {
-    if (!selectedQuiz) return
+  const handleQuizComplete = async (score: number, answers: number[]): Promise<{ score: number; totalQuestions: number } | null> => {
+    if (!selectedQuiz) return null
 
     try {
       console.log('📤 Submitting quiz response to database:', {
@@ -727,6 +729,7 @@ export default function QuizPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers,
+          participantId: currentUser?.id || null,
           participantName: currentUser?.firstName || 'You',
           quizData: {
             title: selectedQuiz.title,
@@ -740,7 +743,7 @@ export default function QuizPage() {
       if (!response.ok) {
         console.error('❌ API error:', result.message)
         alert('Failed to save your quiz response: ' + result.message)
-        return
+        return null
       }
 
       console.log('✅ Quiz response saved to database successfully!')
@@ -783,9 +786,14 @@ export default function QuizPage() {
       )
 
       console.log('✅ Quiz complete! Your response has been saved.')
+      return {
+        score: result.data.score,
+        totalQuestions: result.data.totalQuestions,
+      }
     } catch (error) {
       console.error('❌ Failed to submit quiz:', error)
       alert('Failed to submit quiz. Please try again.')
+      return null
     }
   }
 
@@ -1407,8 +1415,15 @@ export default function QuizPage() {
         {/* Content */}
         {activeTab === 'browse' && (
           <div>
+            {loadingBrowseData ? (
+              <div className="bg-card border border-border rounded-lg p-10 text-center mb-6">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">Loading Quiz Data</h3>
+                <p className="text-muted-foreground">Fetching courses and quizzes from the database...</p>
+              </div>
+            ) : null}
             {/* Year Selection */}
-            {selectedYear === null ? (
+            {!loadingBrowseData && selectedYear === null ? (
               <div>
                 <h2 className="text-2xl font-bold text-foreground mb-6">Select Year</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1428,7 +1443,7 @@ export default function QuizPage() {
                   ))}
                 </div>
               </div>
-            ) : selectedSemester === null ? (
+            ) : !loadingBrowseData && selectedSemester === null ? (
               /* Semester Selection */
               <div>
                 <button
@@ -1460,7 +1475,7 @@ export default function QuizPage() {
                   ))}
                 </div>
               </div>
-            ) : selectedCourse === null ? (
+            ) : !loadingBrowseData && selectedCourse === null ? (
               /* Course Selection */
               <div>
                 <button
@@ -1538,7 +1553,7 @@ export default function QuizPage() {
                   )
                 })()}
               </div>
-            ) : (
+            ) : !loadingBrowseData ? (
               /* Quiz List */
               <div>
                 <button
@@ -1614,7 +1629,7 @@ export default function QuizPage() {
                   )
                 })()}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -1658,7 +1673,13 @@ export default function QuizPage() {
               </p>
             </div>
 
-            {quizResults.length === 0 ? (
+            {loadingResultsData ? (
+              <div className="text-center py-12 bg-card border border-border rounded-lg">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">Loading Results</h3>
+                <p className="text-muted-foreground">Fetching your quiz attempts...</p>
+              </div>
+            ) : quizResults.length === 0 ? (
               <div className="text-center py-12 bg-card border border-border rounded-lg">
                 <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -2097,6 +2118,16 @@ export default function QuizPage() {
                   Start Quiz
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {loadingQuizPreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-foreground mb-1">Loading Quiz</h3>
+              <p className="text-muted-foreground">Preparing questions and details...</p>
             </div>
           </div>
         )}

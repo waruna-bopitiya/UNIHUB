@@ -9,9 +9,10 @@ if (!databaseUrl) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const participantName = searchParams.get('participantName')
+  const participantId = searchParams.get('participantId')
   const year = searchParams.get('year')
 
-  console.log('📊 Fetching score statistics...', { participantName, year })
+  console.log('📊 Fetching score statistics...', { participantName, participantId, year })
 
   try {
     await ensureTablesExist()
@@ -29,8 +30,10 @@ export async function GET(request: Request) {
       SELECT
         qr.id,
         qr.quiz_id,
+        qr.participant_id,
         qr.participant_name,
         qr.score,
+        qr.percentage,
         qr.created_at,
         q.title AS quiz_title,
         q.year,
@@ -46,6 +49,7 @@ export async function GET(request: Request) {
        AND s.semester = q.semester
        AND s.subject_code = q.subject_code
       WHERE qr.participant_name IS NOT NULL
+        AND (${participantId}::text IS NULL OR qr.participant_id = ${participantId})
         AND (${participantName}::text IS NULL OR qr.participant_name = ${participantName})
         AND (${yearFilter}::int IS NULL OR q.year = ${yearFilter})
       ORDER BY q.year, q.semester, COALESCE(q.subject_code, q.course), qr.created_at DESC
@@ -73,8 +77,10 @@ export async function GET(request: Request) {
     const scoreData = responses.map((r: any) => ({
       quizId: r.quiz_id,
       quizTitle: r.quiz_title,
+      participantId: r.participant_id,
       participantName: r.participant_name,
       score: Number(r.score) || 0,
+      percentage: Number(r.percentage) || 0,
       totalQuestions: Number(r.total_questions) || 0,
       year: Number(r.year) || 0,
       semester: Number(r.semester) || 0,
@@ -211,6 +217,56 @@ export async function GET(request: Request) {
       }))
       .sort((a, b) => (a.year === b.year ? (a.semester === b.semester ? a.course.localeCompare(b.course) : a.semester - b.semester) : a.year - b.year))
 
+    // Calculate per-quiz averages (the exact metric requested: average for each quiz)
+    const quizAverageMap = new Map<
+      number,
+      {
+        quizId: number
+        quizTitle: string
+        year: number
+        semester: number
+        participants: Set<string>
+        attempts: number
+        totalPercentage: number
+      }
+    >()
+
+    scoreData.forEach((data) => {
+      if (!quizAverageMap.has(data.quizId)) {
+        quizAverageMap.set(data.quizId, {
+          quizId: data.quizId,
+          quizTitle: data.quizTitle,
+          year: data.year,
+          semester: data.semester,
+          participants: new Set<string>(),
+          attempts: 0,
+          totalPercentage: 0,
+        })
+      }
+
+      const quizData = quizAverageMap.get(data.quizId)!
+      quizData.attempts += 1
+      quizData.participants.add(data.participantId || data.participantName)
+
+      if (data.percentage > 0) {
+        quizData.totalPercentage += data.percentage
+      } else if (data.totalQuestions > 0) {
+        quizData.totalPercentage += (data.score / data.totalQuestions) * 100
+      }
+    })
+
+    const quizAverages = Array.from(quizAverageMap.values())
+      .map((q) => ({
+        quizId: q.quizId,
+        quizTitle: q.quizTitle,
+        year: q.year,
+        semester: q.semester,
+        attempts: q.attempts,
+        participants: q.participants.size,
+        averageScore: q.attempts > 0 ? Math.round((q.totalPercentage / q.attempts) * 10) / 10 : 0,
+      }))
+      .sort((a, b) => b.averageScore - a.averageScore)
+
     // Calculate summary
     const totalAttempts = scoreData.length
     const validScoreAttempts = scoreData.filter((d) => d.totalQuestions > 0)
@@ -228,6 +284,7 @@ export async function GET(request: Request) {
       data: {
         courseByYear: courseByYearArray,
         quizTakers: quizTakersArray,
+        quizAverages,
         summary: {
           totalAttempts,
           averageScore,
