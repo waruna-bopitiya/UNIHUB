@@ -1838,7 +1838,7 @@ export default function QuizPage() {
         {activeTab === 'score' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Subject4Years Database Details</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Summery Details</h3>
               <p className="text-muted-foreground">
                 Live Neon catalog rows from subject4years, joined with quiz score aggregates.
               </p>
