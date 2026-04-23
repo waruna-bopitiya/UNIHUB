@@ -71,10 +71,10 @@ export function Sidebar({ onClose }: SidebarProps) {
           <MessageCircle className="w-5 h-5" />
           <span className="font-medium">Messages</span>
         </Link>
-        <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
+        {/* <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>
-        </button>
+        </button> */}
       </div>
     </aside>
   )
