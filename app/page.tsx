@@ -10,6 +10,8 @@ import Link from "next/link"
 import { MessageCircle, Users, TrendingUp, Award } from "lucide-react"
 
 interface Post {
+  badges: never[]
+  creator_id: string | undefined
   id: number
   author_name: string
   author_avatar: string
