@@ -11,8 +11,6 @@ interface PostCardProps {
     name: string
     avatar: string
     role: string
-    id?: string
-    badges?: string[]
   }
   timestamp: string
   content: string
@@ -301,30 +299,7 @@ export function PostCard({
             {author.avatar}
           </div>
           <div>
-            <div className="flex items-center gap-1">
-              {author.id ? (
-                <Link 
-                  href={`/qna/profile/${author.id}`}
-                  className="font-semibold text-foreground hover:text-primary transition-colors"
-                >
-                  {author.name}
-                </Link>
-              ) : (
-                <h3 className="font-semibold text-foreground">{author.name}</h3>
-              )}
-              {/* Display badges */}
-              {author.badges && author.badges.length > 0 && (
-                <div className="flex gap-1">
-                  {author.badges.map((badge, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs h-5 px-1">
-                      {badge === 'Gold Scholar' && '🥇'}
-                      {badge === 'Silver Scholar' && '🥈'}
-                      {badge === 'Bronze Scholar' && '🥉'}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+            <h3 className="font-semibold text-foreground">{author.name}</h3>
             <p className="text-sm text-muted-foreground">{author.role}</p>
             <p className="text-xs text-muted-foreground mt-1">{timestamp}</p>
           </div>
