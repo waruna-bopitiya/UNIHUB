@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
       creatorId,
       year,
       semester,
+      subjectCode,
       course,
       category,
       difficulty,
@@ -106,7 +107,18 @@ export async function POST(req: NextRequest) {
     year = typeof year === 'string' ? parseInt(year) : year
     semester = typeof semester === 'string' ? parseInt(semester) : semester
     
-    console.log('📋 Extracted:', { title, creator, creatorId, year, semester, course, difficulty, duration, questionsCount: questions?.length })
+    console.log('📋 Extracted:', {
+      title,
+      creator,
+      creatorId,
+      year,
+      semester,
+      subjectCode,
+      course,
+      difficulty,
+      duration,
+      questionsCount: questions?.length,
+    })
 
     // Validation
     if (!title?.trim()) {
@@ -200,6 +212,45 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const normalizedSubjectCode = typeof subjectCode === 'string' ? subjectCode.trim() : ''
+    const normalizedCourseName = course.trim()
+
+    // Validate and resolve the selected module from subject4years
+    const subjectRows = normalizedSubjectCode
+      ? await sqlWithRetry(() =>
+          sql`
+            SELECT year, semester, subject_code, subject_name
+            FROM subject4years
+            WHERE year = ${year}
+              AND semester = ${semester}
+              AND subject_code = ${normalizedSubjectCode}
+            LIMIT 1
+          `,
+        )
+      : await sqlWithRetry(() =>
+          sql`
+            SELECT year, semester, subject_code, subject_name
+            FROM subject4years
+            WHERE year = ${year}
+              AND semester = ${semester}
+              AND LOWER(TRIM(subject_name)) = LOWER(TRIM(${normalizedCourseName}))
+            LIMIT 1
+          `,
+        )
+
+    if (!subjectRows || subjectRows.length === 0) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Selected subject is not valid for the selected year and semester. Please choose a subject from the module list.',
+        },
+        { status: 400 },
+      )
+    }
+
+    const subject = subjectRows[0] as any
+
     if (!difficulty || !['Easy', 'Medium', 'Hard'].includes(difficulty)) {
       return NextResponse.json(
         { status: 'error', message: 'Valid difficulty level is required' },
@@ -250,17 +301,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert quiz with retry logic
-    console.log('💾 Inserting quiz into database with:', { title: title.trim(), year, semester, course: course.trim(), category: category?.trim() || 'General', difficulty, duration })
+    console.log('💾 Inserting quiz into database with:', {
+      title: title.trim(),
+      year,
+      semester,
+      subjectCode: subject.subject_code,
+      course: subject.subject_name,
+      category: category?.trim() || 'General',
+      difficulty,
+      duration,
+    })
     
     let quiz: any
     try {
       const result = await sqlWithRetry(() =>
         sql`
           INSERT INTO quizzes
-            (title, description, creator, year, semester, course, category, difficulty, duration, participants)
+            (title, description, creator, year, semester, subject_code, course, category, difficulty, duration, participants)
           VALUES
-            (${title.trim()}, ${description?.trim() || null}, ${creator.trim()}, ${year}, ${semester}, ${course.trim()}, ${category?.trim() || 'General'}, ${difficulty}, ${duration}, 0)
-          RETURNING id, title, description, creator, year, semester, course, category, difficulty, duration, participants, created_at, updated_at
+            (${title.trim()}, ${description?.trim() || null}, ${creator.trim()}, ${year}, ${semester}, ${subject.subject_code}, ${subject.subject_name}, ${category?.trim() || 'General'}, ${difficulty}, ${duration}, 0)
+          RETURNING id, title, description, creator, year, semester, subject_code, course, category, difficulty, duration, participants, created_at, updated_at
         `
       )
       
@@ -299,6 +359,12 @@ export async function POST(req: NextRequest) {
     try {
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i]
+        console.log(`Question ${i}:`, {
+          question: q.question.substring(0, 50),
+          correctAnswerValue: q.correctAnswer,
+          correctAnswerType: typeof q.correctAnswer,
+          optionsCount: q.options.length,
+        })
         await sql`
           INSERT INTO quiz_questions
             (quiz_id, question_text, options, correct_answer, question_order)

@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless'
+import { ensureTablesExist } from '@/lib/db-init'
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) {
@@ -8,12 +9,14 @@ if (!databaseUrl) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const participantName = searchParams.get('participantName')
-  const viewType = searchParams.get('viewType') || 'courseByYear' // 'courseByYear' or 'quizTakers'
+  const participantId = searchParams.get('participantId')
   const year = searchParams.get('year')
 
-  console.log('📊 Fetching score statistics...', { participantName, viewType, year })
+  console.log('📊 Fetching score statistics...', { participantName, participantId, year })
 
   try {
+    await ensureTablesExist()
+
     const dbUrl = databaseUrl || process.env.DATABASE_URL
     if (!dbUrl) {
       throw new Error('DATABASE_URL is not configured')
@@ -21,23 +24,35 @@ export async function GET(request: Request) {
 
     const db = neon(dbUrl)
 
-    // Fetch all quiz responses with related quiz information
+    const parsedYear = year ? Number.parseInt(year, 10) : null
+    const yearFilter = parsedYear && Number.isFinite(parsedYear) ? parsedYear : null
     const responses = await db`
-      SELECT 
+      SELECT
         qr.id,
         qr.quiz_id,
+        qr.participant_id,
         qr.participant_name,
         qr.score,
+        qr.percentage,
         qr.created_at,
-        q.title as quiz_title,
+        q.title AS quiz_title,
         q.year,
         q.semester,
+        q.subject_code,
         q.course,
-        (SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = q.id) as total_questions
+        COALESCE(s.subject_name, q.course) AS subject_name,
+        (SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = q.id) AS total_questions
       FROM quiz_responses qr
       JOIN quizzes q ON qr.quiz_id = q.id
+      LEFT JOIN subject4years s
+        ON s.year = q.year
+       AND s.semester = q.semester
+       AND s.subject_code = q.subject_code
       WHERE qr.participant_name IS NOT NULL
-      ORDER BY q.year, q.semester, q.course
+        AND (${participantId}::text IS NULL OR qr.participant_id = ${participantId})
+        AND (${participantName}::text IS NULL OR qr.participant_name = ${participantName})
+        AND (${yearFilter}::int IS NULL OR q.year = ${yearFilter})
+      ORDER BY q.year, q.semester, COALESCE(q.subject_code, q.course), qr.created_at DESC
     `
 
     if (!Array.isArray(responses) || responses.length === 0) {
@@ -62,11 +77,15 @@ export async function GET(request: Request) {
     const scoreData = responses.map((r: any) => ({
       quizId: r.quiz_id,
       quizTitle: r.quiz_title,
+      participantId: r.participant_id,
       participantName: r.participant_name,
-      score: r.score,
-      totalQuestions: r.total_questions,
-      year: r.year,
-      semester: r.semester,
+      score: Number(r.score) || 0,
+      percentage: Number(r.percentage) || 0,
+      totalQuestions: Number(r.total_questions) || 0,
+      year: Number(r.year) || 0,
+      semester: Number(r.semester) || 0,
+      subjectCode: r.subject_code,
+      subjectName: r.subject_name,
       course: r.course,
       dateTaken: r.created_at,
     }))
@@ -80,11 +99,11 @@ export async function GET(request: Request) {
         courses: Map<
           string,
           {
+            subjectCode: string
             course: string
-            participants: number
+            participants: Set<string>
             attempts: number
-            avgScore: number
-            quizIds: string[]
+            totalPercentage: number
           }
         >
       }
@@ -92,6 +111,7 @@ export async function GET(request: Request) {
 
     scoreData.forEach((data) => {
       const key = `${data.year}-${data.semester}`
+      const subjectKey = data.subjectCode || data.course
       if (!courseByYearMap.has(key)) {
         courseByYearMap.set(key, {
           year: data.year,
@@ -101,41 +121,36 @@ export async function GET(request: Request) {
       }
 
       const yearSemData = courseByYearMap.get(key)!
-      if (!yearSemData.courses.has(data.course)) {
-        yearSemData.courses.set(data.course, {
-          course: data.course,
-          participants: 0,
+      if (!yearSemData.courses.has(subjectKey)) {
+        yearSemData.courses.set(subjectKey, {
+          subjectCode: data.subjectCode || data.course,
+          course: data.subjectName || data.course,
+          participants: new Set<string>(),
           attempts: 0,
-          avgScore: 0,
-          quizIds: [],
+          totalPercentage: 0,
         })
       }
 
-      const courseData = yearSemData.courses.get(data.course)!
+      const courseData = yearSemData.courses.get(subjectKey)!
       courseData.attempts += 1
-      courseData.participants = new Set([...new Set([courseData.participants]), data.participantName]).size
-      if (!courseData.quizIds.includes(data.quizId)) {
-        courseData.quizIds.push(data.quizId)
+      courseData.participants.add(data.participantName)
+      if (data.totalQuestions > 0) {
+        courseData.totalPercentage += (data.score / data.totalQuestions) * 100
       }
     })
 
     // Convert to array and calculate averages
     const courseByYearArray = Array.from(courseByYearMap.values()).map((yearSemData) => {
       const chartData = Array.from(yearSemData.courses.values()).map((courseData) => {
-        const courseAttempts = scoreData.filter((d) => d.course === courseData.course)
         const avgScore =
-          courseAttempts.length > 0
-            ? Math.round(
-                (courseAttempts.reduce((sum, d) => sum + (d.score / d.totalQuestions) * 100, 0) /
-                  courseAttempts.length) *
-                  10,
-              ) / 10
+          courseData.attempts > 0
+            ? Math.round((courseData.totalPercentage / courseData.attempts) * 10) / 10
             : 0
-
         return {
+          subjectCode: courseData.subjectCode,
           course: courseData.course,
           shortCourse: courseData.course.length > 15 ? `${courseData.course.slice(0, 12)}...` : courseData.course,
-          participants: courseData.participants,
+          participants: courseData.participants.size,
           attempts: courseData.attempts,
           avgScore,
         }
@@ -160,12 +175,12 @@ export async function GET(request: Request) {
     >()
 
     scoreData.forEach((data) => {
-      const key = `${data.year}-${data.semester}-${data.course}`
+      const key = `${data.year}-${data.semester}-${data.subjectCode || data.course}`
       if (!quizTakerMap.has(key)) {
         quizTakerMap.set(key, {
           year: data.year,
           semester: data.semester,
-          course: data.course,
+          course: data.subjectName || data.course,
           participants: new Map(),
         })
       }
@@ -181,7 +196,9 @@ export async function GET(request: Request) {
 
       const participantData = groupData.participants.get(data.participantName)!
       participantData.attempts += 1
-      participantData.totalPercentage += (data.score / data.totalQuestions) * 100
+      if (data.totalQuestions > 0) {
+        participantData.totalPercentage += (data.score / data.totalQuestions) * 100
+      }
     })
 
     // Convert to array
@@ -200,11 +217,62 @@ export async function GET(request: Request) {
       }))
       .sort((a, b) => (a.year === b.year ? (a.semester === b.semester ? a.course.localeCompare(b.course) : a.semester - b.semester) : a.year - b.year))
 
+    // Calculate per-quiz averages (the exact metric requested: average for each quiz)
+    const quizAverageMap = new Map<
+      number,
+      {
+        quizId: number
+        quizTitle: string
+        year: number
+        semester: number
+        participants: Set<string>
+        attempts: number
+        totalPercentage: number
+      }
+    >()
+
+    scoreData.forEach((data) => {
+      if (!quizAverageMap.has(data.quizId)) {
+        quizAverageMap.set(data.quizId, {
+          quizId: data.quizId,
+          quizTitle: data.quizTitle,
+          year: data.year,
+          semester: data.semester,
+          participants: new Set<string>(),
+          attempts: 0,
+          totalPercentage: 0,
+        })
+      }
+
+      const quizData = quizAverageMap.get(data.quizId)!
+      quizData.attempts += 1
+      quizData.participants.add(data.participantId || data.participantName)
+
+      if (data.percentage > 0) {
+        quizData.totalPercentage += data.percentage
+      } else if (data.totalQuestions > 0) {
+        quizData.totalPercentage += (data.score / data.totalQuestions) * 100
+      }
+    })
+
+    const quizAverages = Array.from(quizAverageMap.values())
+      .map((q) => ({
+        quizId: q.quizId,
+        quizTitle: q.quizTitle,
+        year: q.year,
+        semester: q.semester,
+        attempts: q.attempts,
+        participants: q.participants.size,
+        averageScore: q.attempts > 0 ? Math.round((q.totalPercentage / q.attempts) * 10) / 10 : 0,
+      }))
+      .sort((a, b) => b.averageScore - a.averageScore)
+
     // Calculate summary
     const totalAttempts = scoreData.length
+    const validScoreAttempts = scoreData.filter((d) => d.totalQuestions > 0)
     const averageScore =
-      scoreData.length > 0
-        ? Math.round((scoreData.reduce((sum, d) => sum + (d.score / d.totalQuestions) * 100, 0) / scoreData.length) * 10) /
+      validScoreAttempts.length > 0
+        ? Math.round((validScoreAttempts.reduce((sum, d) => sum + (d.score / d.totalQuestions) * 100, 0) / validScoreAttempts.length) * 10) /
           10
         : 0
     const totalParticipants = new Set(scoreData.map((d) => d.participantName)).size
@@ -216,6 +284,7 @@ export async function GET(request: Request) {
       data: {
         courseByYear: courseByYearArray,
         quizTakers: quizTakersArray,
+        quizAverages,
         summary: {
           totalAttempts,
           averageScore,
