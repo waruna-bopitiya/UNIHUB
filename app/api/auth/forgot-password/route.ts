@@ -19,7 +19,7 @@ async function sendOTPEmailWithRetry(email: string, otp: string, maxRetries: num
       const mailOptions = {
         from: process.env.GMAIL_EMAIL,
         to: email,
-        subject: 'UniHub OTP to Reset Your Password',
+        subject: 'Kuppi Site OTP to Reset Your Password',
         html: `<!DOCTYPE html>
 <html>
   <head>
@@ -29,10 +29,10 @@ async function sendOTPEmailWithRetry(email: string, otp: string, maxRetries: num
   <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
     <div style="background-color: white; max-width: 600px; margin: 0 auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">UniHub</h1>
+        <h1 style="color: white; margin: 0; font-size: 28px;">Kuppi Site</h1>
       </div>
       <div style="padding: 30px 20px;">
-        <h2 style="color: #333; margin-top: 0; text-align: center;">UniHub OTP to Reset Your Password</h2>
+        <h2 style="color: #333; margin-top: 0; text-align: center;">Kuppi Site OTP to Reset Your Password</h2>
         <p style="color: #666; font-size: 16px; line-height: 1.6;">
           You requested to reset your password. Use the code below to proceed:
         </p>
@@ -43,14 +43,14 @@ async function sendOTPEmailWithRetry(email: string, otp: string, maxRetries: num
         </div>
         <div style="background-color: #fef8e7; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
           <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
-            <strong>Security:</strong> Never share this code. UniHub staff will never ask for it.
+            <strong>Security:</strong> Never share this code. Kuppi Site staff will never ask for it.
           </p>
         </div>
         <p style="color: #666; font-size: 14px; line-height: 1.6;">
           If you didn't request this, please ignore this email and don't share this code with anyone.
         </p>
         <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
-          UniHub - Student Learning Platform<br>
+          Kuppi Site - Student Learning Platform<br>
           © 2026 All rights reserved
         </p>
       </div>

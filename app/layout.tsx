@@ -8,26 +8,60 @@ import './globals.css'
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://kuppi.site'
+const siteName = 'Kuppi Site'
+const siteDescription =
+  'Kuppi Site is a peer-to-peer learning platform for university students to ask questions, join study groups, share resources, and learn together.'
+
 export const metadata: Metadata = {
-  title: 'UniHub - Peer-to-Peer Learning Platform',
-  description: 'Connect with tutors, join study groups, and learn together. UniHub is a peer-to-peer learning platform for university students featuring live streaming, study materials, and collaborative learning.',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${siteName} | Peer-to-Peer Learning Platform`,
+    template: `%s | ${siteName}`,
+  },
+  description: siteDescription,
+  keywords: [
+    'Kuppi Site',
+    'student learning platform',
+    'peer-to-peer learning',
+    'university study groups',
+    'online tutoring',
+    'study resources',
+    'academic community',
+  ],
+  authors: [{ name: siteName }],
+  creator: siteName,
   generator: 'v0.app',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: siteUrl,
+    siteName,
+    title: `${siteName} | Peer-to-Peer Learning Platform`,
+    description: siteDescription,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${siteName} | Peer-to-Peer Learning Platform`,
+    description: siteDescription,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: '/icon',
+    apple: '/apple-icon',
   },
 }
 

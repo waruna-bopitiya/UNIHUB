@@ -187,7 +187,7 @@ export default function LoginPage() {
           </Link>
           <div className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5 text-indigo-600" />
-            <span className="font-bold text-sm tracking-tight text-slate-800 dark:text-white">UniHub</span>
+            <span className="font-bold text-sm tracking-tight text-slate-800 dark:text-white">Kuppi Site</span>
           </div>
         </div>
       </header>
@@ -202,7 +202,7 @@ export default function LoginPage() {
             {/* Card Header Strip */}
             <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
               <h1 className="text-xl font-bold text-slate-900 dark:text-white">Welcome Back</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sign in to your UniHub account</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sign in to your Kuppi Site account</p>
             </div>
 
             <div className="px-6 py-5 space-y-4">

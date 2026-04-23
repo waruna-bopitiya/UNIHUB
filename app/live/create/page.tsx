@@ -770,7 +770,7 @@ function CreateLiveStreamContent() {
                 <div className="bg-card border border-border rounded-xl p-6 sticky top-6 space-y-5">
                   <h3 className="font-semibold text-foreground">What happens next?</h3>
                   {[
-                    { icon: UploadCloud, label: 'Stream created on YouTube', sub: 'Unlisted – only visible via UniHub' },
+                    { icon: UploadCloud, label: 'Stream created on YouTube', sub: 'Unlisted – only visible via Kuppi Site' },
                     { icon: Radio,       label: 'Stream key generated',      sub: 'OBS or browser streaming' },
                     { icon: Video,       label: 'Camera preview',            sub: 'Preview before going live' },
                     { icon: Send,        label: 'Share in feed',             sub: 'Post appears on the home feed' },

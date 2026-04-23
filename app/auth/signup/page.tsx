@@ -213,7 +213,7 @@ export default function SignupPage() {
           </Link>
           <div className="flex items-center gap-2 text-indigo-600">
             <GraduationCap className="h-5 w-5" />
-            <span className="font-bold text-sm tracking-tight text-slate-800 dark:text-white">UniHub</span>
+            <span className="font-bold text-sm tracking-tight text-slate-800 dark:text-white">Kuppi Site</span>
           </div>
         </div>
       </header>
@@ -230,7 +230,7 @@ export default function SignupPage() {
                 Start your<br />journey today.
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                Join thousands of students learning, sharing, and growing together on UniHub.
+                Join thousands of students learning, sharing, and growing together on Kuppi Site.
               </p>
             </div>
 

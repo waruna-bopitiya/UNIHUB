@@ -430,7 +430,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl md:text-2xl font-bold">
-                👋 Welcome to <span className="text-primary">UniHub</span>
+                👋 Welcome to <span className="text-primary">Kuppi Site</span>
               </h1>
               <p className="text-sm text-muted-foreground">
                 Learn together, grow together

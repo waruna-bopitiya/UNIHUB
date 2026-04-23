@@ -26,7 +26,7 @@ function CommunityContent() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          UniHub Community
+          Kuppi Site Community
         </h1>
         <p className="text-muted-foreground">
           Connect with tutors, join study groups, and learn together

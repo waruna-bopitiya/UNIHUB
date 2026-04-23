@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const testResult = await transporter.sendMail({
       from: gmailEmail,
       to: gmailEmail,
-      subject: 'UniHub - Test Email',
+      subject: 'Kuppi Site - Test Email',
       html: `<!DOCTYPE html>
 <html>
   <head>
@@ -56,10 +56,10 @@ export async function GET(request: NextRequest) {
   </head>
   <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
     <div style="background-color: white; max-width: 600px; margin: 0 auto; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h1 style="color: #667eea; text-align: center; margin-top: 0;">UniHub</h1>
+      <h1 style="color: #667eea; text-align: center; margin-top: 0;">Kuppi Site</h1>
       <h2 style="color: #333; text-align: center;">Email Test Successful ✅</h2>
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
-        This is a test email from UniHub to verify Gmail SMTP is working correctly.
+        This is a test email from Kuppi Site to verify Gmail SMTP is working correctly.
       </p>
       <p style="color: #666; font-size: 16px; line-height: 1.6;">
         If you received this email, your email configuration is ready for OTP and other notifications!
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         </p>
       </div>
       <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-        UniHub - Student Learning Platform
+        Kuppi Site - Student Learning Platform
       </p>
     </div>
   </body>
