@@ -4,12 +4,13 @@ import { ensureTablesExist } from '@/lib/db-init'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // params දැන් Promise එකක් ලෙස type කරන්න
 ) {
   await ensureTablesExist()
 
   try {
-    const { id } = params
+    // params await කරන්න
+    const { id } = await params 
     const { isRead } = await req.json()
 
     if (!id || isRead === undefined) {
@@ -47,12 +48,13 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // මෙතනත් Promise එකක් ලෙස වෙනස් කරන්න
 ) {
   await ensureTablesExist()
 
   try {
-    const { id } = params
+    // params await කරන්න
+    const { id } = await params
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 })

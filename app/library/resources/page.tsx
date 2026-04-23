@@ -199,6 +199,8 @@ export default function ResourcesPage() {
             resource_type: res.resource_type,
             file_path: res.file_path,
             created_at: res.created_at,
+
+            uploadMethod: res.file_path ? "file" : "link"
           })))
           
           await fetchFeedbackStats()
@@ -350,6 +352,7 @@ export default function ResourcesPage() {
           resource_type: newResource.resource_type,
           file_path: newResource.file_path,
           created_at: newResource.created_at,
+          uploadMethod: newResource.file_path ? "file" : "link"
         }
         
         console.log('📝 Resource with ID:', { id: resourceWithId.id, name: resourceWithId.name })
@@ -378,6 +381,12 @@ export default function ResourcesPage() {
 
     if (!file) {
       toast.error('No file selected')
+      setSubmitting(false)
+      return
+    }
+
+    if (!currentUserId) {
+      toast.error('Please log in to upload resources')
       setSubmitting(false)
       return
     }
@@ -433,6 +442,7 @@ export default function ResourcesPage() {
             resource_type: response.resource_type,
             file_path: response.file_path,
             created_at: response.created_at,
+            uploadMethod: response.file_path ? "file" : "link"
           }
 
           setResources((prev) => [resourceWithId, ...prev])
@@ -472,7 +482,7 @@ export default function ResourcesPage() {
   }
 
   // Handle open resource link
-  const handleOpenLink = (shareableLink: string, filePath: string | undefined, resourceName: string) => {
+  const handleOpenLink = (shareableLink: string | undefined, filePath: string | undefined, resourceName: string) => {
     // Try shareable link first, then file path
     const linkToOpen = shareableLink?.trim() || filePath?.trim()
     
@@ -611,6 +621,7 @@ export default function ResourcesPage() {
                       resource_type: res.resource_type,
                       file_path: res.file_path,
                       created_at: res.created_at,
+                      uploadMethod: res.file_path ? "file" : "link"
                     })))
                     
                     return fetch('/api/resources/feedback-stats')
@@ -1165,7 +1176,7 @@ export default function ResourcesPage() {
 
               <div className="flex gap-2">
                 <Button 
-                  onClick={() => handleOpenLink(topResource.shareableLink, topResource.name)}
+                  onClick={() => handleOpenLink(topResource.shareableLink, topResource.file_path, topResource.name)}
                   className="gap-1 shadow-sm hover:shadow-md text-sm h-8"
                   size="sm"
                 >
@@ -1315,7 +1326,7 @@ export default function ResourcesPage() {
                 </div>
 
                 <Button 
-                  onClick={() => handleOpenLink(selectedResource.shareableLink, selectedResource.name)}
+                  onClick={() => handleOpenLink(selectedResource.shareableLink, selectedResource.file_path, selectedResource.name)}
                   className="w-full gap-2"
                   size="lg"
                 >
