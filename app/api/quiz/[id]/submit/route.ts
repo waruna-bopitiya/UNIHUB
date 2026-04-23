@@ -20,14 +20,9 @@ export async function POST(
     }
 
     const body = await req.json()
-    const { answers, participantName = 'Anonymous', quizData } = body
+    const { answers, participantName = 'Anonymous', participantId } = body
 
-    console.log('📝 Quiz submission received:', {
-      quizId,
-      participantName,
-      answersCount: answers?.length,
-      hasQuizData: !!quizData,
-    })
+    console.log('📝 Quiz submission received:', { quizId, participantName, participantId, answersCount: answers?.length })
 
     if (!Array.isArray(answers)) {
       return NextResponse.json(
@@ -36,15 +31,7 @@ export async function POST(
       )
     }
 
-    // Debug: Log all available quizzes
-    console.log('🔍 Debugging: Listing all quizzes in database...')
-    const allQuizzes = await sqlWithRetry(() =>
-      sql`SELECT id, title FROM quizzes LIMIT 10`
-    )
-    console.log('📊 Quizzes in database:', allQuizzes.map((q: any) => ({ id: q.id, title: q.title })))
-
     // Get quiz and questions with retry logic
-    console.log('🔍 Fetching quiz details from database for ID:', quizId, 'Type:', typeof quizId)
     const quizzes = await sqlWithRetry(() =>
       sql`SELECT id, title FROM quizzes WHERE id = ${quizId}`
     )
@@ -53,15 +40,15 @@ export async function POST(
     let questions: any[]
 
     if (quizzes && quizzes.length > 0) {
-      // Quiz found in database
       quiz = quizzes[0]
-      console.log('✅ Quiz found in database:', { id: quiz.id, title: quiz.title })
 
       questions = await sqlWithRetry(() =>
         sql`
           SELECT 
             id,
-            correct_answer as correctAnswer,
+            question_text,
+            options,
+            correct_answer,
             question_order
           FROM quiz_questions
           WHERE quiz_id = ${quizId}
@@ -70,27 +57,35 @@ export async function POST(
       )
 
       if (!questions || questions.length === 0) {
-        console.error('❌ Quiz has no questions with ID:', quizId)
         return NextResponse.json(
           { status: 'error', message: 'Quiz has no questions' },
           { status: 400 }
         )
       }
-    } else if (quizData && Array.isArray(quizData.questions)) {
-      // Quiz not in database - use quiz data from request (for mock quizzes)
-      console.log('⚠️  Quiz not found in database, using quiz data from request (mock quiz)')
-      quiz = { id: quizId, title: quizData.title || 'Quiz' }
-      questions = quizData.questions.map((q: any) => ({
-        id: q.id,
-        correctAnswer: q.correctAnswer,
-      }))
     } else {
-      console.error('❌ Quiz not found with ID:', quizId)
-      console.error('⚠️  Available quizzes:', allQuizzes.length > 0 ? allQuizzes : 'No quizzes in database')
       return NextResponse.json(
         { status: 'error', message: `Quiz not found (ID: ${quizId})` },
         { status: 404 }
       )
+    }
+
+    let resolvedParticipantId: string | null = null
+    let resolvedParticipantName = (participantName || 'Anonymous').trim() || 'Anonymous'
+
+    if (typeof participantId === 'string' && participantId.trim()) {
+      const users = await sqlWithRetry(() =>
+        sql`
+          SELECT id, first_name
+          FROM users
+          WHERE id = ${participantId.trim()}
+          LIMIT 1
+        `,
+      )
+
+      if (users.length > 0) {
+        resolvedParticipantId = users[0].id
+        resolvedParticipantName = users[0].first_name || resolvedParticipantName
+      }
     }
 
     if (answers.length !== questions.length) {
@@ -103,32 +98,61 @@ export async function POST(
       )
     }
 
+    const normalizedAnswers = answers.map((a: unknown) => {
+      const n = Number(a)
+      return Number.isInteger(n) && n >= 0 ? n : -1
+    })
+
     // Calculate score
     let score = 0
     for (let i = 0; i < questions.length; i++) {
-      if (answers[i] === questions[i].correctAnswer) {
+      const userAnswer = normalizedAnswers[i]
+      const rawCorrectAnswer = questions[i].correct_answer
+      const correctAnswer = typeof rawCorrectAnswer === 'string'
+        ? Number(rawCorrectAnswer)
+        : Number(rawCorrectAnswer)
+      if (userAnswer === correctAnswer) {
         score++
       }
     }
 
-    console.log('📊 Score calculated:', { score, total: questions.length })
+    const totalQuestions = questions.length
+    const percentage = totalQuestions > 0 ? Number(((score / totalQuestions) * 100).toFixed(2)) : 0
 
-    // Store response with retry logic
-    console.log('💾 Attempting to insert quiz response with data:', {
-      quizId,
-      participantName,
-      answersCount: answers.length,
-      questionsCount: questions.length,
-      score,
-      answers: answers.slice(0, 3), // Log first 3 answers for debugging
-    })
+    // Build detailed results for each question
+    const detailedResults = []
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i]
+      const userAnswer = normalizedAnswers[i]
+      const correctAnswer = question.correct_answer
+      const normalizedUserAnswer = Number(userAnswer)
+      const normalizedCorrectAnswer = typeof correctAnswer === 'string'
+        ? Number(correctAnswer)
+        : Number(correctAnswer)
+      const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer
+
+      // Parse options - handle both array and string formats
+      const parsedOptions = Array.isArray(question.options)
+        ? question.options
+        : JSON.parse(question.options || '[]')
+
+      detailedResults.push({
+        questionId: question.id,
+        questionText: question.question_text || `Question ${i + 1}`,
+        userAnswer: normalizedUserAnswer,
+        correctAnswer: normalizedCorrectAnswer,
+        options: parsedOptions,
+        isCorrect: isCorrect,
+      })
+    }
+
     const result = await sqlWithRetry(() =>
       sql`
         INSERT INTO quiz_responses
-          (quiz_id, participant_name, answers, score, total_questions)
+          (quiz_id, participant_id, participant_name, answers, score, total_questions, percentage, submitted_at)
         VALUES
-          (${quizId}, ${participantName}, ${answers}, ${score}, ${questions.length})
-        RETURNING id, score, total_questions, date_taken, created_at
+          (${quizId}, ${resolvedParticipantId}, ${resolvedParticipantName}, ${normalizedAnswers}, ${score}, ${totalQuestions}, ${percentage}, NOW())
+        RETURNING id, score, total_questions, percentage, date_taken, created_at
       `
     )
 
@@ -137,19 +161,36 @@ export async function POST(
     }
 
     const response = result[0]
-    console.log('✅ Quiz response saved:', { id: response.id, score: response.score })
 
-    // Update participants count with retry logic
-    console.log('📈 Updating participants count...')
+    // Keep participants count in sync with distinct takers for this quiz
     await sqlWithRetry(() =>
       sql`
-        UPDATE quizzes
-        SET participants = participants + 1
-        WHERE id = ${quizId}
-      `
+        UPDATE quizzes q
+        SET participants = stats.takers
+        FROM (
+          SELECT
+            quiz_id,
+            COUNT(DISTINCT COALESCE(participant_id, participant_name))::int AS takers
+          FROM quiz_responses
+          WHERE quiz_id = ${quizId}
+          GROUP BY quiz_id
+        ) stats
+        WHERE q.id = stats.quiz_id
+      `,
     )
 
-    console.log('✅ Participants count updated')
+    const avgRows = await sqlWithRetry(() =>
+      sql`
+        SELECT
+          COALESCE(ROUND(AVG(percentage), 2), 0)::float AS average_percentage,
+          COUNT(*)::int AS attempts,
+          COUNT(DISTINCT COALESCE(participant_id, participant_name))::int AS participants
+        FROM quiz_responses
+        WHERE quiz_id = ${quizId}
+      `,
+    )
+
+    const quizAverage = avgRows[0] || { average_percentage: 0, attempts: 0, participants: 0 }
 
     return NextResponse.json({
       status: 'success',
@@ -157,8 +198,14 @@ export async function POST(
       data: {
         score: response.score,
         totalQuestions: response.total_questions,
-        percentage: Math.round((response.score / response.total_questions) * 100),
+        percentage: Number(response.percentage ?? percentage),
         dateTaken: response.date_taken,
+        results: detailedResults,
+        quizStats: {
+          averageScore: Number(quizAverage.average_percentage || 0),
+          attempts: Number(quizAverage.attempts || 0),
+          participants: Number(quizAverage.participants || 0),
+        },
       },
     })
   } catch (error: any) {

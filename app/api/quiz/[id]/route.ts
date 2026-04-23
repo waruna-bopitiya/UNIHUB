@@ -30,6 +30,7 @@ export async function GET(
           creator,
           year,
           semester,
+          subject_code,
           course,
           category,
           difficulty,
@@ -59,9 +60,9 @@ export async function GET(
       sql`
         SELECT 
           id,
-          question_text as question,
+          question_text,
           options,
-          correct_answer as correctAnswer,
+          correct_answer,
           question_order
         FROM quiz_questions
         WHERE quiz_id = ${quizId}
@@ -71,15 +72,26 @@ export async function GET(
 
     console.log('✅ Questions fetched:', questions.length, 'questions')
 
+    // Log all questions for debugging
+    questions.forEach((q: any, idx: number) => {
+      console.log(`  Question ${idx}:`, {
+        id: q.id,
+        rawCorrectAnswer: q.correct_answer,
+        parsedCorrectAnswer: parseInt(q.correctAnswer) || 0,
+        optionsType: typeof q.options,
+        options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+      })
+    })
+
     return NextResponse.json({
       status: 'success',
       data: {
         ...quiz,
         questions: (questions || []).map((q) => ({
           id: q.id.toString(),
-          question: q.question,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
+          question: q.question_text,
+          options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+          correctAnswer: Number.isFinite(Number(q.correct_answer)) ? Number(q.correct_answer) : 0,
         })),
       },
     })
@@ -117,6 +129,7 @@ export async function PUT(
       year,
       semester,
       course,
+      subjectCode,
       category,
       difficulty,
       duration,
@@ -132,6 +145,49 @@ export async function PUT(
       )
     }
 
+    // Resolve subject linkage if year/semester/course/subjectCode changed
+    const nextYear = year || existingQuiz[0].year
+    const nextSemester = semester || existingQuiz[0].semester
+    const nextCourse = (course || existingQuiz[0].course || '').trim()
+    const nextSubjectCode = typeof subjectCode === 'string' && subjectCode.trim().length > 0
+      ? subjectCode.trim()
+      : (existingQuiz[0].subject_code || '').trim()
+
+    const subjectRows = nextSubjectCode
+      ? await sqlWithRetry(() =>
+          sql`
+            SELECT subject_code, subject_name
+            FROM subject4years
+            WHERE year = ${nextYear}
+              AND semester = ${nextSemester}
+              AND subject_code = ${nextSubjectCode}
+            LIMIT 1
+          `,
+        )
+      : await sqlWithRetry(() =>
+          sql`
+            SELECT subject_code, subject_name
+            FROM subject4years
+            WHERE year = ${nextYear}
+              AND semester = ${nextSemester}
+              AND LOWER(TRIM(subject_name)) = LOWER(TRIM(${nextCourse}))
+            LIMIT 1
+          `,
+        )
+
+    if (!subjectRows || subjectRows.length === 0) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Selected subject is not valid for the selected year and semester. Please choose a subject from the module list.',
+        },
+        { status: 400 },
+      )
+    }
+
+    const subject = subjectRows[0] as any
+
     // Update quiz
     await sql`
       UPDATE quizzes
@@ -139,9 +195,10 @@ export async function PUT(
         title = ${title || existingQuiz[0].title},
         description = ${description || existingQuiz[0].description},
         creator = ${creator || existingQuiz[0].creator},
-        year = ${year || existingQuiz[0].year},
-        semester = ${semester || existingQuiz[0].semester},
-        course = ${course || existingQuiz[0].course},
+        year = ${nextYear},
+        semester = ${nextSemester},
+        subject_code = ${subject.subject_code},
+        course = ${subject.subject_name},
         category = ${category || existingQuiz[0].category},
         difficulty = ${difficulty || existingQuiz[0].difficulty},
         duration = ${duration || existingQuiz[0].duration},

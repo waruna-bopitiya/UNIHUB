@@ -15,6 +15,7 @@ interface CreateQuizFormProps {
   availableCourses: {
     year: number
     semester: number
+    code?: string
     course: string
     category: string
   }[]
@@ -58,9 +59,8 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       allowedYears.push(i)
     }
     
-    // For semesters: all semesters up to user's semester
-    // Since there are only 2 semesters
-    const allowedSemesters = userSemester === 1 ? [1] : [1, 2]
+    // For semesters: users can create quizzes for all semesters (1 & 2)
+    const allowedSemesters = [1, 2]
     
     return { years: allowedYears, semesters: allowedSemesters }
   }
@@ -75,13 +75,14 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
     : availableCourses
 
   const userPermissionMessage = currentUser 
-    ? `You can create quizzes for: Year${allowedYears.length > 1 ? 's' : ''} ${allowedYears.join(', ')} and Semester${allowedSemesters.length > 1 ? 's' : ''} ${allowedSemesters.join(', ')}`
+    ? `You can create quizzes for: Year${allowedYears.length > 1 ? 's' : ''} ${allowedYears.join(', ')} and All Semesters (1 & 2)`
     : ''
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [year, setYear] = useState<number | ''>('')
   const [semester, setSemester] = useState<number | ''>('')
+  const [subjectCode, setSubjectCode] = useState('')
   const [course, setCourse] = useState('')
   const [difficulty, setDifficulty] = useState('Medium')
   const [duration, setDuration] = useState(30)
@@ -114,8 +115,16 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
   }
 
   const updateQuestion = (id: string, field: string, value: any) => {
+    console.log(`Updating question ${id}, field '${field}' to:`, value, `(type: ${typeof value})`)
     setQuestions(
-      questions.map((q) => (q.id === id ? { ...q, [field]: value } : q))
+      questions.map((q) => {
+        if (q.id === id) {
+          const updated = { ...q, [field]: value }
+          console.log(`  After update, question correctAnswer is:`, updated.correctAnswer, `(type: ${typeof updated.correctAnswer})`)
+          return updated
+        }
+        return q
+      })
     )
   }
 
@@ -157,7 +166,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       nextErrors.semester = 'Please select a semester.'
     }
 
-    if (!course) {
+    if (!subjectCode) {
       nextErrors.course = 'Please select a course.'
     }
 
@@ -201,6 +210,13 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
         questionError.correctAnswer = 'Select a valid correct answer option.'
       }
 
+      console.log(`Question ${questions.indexOf(question)} validation:`, {
+        correctAnswer: question.correctAnswer,
+        correctAnswerType: typeof question.correctAnswer,
+        optionsCount: question.options.length,
+        selectedOption: question.options[question.correctAnswer],
+      })
+
       if (questionError.question || questionError.options || questionError.correctAnswer) {
         nextErrors.questionErrors[question.id] = questionError
       }
@@ -226,7 +242,10 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
     setFormError('')
 
     const selectedCourse = availableCourses.find(
-      (item) => item.year === year && item.semester === semester && item.course === course,
+      (item) =>
+        item.year === year &&
+        item.semester === semester &&
+        (item.code || item.course) === subjectCode,
     )
 
     const quizData = {
@@ -234,7 +253,8 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       description,
       year: typeof year === 'number' ? year : parseInt(year as string),
       semester: typeof semester === 'number' ? semester : parseInt(semester as string),
-      course,
+      subjectCode: selectedCourse?.code || subjectCode || null,
+      course: selectedCourse?.course || course,
       category: selectedCourse?.category || 'Computer Science',
       difficulty,
       duration,
@@ -253,6 +273,17 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       questionsCount: quizData.questions.length,
     })
 
+    // Log all questions to verify correctAnswer is set
+    quizData.questions.forEach((q: any, idx: number) => {
+      console.log(`  Question ${idx}:`, {
+        question: q.question.substring(0, 50),
+        correctAnswer: q.correctAnswer,
+        correctAnswerType: typeof q.correctAnswer,
+        selectedOption: q.options[q.correctAnswer],
+        optionsCount: q.options.length,
+      })
+    })
+
     try {
       setIsSubmitting(true)
       await onSubmit(quizData)
@@ -261,6 +292,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
       setDescription('')
       setYear('')
       setSemester('')
+      setSubjectCode('')
       setCourse('')
       setDifficulty('Medium')
       setDuration(30)
@@ -285,25 +317,24 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
   // Calculate options for year/semester/course dropdowns
   const yearOptions = allowedYears
 
-  // For semester options: depends on which year is selected
-  // - For years below user's year: show both semesters (1 & 2)
-  // - For user's own year: show semesters up to their current semester
+  // For semester options: show all semesters (1 & 2) for any selected year
   const semesterOptions = year === '' 
     ? [] 
-    : currentUser && year < currentUser.year
-      ? [1, 2]  // Years below current year: all semesters
-      : allowedSemesters  // Current year: only up to user's semester
+    : [1, 2]  // Always show both semesters for any selected year
 
   const courseOptions =
     year === '' || semester === ''
       ? []
-      : Array.from(
-          new Set(
-            filteredCourses
-              .filter((item) => item.year === year && item.semester === semester)
-              .map((item) => item.course),
-          ),
-        ).sort((a, b) => a.localeCompare(b))
+      : filteredCourses
+          .filter((item) => item.year === year && item.semester === semester)
+          .reduce((acc, item) => {
+            const key = item.code || item.course
+            if (!acc.find((existing) => (existing.code || existing.course) === key)) {
+              acc.push(item)
+            }
+            return acc
+          }, [] as Array<{ year: number; semester: number; code?: string; course: string; category: string }>)
+          .sort((a, b) => a.course.localeCompare(b.course))
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -366,6 +397,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                   const nextValue = e.target.value
                   setYear(nextValue === '' ? '' : Number(nextValue))
                   setSemester('')
+                  setSubjectCode('')
                   setCourse('')
                 }}
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -390,6 +422,7 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                 onChange={(e) => {
                   const nextValue = e.target.value
                   setSemester(nextValue === '' ? '' : Number(nextValue))
+                  setSubjectCode('')
                   setCourse('')
                 }}
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -411,16 +444,26 @@ export function CreateQuizForm({ onSubmit, availableCourses, currentUser }: Crea
                 Course *
               </label>
               <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
+                value={subjectCode}
+                onChange={(e) => {
+                  const nextCode = e.target.value
+                  setSubjectCode(nextCode)
+                  const selected = courseOptions.find(
+                    (item) => (item.code || item.course) === nextCode,
+                  )
+                  setCourse(selected?.course || '')
+                }}
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 required
                 disabled={year === '' || semester === ''}
               >
                 <option value="">Select course</option>
                 {courseOptions.map((optionCourse) => (
-                  <option key={optionCourse} value={optionCourse}>
-                    {optionCourse}
+                  <option
+                    key={optionCourse.code || optionCourse.course}
+                    value={optionCourse.code || optionCourse.course}
+                  >
+                    {optionCourse.code ? `${optionCourse.code} - ${optionCourse.course}` : optionCourse.course}
                   </option>
                 ))}
               </select>
