@@ -10,6 +10,15 @@ interface Question {
   correctAnswer: number
 }
 
+interface DetailedResult {
+  questionId: string
+  questionText: string
+  userAnswer: number
+  correctAnswer: number
+  options: string[]
+  isCorrect: boolean
+}
+
 interface TakeQuizProps {
   quiz: {
     id: string
@@ -38,9 +47,10 @@ interface TakeQuizProps {
     firstName: string
     email: string
   }
+  detailedResults?: DetailedResult[]
   onAddComment: (name: string, message: string) => void
   onAddRating: (name: string, rating: number) => void
-  onComplete: (score: number, answers: number[]) => void
+  onComplete: (score: number, answers: number[]) => Promise<{ score: number; totalQuestions: number } | null>
   onCancel: () => void
 }
 
@@ -50,6 +60,7 @@ export function TakeQuiz({
   quizComments,
   quizRatings,
   currentUser,
+  detailedResults,
   onAddComment,
   onAddRating,
   onComplete,
@@ -122,7 +133,7 @@ export function TakeQuiz({
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Check if all questions are answered
     const unansweredQuestions = answers.filter((a) => a === null).length
     if (unansweredQuestions > 0) {
@@ -130,15 +141,16 @@ export function TakeQuiz({
       return
     }
 
-    let correctCount = 0
-    quiz.questions.forEach((question, index) => {
-      if (answers[index] === question.correctAnswer) {
-        correctCount++
-      }
-    })
-    setScore(correctCount)
+    // Server is the source of truth for scoring.
+    const fallbackScore = quiz.questions.reduce((acc, question, index) => {
+      const userAnswer = answers[index]
+      const correctAnswer = typeof question.correctAnswer === 'string' ? Number.parseInt(question.correctAnswer, 10) : question.correctAnswer
+      return userAnswer === correctAnswer ? acc + 1 : acc
+    }, 0)
+
+    const completionResult = await onComplete(fallbackScore, answers as number[])
+    setScore(completionResult?.score ?? fallbackScore)
     setShowResults(true)
-    onComplete(correctCount, answers as number[])
   }
 
   const formatTime = (seconds: number) => {
@@ -193,56 +205,69 @@ export function TakeQuiz({
           </div>
         </div>
 
-        {/* Results breakdown - HIDDEN */}
-        {false && (
+        {/* Results breakdown - Show detailed answer review */}
+        {detailedResults && detailedResults.length > 0 ? (
         <div className="space-y-4 mb-6">
-          <h3 className="font-semibold text-foreground mb-4">Review Answers</h3>
-          {quiz.questions.map((question, index) => {
-            const userAnswer = answers[index]
-            const isCorrect = userAnswer === question.correctAnswer
+          <h3 className="font-semibold text-foreground mb-4">Review Your Answers</h3>
+          {detailedResults.map((result, index) => {
+            console.log(`Displaying result ${index}:`, {
+              isCorrect: result.isCorrect,
+              userAnswer: result.userAnswer,
+              correctAnswer: result.correctAnswer,
+              optionsType: typeof result.options,
+              optionsLength: Array.isArray(result.options) ? result.options.length : 'not-array',
+            })
             return (
-              <div
-                key={question.id}
-                className="border border-border rounded-lg p-4"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  {isCorrect ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500 mt-1 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground mb-2">
-                      Question {index + 1}: {question.question}
-                    </p>
-                    <div className="space-y-2">
-                      {question.options.map((option, optIndex) => {
-                        const isUserAnswer = userAnswer === optIndex
-                        const isCorrectAnswer = question.correctAnswer === optIndex
-                        return (
-                          <div
-                            key={optIndex}
-                            className={`px-3 py-2 rounded text-sm ${
-                              isCorrectAnswer
-                                ? 'bg-green-500/10 text-green-500 font-medium'
-                                : isUserAnswer
-                                ? 'bg-red-500/10 text-red-500'
-                                : 'bg-secondary text-muted-foreground'
-                            }`}
-                          >
-                            {option}
-                            {isCorrectAnswer && ' ✓ Correct'}
-                            {isUserAnswer && !isCorrectAnswer && ' ✗ Your answer'}
-                          </div>
-                        )
-                      })}
-                    </div>
+            <div
+              key={result.questionId}
+              className="border border-border rounded-lg p-4"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                {result.isCorrect ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-500 mt-1 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium text-foreground mb-2">
+                    Question {index + 1}: {result.questionText}
+                  </p>
+                  <div className="space-y-2">
+                    {Array.isArray(result.options) && result.options.map((option, optIndex) => {
+                      const isUserAnswer = result.userAnswer === optIndex
+                      const isCorrectAnswer = result.correctAnswer === optIndex
+                      return (
+                        <div
+                          key={optIndex}
+                          className={`px-3 py-2 rounded text-sm ${
+                            isCorrectAnswer
+                              ? 'bg-green-500/10 text-green-700 dark:text-green-400 font-medium border border-green-500/30'
+                              : isUserAnswer
+                              ? 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/30'
+                              : 'bg-secondary text-muted-foreground'
+                          }`}
+                        >
+                          {option}
+                          {isCorrectAnswer && ' ✓'}
+                          {isUserAnswer && !isCorrectAnswer && ' ✗'}
+                        </div>
+                      )
+                    })}
+                    {!Array.isArray(result.options) && (
+                      <p className="text-red-500 text-sm">Error: Options are not in array format</p>
+                    )}
                   </div>
                 </div>
               </div>
-            )
-          })}
+            </div>
+          )})}
         </div>
+        ) : (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
+            <p className="text-yellow-700 dark:text-yellow-400 text-sm">
+              {detailedResults ? 'No detailed results available' : 'Loading detailed results...'}
+            </p>
+          </div>
         )}
 
         <div className="border border-border rounded-lg p-4 mb-6">
@@ -466,9 +491,7 @@ export function TakeQuiz({
                 key={index}
                 onClick={() => setCurrentQuestion(index)}
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                  answers[index] !== null
-                    ? 'bg-green-500/20 border-2 border-green-500 text-green-600'
-                    : currentQuestion === index
+                  currentQuestion === index
                     ? 'bg-primary border-2 border-primary text-primary-foreground'
                     : 'bg-secondary border-2 border-border text-muted-foreground hover:border-primary'
                 }`}
@@ -488,32 +511,38 @@ export function TakeQuiz({
 
         {/* Options */}
         <div className="space-y-3">
-          {question.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => handleAnswerSelect(index)}
-              className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
-                answers[currentQuestion] === index
-                  ? 'border-primary bg-primary/10 text-foreground font-medium'
-                  : 'border-border bg-background text-foreground hover:border-primary/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    answers[currentQuestion] === index
-                      ? 'border-primary bg-primary'
-                      : 'border-border'
-                  }`}
-                >
-                  {answers[currentQuestion] === index && (
-                    <div className="w-3 h-3 rounded-full bg-primary-foreground" />
-                  )}
+          {question.options.map((option, index) => {
+            const isSelected = answers[currentQuestion] === index
+            const hasAnswered = answers[currentQuestion] !== null
+            
+            return (
+              <button
+                key={index}
+                onClick={() => handleAnswerSelect(index)}
+                disabled={hasAnswered}
+                className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
+                  isSelected
+                    ? 'border-primary bg-primary/10 text-foreground font-medium'
+                    : 'border-border bg-background text-foreground hover:border-primary/50'
+                } ${hasAnswered ? 'cursor-not-allowed' : ''}`}
+              >
+                <div className="flex items-center gap-3 justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold ${
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border'
+                      }`}
+                    >
+                      {isSelected && <div className="w-3 h-3 rounded-full bg-primary-foreground" />}
+                    </div>
+                    <span>{option}</span>
+                  </div>
                 </div>
-                <span>{option}</span>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
 

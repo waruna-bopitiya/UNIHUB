@@ -12,7 +12,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { useState, useEffect } from 'react'
-import { BookOpen, Download, Search, Star, Trophy } from 'lucide-react'
+import { BookOpen, Download, Loader2, Search, Star, Trophy } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { jsPDF } from 'jspdf'
 
@@ -29,6 +29,33 @@ interface Quiz {
   year: number
   semester: number
   course: string
+  takers?: number
+  attempts?: number
+  averageScore?: number
+}
+
+interface SubjectCatalogRow {
+  year: number
+  semester: number
+  code: string
+  name: string
+}
+
+interface SubjectParticipant {
+  name: string
+  attempts: number
+  averageScore: number
+}
+
+interface SubjectScoreRow {
+  year: number
+  semester: number
+  code: string
+  name: string
+  takers: number
+  attempts: number
+  averageScore: number
+  participants: SubjectParticipant[]
 }
 
 interface QuizResult {
@@ -58,680 +85,12 @@ interface QuizRating {
   date: string
 }
 
-const mockQuizzes: Quiz[] = [
-  {
-    id: '1',
-    title: 'Communication Skills - Written Communication',
-    description: 'Test your knowledge on written communication techniques',
-    creator: 'Prof. Sarah Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary goal of written communication?',
-        options: [
-          'To entertain the reader',
-          'To clearly convey information and ideas',
-          'To use complex vocabulary',
-          'To make the text longer',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 15,
-    participants: 234,
-    category: 'Communication',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Communication Skills',
-  },
-  {
-    id: '2',
-    title: 'Mathematics - Algebra Fundamentals',
-    description: 'Test your understanding of algebraic concepts',
-    creator: 'Dr. James Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the solution to 2x + 5 = 13?',
-        options: ['2', '4', '6', '8'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 189,
-    category: 'Mathematics',
-    difficulty: 'Medium',
-    year: 1,
-    semester: 1,
-    course: 'Mathematics for Computing',
-  },
-  {
-    id: '3',
-    title: 'Computer Systems - Hardware Basics',
-    description: 'Learn about computer hardware components',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'What does CPU stand for?',
-        options: [
-          'Central Process Unit',
-          'Central Processing Unit',
-          'Computer Personal Unit',
-          'Central Processor Utility',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 10,
-    participants: 412,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Introduction to Computer Systems',
-  },
-  {
-    id: '4',
-    title: 'Computing Systems - Operating Systems',
-    description: 'Understand operating systems and their functions',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the main role of an operating system?',
-        options: [
-          'To provide user entertainment',
-          'To manage hardware and software resources',
-          'To create programs',
-          'To store files only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 12,
-    participants: 356,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Introduction to Computing Systems',
-  },
-  {
-    id: '5',
-    title: 'Programming - Variables and Data Types',
-    description: 'Master variables and data types in programming',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is a variable in programming?',
-        options: [
-          'A named container for storing data values',
-          'A type of loop',
-          'A function parameter',
-          'A conditional statement',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 18,
-    participants: 298,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 1,
-    course: 'Introduction to Programming',
-  },
-  {
-    id: '6',
-    title: 'Software Architecture Patterns',
-    description: 'Understand common software architecture patterns',
-    creator: 'Prof. Michael Rodriguez',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the MVC pattern?',
-        options: [
-          'Model-View-Controller',
-          'Multiple-Version-Control',
-          'Memory-Virtual-Cache',
-          'Module-Variable-Container',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 20,
-    participants: 245,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 2,
-    semester: 1,
-    course: 'Software Engineering',
-  },
-  {
-    id: '19',
-    title: 'Operating Systems and System Administration - Fundamentals',
-    description: 'Test key concepts in operating systems and system administration',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'Which component is responsible for process scheduling?',
-        options: ['Compiler', 'Kernel', 'Database engine', 'Network card'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 201,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 1,
-    course: 'Operating Systems and System Administration',
-  },
-  {
-    id: '20',
-    title: 'Computer Neteorks - Network Basics',
-    description: 'Assess understanding of foundational computer networking concepts',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'Which device forwards packets between networks?',
-        options: ['Switch', 'Router', 'Hub', 'Repeater'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 16,
-    participants: 187,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 2,
-    semester: 1,
-    course: 'Computer Neteorks',
-  },
-  {
-    id: '21',
-    title: 'Database Mangement Systems - Relational Design',
-    description: 'Evaluate database management system and relational model basics',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What does SQL primarily manage?',
-        options: ['Network routes', 'Relational data', 'Operating system logs', 'Hardware drivers'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 17,
-    participants: 214,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 1,
-    course: 'Database Mangement Systems',
-  },
-  {
-    id: '22',
-    title: 'Object Oriented Programming - Core Principles',
-    description: 'Practice core principles of object-oriented programming',
-    creator: 'Dr. James Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which OOP principle hides implementation details?',
-        options: ['Inheritance', 'Abstraction', 'Recursion', 'Compilation'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 19,
-    participants: 226,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 2,
-    semester: 1,
-    course: 'Object Oriented Programming',
-  },
-  {
-    id: '7',
-    title: 'Employability Skills Development - Advanced Career Skills',
-    description: 'Assess advanced communication and workplace readiness skills',
-    creator: 'Dr. Lisa Anderson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which practice improves interview performance the most?',
-        options: [
-          'No preparation',
-          'Practicing role-specific questions and communication',
-          'Arriving late intentionally',
-          'Ignoring feedback',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 16,
-    participants: 188,
-    category: 'Professional Development',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 1,
-    course: 'Employability Skills Development',
-  },
-  {
-    id: '23',
-    title: 'IT Project Mnagement - Planning and Execution',
-    description: 'Test core project management concepts in IT environments',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'Which process helps identify potential project risks early?',
-        options: ['Risk assessment', 'Code refactoring', 'UI prototyping only', 'Database seeding'],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 17,
-    participants: 175,
-    category: 'Project Management',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 1,
-    course: 'IT Project Mnagement',
-  },
-  {
-    id: '24',
-    title: 'Programming Applications and Frameworks - Practical Development',
-    description: 'Evaluate your understanding of frameworks and application architecture',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'What is a key benefit of using frameworks?',
-        options: [
-          'No need for structure',
-          'Reusable patterns and faster development',
-          'Eliminates testing entirely',
-          'Removes need for documentation',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 211,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 1,
-    course: 'Programming Applications and Frameworks',
-  },
-  {
-    id: '25',
-    title: 'Database Systems - Advanced Concepts',
-    description: 'Assess understanding of transactions, indexing, and performance',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'What does ACID primarily ensure in databases?',
-        options: ['Styling consistency', 'Reliable transactions', 'Faster internet speed', 'Mobile responsiveness'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 204,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 1,
-    course: 'Database Systems',
-  },
-  {
-    id: '26',
-    title: 'Neywork Design and Mnagement - Enterprise Networking',
-    description: 'Test enterprise network design and management fundamentals',
-    creator: 'Prof. Michael Rodriguez',
-    questions: [
-      {
-        id: '1',
-        question: 'Which is essential when designing scalable enterprise networks?',
-        options: ['No redundancy', 'Single point of failure', 'Capacity planning and segmentation', 'Random IP allocation'],
-        correctAnswer: 2,
-      },
-    ],
-    duration: 19,
-    participants: 193,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 1,
-    course: 'Neywork Design and Mnagement',
-  },
-  {
-    id: '8',
-    title: 'Advanced Cloud Computing',
-    description: 'Explore advanced cloud computing technologies and strategies',
-    creator: 'Prof. David Thompson',
-    questions: [
-      {
-        id: '1',
-        question: 'What are the three main cloud service models?',
-        options: [
-          'IaaS, PaaS, SaaS',
-          'Mac, Linux, Windows',
-          'HTTP, FTP, SMTP',
-          'SQL, NoSQL, GraphQL',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 22,
-    participants: 167,
-    category: 'Computer Science',
-    difficulty: 'Hard',
-    year: 4,
-    semester: 2,
-    course: 'Cloud Computing',
-  },
-  {
-    id: '13',
-    title: 'Internet & Web Technology - Core Concepts',
-    description: 'Test your understanding of internet and web technology fundamentals',
-    creator: 'Dr. James Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'Which protocol is primarily used to securely load web pages?',
-        options: ['FTP', 'SMTP', 'HTTPS', 'SSH'],
-        correctAnswer: 2,
-      },
-    ],
-    duration: 18,
-    participants: 191,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 2,
-    course: 'Internet & Web Technology',
-  },
-  {
-    id: '14',
-    title: 'Information System & Data Modeling - Foundations',
-    description: 'Assess practical concepts in information systems and data modeling',
-    creator: 'Prof. Sarah Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'Which model is commonly used for relational database design?',
-        options: [
-          'ER model',
-          'OSI model',
-          'Waterfall model',
-          'MVC model',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 14,
-    participants: 170,
-    category: 'Computer Science',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 2,
-    course: 'Information System & Data Modeling',
-  },
-  {
-    id: '15',
-    title: 'English for Academic Purposes - Academic Writing',
-    description: 'Practice English skills needed for academic communication',
-    creator: 'Prof. Emily Davis',
-    questions: [
-      {
-        id: '1',
-        question: 'Which is most important in academic writing?',
-        options: [
-          'Informal slang usage',
-          'Clear structure and evidence-based arguments',
-          'Very long sentences only',
-          'No references',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 15,
-    participants: 177,
-    category: 'Professional Development',
-    difficulty: 'Easy',
-    year: 1,
-    semester: 2,
-    course: 'English for Academic Purposes',
-  },
-  {
-    id: '16',
-    title: 'Software Process Modeling - Process Lifecycle',
-    description: 'Understand software process models and lifecycle practices',
-    creator: 'Alex Kumar',
-    questions: [
-      {
-        id: '1',
-        question: 'Which model is iterative and risk-driven?',
-        options: ['Waterfall', 'Spiral', 'Big Bang', 'V-Model only'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 17,
-    participants: 183,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 1,
-    semester: 2,
-    course: 'Software Process Modeling',
-  },
-  {
-    id: '17',
-    title: 'Object Oriented Concept - Core Principles',
-    description: 'Evaluate your understanding of object-oriented concepts and design',
-    creator: 'Dr. Robert Chen',
-    questions: [
-      {
-        id: '1',
-        question: 'Which OOP concept allows one interface with many implementations?',
-        options: ['Encapsulation', 'Polymorphism', 'Compilation', 'Serialization'],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 239,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 1,
-    semester: 2,
-    course: 'Object Oriented Concept',
-  },
-  {
-    id: '18',
-    title: 'Mobile Application Development - Fundamentals',
-    description: 'Test core concepts in modern mobile application development',
-    creator: 'Prof. Michael Rodriguez',
-    questions: [
-      {
-        id: '1',
-        question: 'Which is a common concern in mobile app development?',
-        options: [
-          'Battery and performance optimization',
-          'Desktop BIOS updates',
-          'Server rack layout',
-          'Printer driver installation',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 19,
-    participants: 209,
-    category: 'Computer Science',
-    difficulty: 'Medium',
-    year: 2,
-    semester: 2,
-    course: 'Mobile Application Development',
-  },
-  {
-    id: '27',
-    title: 'Business Management for IT - Strategic IT Management',
-    description: 'Understand IT management and strategic business alignment',
-    creator: 'Dr. Sarah Johnson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary goal of IT management in organizations?',
-        options: [
-          'To maximize hardware spending',
-          'To align IT strategy with business objectives',
-          'To eliminate all technology costs',
-          'To prevent all system updates',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 20,
-    participants: 198,
-    category: 'Business',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 2,
-    course: 'Business Management for IT',
-  },
-  {
-    id: '28',
-    title: 'Data Science & Analytics - Advanced Analytics',
-    description: 'Explore data science techniques and analytics methodologies',
-    creator: 'Prof. Michael Zhang',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary purpose of exploratory data analysis?',
-        options: [
-          'To delete data',
-          'To understand data patterns and characteristics',
-          'To encrypt sensitive information',
-          'To increase data size',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 22,
-    participants: 215,
-    category: 'Data Science',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 2,
-    course: 'Data Science & Analytics',
-  },
-  {
-    id: '29',
-    title: 'Information Assurance & Security - Security Fundamentals',
-    description: 'Master information security principles and assurance practices',
-    creator: 'Prof. James McCarthy',
-    questions: [
-      {
-        id: '1',
-        question: 'What are the three pillars of information security (CIA triad)?',
-        options: [
-          'Confidentiality, Integrity, Availability',
-          'Computer, Internet, Application',
-          'Centralized, Integrated, Automated',
-          'Capability, Implementation, Assessment',
-        ],
-        correctAnswer: 0,
-      },
-    ],
-    duration: 21,
-    participants: 187,
-    category: 'Security',
-    difficulty: 'Hard',
-    year: 3,
-    semester: 2,
-    course: 'Information Assurance & Security',
-  },
-  {
-    id: '30',
-    title: 'Human Computer Interaction - User Experience Design',
-    description: 'Learn HCI principles and user experience design methodologies',
-    creator: 'Dr. Emma Wilson',
-    questions: [
-      {
-        id: '1',
-        question: 'What is the primary focus of user-centered design?',
-        options: [
-          'Maximizing technical complexity',
-          'Understanding user needs and designing accordingly',
-          'Reducing design costs',
-          'Using the latest technologies only',
-        ],
-        correctAnswer: 1,
-      },
-    ],
-    duration: 18,
-    participants: 172,
-    category: 'Design',
-    difficulty: 'Medium',
-    year: 3,
-    semester: 2,
-    course: 'Human Computer Interaction',
-  },
-]
-
-const ensureThreeQuestions = (quiz: Quiz): Quiz => {
-  if (quiz.questions.length >= 3) {
-    return quiz
-  }
-
-  const topic = quiz.course || quiz.category
-  const generatedQuestions = [
-    {
-      id: `auto-${quiz.id}-1`,
-      question: `Which statement best describes a core concept in ${topic}?`,
-      options: [
-        'Only memorizing definitions matters',
-        'Understanding concepts and applying them to problems is essential',
-        'There is always only one way to solve tasks',
-        'Practice is not required if theory is known',
-      ],
-      correctAnswer: 1,
-    },
-    {
-      id: `auto-${quiz.id}-2`,
-      question: `Which practice most improves performance in ${topic}?`,
-      options: [
-        'Skipping revision',
-        'Ignoring feedback',
-        'Regular practice with feedback and reflection',
-        'Studying only the night before',
-      ],
-      correctAnswer: 2,
-    },
-    {
-      id: `auto-${quiz.id}-3`,
-      question: `When solving a ${topic} problem, what should you do first?`,
-      options: [
-        'Guess an answer immediately',
-        'Identify requirements and constraints',
-        'Avoid reading the full question',
-        'Pick the longest option',
-      ],
-      correctAnswer: 1,
-    },
-  ]
-
-  const needed = 3 - quiz.questions.length
-  return {
-    ...quiz,
-    questions: [...quiz.questions, ...generatedQuestions.slice(0, needed)],
-  }
+interface CourseData {
+  year: number
+  semester: number
+  code: string
+  name: string
 }
-
-const normalizedQuizzes: Quiz[] = mockQuizzes.map(ensureThreeQuestions)
 
 const studentNames = [
   'Nimal Perera',
@@ -781,12 +140,15 @@ export default function QuizPage() {
   const [activeTab, setActiveTab] = useState<'browse' | 'create' | 'results' | 'score'>('browse')
   const [scoreView, setScoreView] = useState<'courseByYear' | 'quizTakers'>('courseByYear')
   const [selectedScoreYear, setSelectedScoreYear] = useState<number | 'all'>('all')
-  const [quizzes, setQuizzes] = useState<Quiz[]>(normalizedQuizzes)
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [availableCourses, setAvailableCourses] = useState<Array<{ year: number; semester: number; code: string; course: string; category: string }>>([])
+  const [subjectCatalogRows, setSubjectCatalogRows] = useState<SubjectCatalogRow[]>([])
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null)
   const [previewQuiz, setPreviewQuiz] = useState<Quiz | null>(null)
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
   const [quizComments, setQuizComments] = useState<Record<string, QuizComment[]>>({})
   const [quizRatings, setQuizRatings] = useState<Record<string, QuizRating[]>>({})
+  const [detailedResults, setDetailedResults] = useState<any[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
@@ -796,6 +158,9 @@ export default function QuizPage() {
   const [scoreSearch, setScoreSearch] = useState('')
   const [hoveredCourseKey, setHoveredCourseKey] = useState<string | null>(null)
   const [isCreatingQuiz, setIsCreatingQuiz] = useState(false)
+  const [loadingBrowseData, setLoadingBrowseData] = useState(true)
+  const [loadingResultsData, setLoadingResultsData] = useState(false)
+  const [loadingQuizPreview, setLoadingQuizPreview] = useState(false)
 
   // Score data from API
   const [scoreDataFromApi, setScoreDataFromApi] = useState<any>(null)
@@ -837,25 +202,130 @@ export default function QuizPage() {
     fetchCurrentUser()
   }, [])
 
+  // Function to fetch and merge statistics with quiz data
+  const fetchAndMergeStatistics = async (quizzes: Quiz[]) => {
+    try {
+      console.log('Fetching quiz statistics...')
+      
+      const response = await fetch('/api/quiz/scores')
+      const result = await response.json()
+      
+      if (result.status === 'success' && result.data) {
+        console.log('Statistics fetched successfully')
+        
+        // Merge statistics with quiz data
+        const quizzesWithStats = quizzes.map(quiz => {
+          const stats = result.data.courseByYear?.find((stat: any) => 
+            stat.year === quiz.year && stat.semester === quiz.semester
+          )
+          const courseStats = stats?.chartData?.find((course: any) => course.course === quiz.course)
+          
+          return {
+            ...quiz,
+            takers: courseStats?.participants || 0,
+            attempts: courseStats?.attempts || 0,
+            averageScore: courseStats?.avgScore || 0,
+          }
+        })
+        
+        setQuizzes(quizzesWithStats)
+        console.log('Statistics merged with quiz data')
+      }
+    } catch (error) {
+      console.error('Error fetching statistics:', error)
+      // Still set quizzes without stats if stats fetch fails
+      setQuizzes(quizzes)
+    }
+  }
+
   // Fetch quizzes from database on page load
+  // Function to generate courses for all years and semesters
+  const generateCoursesForAllYears = async () => {
+    try {
+      console.log('🎓 Generating courses for all years and semesters...')
+      
+      const response = await fetch('/api/quiz/generate-courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      const result = await response.json()
+      
+      if (result.status === 'success') {
+        console.log('✅ Courses generated successfully:', result.data)
+        return result.data
+      } else {
+        console.error('❌ Failed to generate courses:', result.message)
+        return null
+      }
+    } catch (error) {
+      console.error('❌ Error generating courses:', error)
+      return null
+    }
+  } // Added closing brace here
+
   // Function to fetch quizzes from database
   const fetchQuizzesFromDatabase = async () => {
+    setLoadingBrowseData(true)
     try {
-      console.log('📚 Fetching quizzes from database...')
-      const response = await fetch('/api/quiz')
-      const result = await response.json()
+      console.log('Fetching courses from subject4years table...')
+      
+      // Fetch courses from the database (only use existing categorized courses)
+      const coursesResponse = await fetch('/api/quiz/courses')
+      const coursesResult = await coursesResponse.json()
 
-      if (result.status === 'success' && Array.isArray(result.data)) {
-        console.log('✅ Quizzes loaded from database:', result.data.length, 'quizzes')
-        // Map database quizzes to Quiz type and merge with mock data with null checks
-        const dbQuizzes = result.data
-          .filter((q: any) => q && q.id) // Filter out any quizzes with missing id
+      if (coursesResult.status === 'success' && Array.isArray(coursesResult.data)) {
+        console.log('✅ Courses loaded from database:', coursesResult.data.length, 'courses')
+        const courseRows = coursesResult.data as CourseData[]
+        setSubjectCatalogRows(
+          courseRows.map((row) => ({
+            year: row.year,
+            semester: row.semester,
+            code: row.code,
+            name: row.name,
+          })),
+        )
+        const courseMap = courseRows.reduce(
+          (map: Map<string, { year: number; semester: number; code: string; course: string; category: string }>, c: CourseData) => {
+            const key = `${c.year}-${c.semester}-${c.code}`
+            if (!map.has(key)) {
+              map.set(key, {
+                year: c.year,
+                semester: c.semester,
+                code: c.code,
+                course: c.name,
+                category: 'Course',
+              })
+            }
+            return map
+          },
+          new Map<string, { year: number; semester: number; code: string; course: string; category: string }>(),
+        )
+        const uniqueCourses = Array.from(courseMap.values())
+        setAvailableCourses(uniqueCourses)
+      } else {
+        console.log('⚠️ Error loading courses from database')
+        setAvailableCourses([])
+        setSubjectCatalogRows([])
+      }
+
+      // Fetch existing quizzes from database
+      const quizzesResponse = await fetch('/api/quiz')
+      const quizzesResult = await quizzesResponse.json()
+
+      let dbQuizzes: Quiz[] = []
+      if (quizzesResult.status === 'success' && Array.isArray(quizzesResult.data)) {
+        console.log('✅ Quizzes loaded from database:', quizzesResult.data.length)
+        dbQuizzes = quizzesResult.data
+          .filter((q: any) => q && q.id)
           .map((q: any) => ({
             id: (q.id || '').toString(),
             title: q.title || 'Untitled Quiz',
             description: q.description || '',
             creator: q.creator || 'Unknown',
-            questions: [], // Questions will be loaded separately if needed
+            questions: [],
             duration: q.duration || 0,
             participants: q.participants || 0,
             category: q.category || 'General',
@@ -863,65 +333,20 @@ export default function QuizPage() {
             year: q.year || 1,
             semester: q.semester || 1,
             course: q.course || 'Unknown Course',
+            takers: q.takers || 0,
+            attempts: q.attempts || 0,
+            averageScore: q.averageScore || 0,
           }))
-        
-        console.log('✅ Processed', dbQuizzes.length, 'quizzes from database')
-        // Merge mock quizzes to ensure Year 1 and Year 2 courses are always available
-        let finalQuizzes = dbQuizzes
-        if (dbQuizzes.length > 0) {
-          // Check database courses for Year 1 and Year 2
-          const year1DbCourses = new Set(
-            dbQuizzes
-              .filter((q: any) => q.year === 1)
-              .map((q: any) => q.course)
-          )
-          
-          const year2DbCourses = new Set(
-            dbQuizzes
-              .filter((q: any) => q.year === 2)
-              .map((q: any) => q.course)
-          )
-          
-          // Add mock quizzes for Year 1 to ensure these courses are available:
-          // Semester 1: Communication Skills, Mathematics for Computing, 
-          //            Introduction to Computer Systems, Introduction to Programming
-          // Semester 2: Internet & Web Technology, Information System & Data Modeling,
-          //            English for Academic Purposes, Software Process Modeling,
-          //            Object Oriented Concept
-          const year1MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 1
-          )
-          
-          // Add mock quizzes for Year 2, Semester 1 to ensure these courses are available:
-          // - Operating Systems and System Administration
-          // - Computer Networks
-          // - Database Management Systems
-          // - Object Oriented Programming
-          // - Software Engineering
-          const year2MockQuizzes = normalizedQuizzes.filter(
-            (q) => q.year === 2
-          )
-          
-          // Add mock quizzes only if they fill gaps in the database
-          const mockQuizzesToAdd = [
-            ...year1MockQuizzes.filter(
-              (mock) => !year1DbCourses.has(mock.course)
-            ),
-            ...year2MockQuizzes.filter(
-              (mock) => !year2DbCourses.has(mock.course)
-            ),
-          ]
-          
-          finalQuizzes = [...dbQuizzes, ...mockQuizzesToAdd]
-        }
-        setQuizzes(finalQuizzes.length > 0 ? finalQuizzes : normalizedQuizzes)
-      } else {
-        console.log('⚠️ No quizzes found in database, using mock data')
-        setQuizzes(normalizedQuizzes)
       }
+
+      // Fetch and merge statistics with real quizzes only
+      await fetchAndMergeStatistics(dbQuizzes)
     } catch (error) {
-      console.error('❌ Error fetching quizzes from database:', error)
-      setQuizzes(normalizedQuizzes)
+      console.error('❌ Error fetching courses from database:', error)
+      setAvailableCourses([])
+      setQuizzes([])
+    } finally {
+      setLoadingBrowseData(false)
     }
   }
 
@@ -933,27 +358,31 @@ export default function QuizPage() {
   useEffect(() => {
     const fetchQuizResultsFromDatabase = async () => {
       try {
-        if (!currentUser?.firstName) {
+        setLoadingResultsData(true)
+        if (!currentUser?.id) {
           console.log('⏭️  Skipping results fetch - no user logged in')
+          setLoadingResultsData(false)
           return
         }
 
-        console.log('📊 Fetching quiz results from database for user:', currentUser.firstName)
-        const response = await fetch(`/api/quiz/results?participantName=${encodeURIComponent(currentUser.firstName)}`)
+        console.log('📊 Fetching quiz results from database for user ID:', currentUser.id)
+        const response = await fetch(
+          `/api/quiz/results?participantId=${encodeURIComponent(currentUser.id)}&participantName=${encodeURIComponent(currentUser.firstName || '')}`,
+        )
         const result = await response.json()
 
         if (result.status === 'success' && Array.isArray(result.data)) {
           console.log('✅ Quiz results loaded from database:', result.data.length, 'results')
           // Map results to QuizResult type with null checks
           const dbResults = result.data
-            .filter((r: any) => r && r.quizId) // Filter out any results with missing data
+            .filter((r: any) => r && (r.quizId || r.quiz_id)) // Filter out any results with missing data
             .map((r: any) => ({
-              quizId: r.quizId.toString(),
-              quizTitle: r.quizTitle || 'Unknown Quiz',
-              participantName: r.participantName || 'Anonymous',
+              quizId: (r.quizId || r.quiz_id).toString(),
+              quizTitle: r.quizTitle || r.title || 'Unknown Quiz',
+              participantName: r.participantName || r.participant_name || 'Anonymous',
               score: r.score || 0,
-              totalQuestions: r.totalQuestions || 0,
-              dateTaken: r.dateTaken ? new Date(r.dateTaken).toLocaleDateString() : 'Unknown Date',
+              totalQuestions: r.totalQuestions || r.total_questions || 0,
+              dateTaken: r.dateTaken || r.date_taken ? new Date(r.dateTaken || r.date_taken).toLocaleDateString() : 'Unknown Date',
             }))
           
           console.log('✅ Processed', dbResults.length, 'quiz results')
@@ -966,6 +395,8 @@ export default function QuizPage() {
       } catch (error) {
         console.error('❌ Error fetching quiz results from database:', error)
         setQuizResults([])
+      } finally {
+        setLoadingResultsData(false)
       }
     }
 
@@ -976,11 +407,6 @@ export default function QuizPage() {
   useEffect(() => {
     const fetchScoreDataFromDatabase = async () => {
       try {
-        if (!quizResults || quizResults.length === 0) {
-          console.log('⏭️  Skipping score data fetch - no quiz results yet')
-          return
-        }
-
         console.log('📊 Fetching score statistics from database...')
         setLoadingScoreData(true)
         const response = await fetch('/api/quiz/scores')
@@ -991,16 +417,18 @@ export default function QuizPage() {
           setScoreDataFromApi(result.data)
         } else {
           console.log('⚠️ Failed to fetch score data:', result.message)
+          setScoreDataFromApi(null)
         }
       } catch (error) {
         console.error('❌ Error fetching score data from database:', error)
+        setScoreDataFromApi(null)
       } finally {
         setLoadingScoreData(false)
       }
     }
 
     fetchScoreDataFromDatabase()
-  }, [quizResults])
+  }, [])
 
   const downloadCsv = (fileName: string, rows: Array<Array<string | number>>) => {
     const escapeCsv = (value: string | number) => {
@@ -1242,6 +670,7 @@ export default function QuizPage() {
   }
 
   const handleTakeQuiz = async (quizId: string) => {
+    setLoadingQuizPreview(true)
     try {
       // Fetch full quiz details with questions from API
       const response = await fetch(`/api/quiz/${quizId}`)
@@ -1261,28 +690,19 @@ export default function QuizPage() {
         fetchQuizComments(quizId)
       } else {
         console.error('Failed to fetch quiz details:', result.message)
-        // Fallback to quiz from list if API fails
-        const quiz = quizzes.find((q) => q.id === quizId)
-        if (quiz) {
-          setPreviewQuiz(quiz)
-          fetchQuizRatings(quizId)
-          fetchQuizComments(quizId)
-        }
+        alert('Failed to load quiz questions. Please try again.')
       }
     } catch (error) {
       console.error('Error fetching quiz details:', error)
-      // Fallback to quiz from list if API fails
-      const quiz = quizzes.find((q) => q.id === quizId)
-      if (quiz) {
-        setPreviewQuiz(quiz)
-        fetchQuizRatings(quizId)
-        fetchQuizComments(quizId)
-      }
+      alert('Failed to load quiz questions. Please try again.')
+    } finally {
+      setLoadingQuizPreview(false)
     }
   }
 
   const handleStartQuizFromPreview = () => {
     if (previewQuiz) {
+      setDetailedResults([])
       setSelectedQuiz(previewQuiz)
       setPreviewQuiz(null)
       // Load ratings and comments from database
@@ -1295,8 +715,8 @@ export default function QuizPage() {
     setPreviewQuiz(null)
   }
 
-  const handleQuizComplete = async (score: number, answers: number[]) => {
-    if (!selectedQuiz) return
+  const handleQuizComplete = async (score: number, answers: number[]): Promise<{ score: number; totalQuestions: number } | null> => {
+    if (!selectedQuiz) return null
 
     try {
       console.log('📤 Submitting quiz response to database:', {
@@ -1311,6 +731,7 @@ export default function QuizPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers,
+          participantId: currentUser?.id || null,
           participantName: currentUser?.firstName || 'You',
           quizData: {
             title: selectedQuiz.title,
@@ -1324,10 +745,28 @@ export default function QuizPage() {
       if (!response.ok) {
         console.error('❌ API error:', result.message)
         alert('Failed to save your quiz response: ' + result.message)
-        return
+        return null
       }
 
       console.log('✅ Quiz response saved to database successfully!')
+
+      // Store detailed results from API response
+      if (result.data.results) {
+        console.log('🎯 Received detailed results from API:', {
+          count: result.data.results.length,
+          firstQuestion: result.data.results[0] ? {
+            questionId: result.data.results[0].questionId,
+            userAnswer: result.data.results[0].userAnswer,
+            correctAnswer: result.data.results[0].correctAnswer,
+            isCorrect: result.data.results[0].isCorrect,
+            optionsCount: result.data.results[0].options?.length,
+          } : null,
+        })
+        setDetailedResults(result.data.results)
+        console.log('✅ Detailed results captured:', result.data.results.length, 'questions')
+      } else {
+        console.warn('⚠️  No results in API response:', result.data)
+      }
 
       // Update local state with actual response from API
       const quizResult: QuizResult = {
@@ -1349,9 +788,14 @@ export default function QuizPage() {
       )
 
       console.log('✅ Quiz complete! Your response has been saved.')
+      return {
+        score: result.data.score,
+        totalQuestions: result.data.totalQuestions,
+      }
     } catch (error) {
       console.error('❌ Failed to submit quiz:', error)
       alert('Failed to submit quiz. Please try again.')
+      return null
     }
   }
 
@@ -1468,6 +912,102 @@ export default function QuizPage() {
   const scoreDataFromApiCourseByYear = scoreDataFromApi?.courseByYear || null
   const scoreDataFromApiQuizTakers = scoreDataFromApi?.quizTakers || null
   const scoreDataSummary = scoreDataFromApi?.summary || { totalAttempts: 0, averageScore: 0, totalParticipants: 0 }
+
+  const subjectScoreRows: SubjectScoreRow[] = subjectCatalogRows
+    .map((subject) => {
+      const matchingYearGroup = Array.isArray(scoreDataFromApiCourseByYear)
+        ? scoreDataFromApiCourseByYear.find(
+            (group: any) => group.year === subject.year && group.semester === subject.semester,
+          )
+        : null
+
+      const subjectNameLower = subject.name.trim().toLowerCase()
+      const matchingCourseStats = matchingYearGroup?.chartData?.find((course: any) => {
+        const courseNameLower = String(course.course || '').trim().toLowerCase()
+        return (
+          courseNameLower === subjectNameLower ||
+          courseNameLower.includes(subjectNameLower) ||
+          subjectNameLower.includes(courseNameLower)
+        )
+      })
+
+      const matchingTakerStats = Array.isArray(scoreDataFromApiQuizTakers)
+        ? scoreDataFromApiQuizTakers.find(
+            (group: any) =>
+              group.year === subject.year &&
+              group.semester === subject.semester &&
+              String(group.course || '').trim().toLowerCase() === subjectNameLower,
+          )
+        : null
+
+      const participants: SubjectParticipant[] = Array.isArray(matchingTakerStats?.rows)
+        ? matchingTakerStats.rows.map((row: any) => ({
+            name: row.name,
+            attempts: row.attempts || 0,
+            averageScore: row.averageScore || 0,
+          }))
+        : []
+
+      return {
+        year: subject.year,
+        semester: subject.semester,
+        code: subject.code,
+        name: subject.name,
+        takers: matchingCourseStats?.participants || 0,
+        attempts: matchingCourseStats?.attempts || 0,
+        averageScore: matchingCourseStats?.avgScore || 0,
+        participants,
+      }
+    })
+    .sort((a, b) =>
+      a.year === b.year
+        ? a.semester === b.semester
+          ? a.code.localeCompare(b.code)
+          : a.semester - b.semester
+        : a.year - b.year,
+    )
+
+  const subjectScoreRowsWithScores = subjectScoreRows.filter((row) => row.takers > 0 || row.attempts > 0)
+  const subjectScoreGroups = Array.from(
+    subjectScoreRows.reduce((map, row) => {
+      const key = `${row.year}-${row.semester}`
+      if (!map.has(key)) {
+        map.set(key, { year: row.year, semester: row.semester, rows: [] as typeof subjectScoreRows })
+      }
+      map.get(key)!.rows.push(row)
+      return map
+    }, new Map<string, { year: number; semester: number; rows: typeof subjectScoreRows }>()),
+  )
+    .map(([, value]) => ({
+      ...value,
+      rows: value.rows.sort((a, b) => a.code.localeCompare(b.code)),
+    }))
+    .sort((a, b) => (a.year === b.year ? a.semester - b.semester : a.year - b.year))
+
+  const subjectAvailableScoreYears = Array.from(new Set(subjectScoreRows.map((row) => row.year))).sort((a, b) => a - b)
+  const filteredSubjectScoreGroups =
+    selectedScoreYear === 'all'
+      ? subjectScoreGroups
+      : subjectScoreGroups.filter((group) => group.year === selectedScoreYear)
+
+  const normalizedSubjectScoreSearch = scoreSearch.trim().toLowerCase()
+  const searchedSubjectScoreGroups = filteredSubjectScoreGroups
+    .map((group) => ({
+      ...group,
+      rows: group.rows.filter((row) => {
+        if (!normalizedSubjectScoreSearch) return true
+        return (
+          row.name.toLowerCase().includes(normalizedSubjectScoreSearch) ||
+          row.code.toLowerCase().includes(normalizedSubjectScoreSearch)
+        )
+      }),
+    }))
+    .filter((group) => group.rows.length > 0)
+
+  const topSubject = [...subjectScoreRowsWithScores].sort((a, b) => b.averageScore - a.averageScore)[0]
+  const lowSubject = [...subjectScoreRowsWithScores].sort((a, b) => a.averageScore - b.averageScore)[0]
+  const totalSubjects = subjectCatalogRows.length
+  const subjectsWithScores = subjectScoreRowsWithScores.length
 
   // Fallback calculated data (for backward compatibility if API is not ready)
   const calculatedCategorizedScoreData = yearSemesterBuckets.map((bucket) => {
@@ -1678,20 +1218,7 @@ export default function QuizPage() {
     return acc
   }, {} as Record<string, Array<{ name: string; attempts: number; totalPercentage: number; averageScore: number }>>)
 
-  const createQuizCourseOptions = Array.from(
-    quizzes.reduce((map, quiz) => {
-      const key = `${quiz.year}-${quiz.semester}-${quiz.course}`
-      if (!map.has(key)) {
-        map.set(key, {
-          year: quiz.year,
-          semester: quiz.semester,
-          course: quiz.course,
-          category: quiz.category,
-        })
-      }
-      return map
-    }, new Map<string, { year: number; semester: number; course: string; category: string }>()),
-  ).map(([, value]) => value)
+  const createQuizCourseOptions = availableCourses
 
   const normalizedScoreSearch = scoreSearch.trim().toLowerCase()
   const searchedCategorizedScoreData = filteredCategorizedScoreData
@@ -1749,6 +1276,7 @@ export default function QuizPage() {
             quizComments={combinedComments}
             quizRatings={combinedRatings}
             currentUser={currentUser}
+            detailedResults={detailedResults}
             onAddComment={(name, message) =>
               handleAddQuizComment(selectedQuiz.id, name, message)
             }
@@ -1764,7 +1292,7 @@ export default function QuizPage() {
   return (
     <AppLayout>
       <div className="w-full py-6 px-4 md:px-6 lg:px-8">
-        {/* Header */}
+        Header
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Quiz Platform
@@ -1889,8 +1417,15 @@ export default function QuizPage() {
         {/* Content */}
         {activeTab === 'browse' && (
           <div>
+            {loadingBrowseData ? (
+              <div className="bg-card border border-border rounded-lg p-10 text-center mb-6">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">Loading Quiz Data</h3>
+                <p className="text-muted-foreground">Fetching courses and quizzes from the database...</p>
+              </div>
+            ) : null}
             {/* Year Selection */}
-            {selectedYear === null ? (
+            {!loadingBrowseData && selectedYear === null ? (
               <div>
                 <h2 className="text-2xl font-bold text-foreground mb-6">Select Year</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1910,7 +1445,7 @@ export default function QuizPage() {
                   ))}
                 </div>
               </div>
-            ) : selectedSemester === null ? (
+            ) : !loadingBrowseData && selectedSemester === null ? (
               /* Semester Selection */
               <div>
                 <button
@@ -1942,7 +1477,7 @@ export default function QuizPage() {
                   ))}
                 </div>
               </div>
-            ) : selectedCourse === null ? (
+            ) : !loadingBrowseData && selectedCourse === null ? (
               /* Course Selection */
               <div>
                 <button
@@ -1957,9 +1492,9 @@ export default function QuizPage() {
                 {(() => {
                   const courses = Array.from(
                     new Set(
-                      quizzes
-                        .filter((q) => q.year === selectedYear && q.semester === selectedSemester)
-                        .map((q) => q.course)
+                      availableCourses
+                        .filter((c) => c.year === selectedYear && c.semester === selectedSemester)
+                        .map((c) => c.course)
                     )
                   ).filter((course) =>
                     browseCourseSearch.trim() === ''
@@ -2020,7 +1555,7 @@ export default function QuizPage() {
                   )
                 })()}
               </div>
-            ) : (
+            ) : !loadingBrowseData ? (
               /* Quiz List */
               <div>
                 <button
@@ -2096,7 +1631,7 @@ export default function QuizPage() {
                   )
                 })()}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -2140,7 +1675,13 @@ export default function QuizPage() {
               </p>
             </div>
 
-            {quizResults.length === 0 ? (
+            {loadingResultsData ? (
+              <div className="text-center py-12 bg-card border border-border rounded-lg">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">Loading Results</h3>
+                <p className="text-muted-foreground">Fetching your quiz attempts...</p>
+              </div>
+            ) : quizResults.length === 0 ? (
               <div className="text-center py-12 bg-card border border-border rounded-lg">
                 <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -2297,10 +1838,48 @@ export default function QuizPage() {
         {activeTab === 'score' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">Score Summary Diagram</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Subject4Years Database Details</h3>
               <p className="text-muted-foreground">
-                Categorized summary of courses by year and semester.
+                Live Neon catalog rows from subject4years, joined with quiz score aggregates.
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Subject Rows</p>
+                <p className="text-2xl font-bold text-foreground">{totalSubjects}</p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Subjects With Scores</p>
+                <p className="text-2xl font-bold text-foreground">{subjectsWithScores}</p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
+                <p className="text-2xl font-bold text-foreground">{scoreDataSummary.totalAttempts}</p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Average Score</p>
+                <p className="text-2xl font-bold text-foreground">{scoreDataSummary.averageScore}%</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Top Scoring Subject</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {topSubject
+                    ? `${topSubject.code} - ${topSubject.name} (${topSubject.averageScore}%)`
+                    : 'No scored subjects yet'}
+                </p>
+              </div>
+              <div className="bg-card border border-border rounded-lg p-5">
+                <p className="text-sm text-muted-foreground mb-1">Lowest Scoring Subject</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {lowSubject
+                    ? `${lowSubject.code} - ${lowSubject.name} (${lowSubject.averageScore}%)`
+                    : 'No scored subjects yet'}
+                </p>
+              </div>
             </div>
 
             <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2311,7 +1890,7 @@ export default function QuizPage() {
                   onChange={(e) => setScoreView(e.target.value as 'courseByYear' | 'quizTakers')}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
                 >
-                  <option value="courseByYear">Course Scores by Year</option>
+                  <option value="courseByYear">Subject Scores by Year</option>
                   <option value="quizTakers">Quiz Takers Scores</option>
                 </select>
               </div>
@@ -2324,7 +1903,7 @@ export default function QuizPage() {
                     type="text"
                     value={scoreSearch}
                     onChange={(e) => setScoreSearch(e.target.value)}
-                    placeholder="Search by course name"
+                    placeholder="Search by subject code or name"
                     className="w-full pl-10 pr-3 py-2 rounded-lg border border-border bg-background text-foreground"
                   />
                 </div>
@@ -2341,7 +1920,7 @@ export default function QuizPage() {
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground"
                   >
                     <option value="all">All Years</option>
-                    {availableScoreYears.map((year) => (
+                    {subjectAvailableScoreYears.map((year) => (
                       <option key={year} value={year}>
                         Year {year}
                       </option>
@@ -2351,50 +1930,42 @@ export default function QuizPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-sm text-muted-foreground mb-1">Total Quizzes</p>
-                <p className="text-2xl font-bold text-foreground">{quizzes.length}</p>
+            {loadingScoreData && (
+              <div className="bg-card border border-border rounded-lg p-4 text-sm text-muted-foreground">
+                Loading live score data from Neon...
               </div>
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-sm text-muted-foreground mb-1">Year/Semester Groups</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {scoreView === 'courseByYear'
-                    ? searchedCategorizedScoreData.length
-                    : searchedCourseTakerScoreByYearSemester.length}
-                </p>
-              </div>
-              <div className="bg-card border border-border rounded-lg p-5">
-                <p className="text-sm text-muted-foreground mb-1">Total Attempts</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {scoreView === 'courseByYear' ? totalAttempts : participantAttemptRows.length}
-                </p>
-              </div>
-            </div>
+            )}
 
             {scoreView === 'courseByYear' ? (
-              searchedCategorizedScoreData.length === 0 ? (
+              searchedSubjectScoreGroups.length === 0 ? (
                 <div className="bg-card border border-border rounded-lg p-8 text-center">
-                  <p className="text-muted-foreground">No course score data for the selected year.</p>
+                  <p className="text-muted-foreground">No subject score data for the selected year.</p>
                 </div>
               ) : (
-                searchedCategorizedScoreData.map((group, index) => (
-                  <div key={`category-score-${group.year}-${group.semester}-${index}`} className="bg-card border border-border rounded-lg p-4">
+                searchedSubjectScoreGroups.map((group, index) => (
+                  <div key={`subject-score-${group.year}-${group.semester}-${index}`} className="bg-card border border-border rounded-lg p-4">
                     <h4 className="text-lg font-semibold text-foreground mb-1">
                       Year {group.year} - Semester {group.semester}
                     </h4>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Course-wise participants, attempts, and average scores.
+                      Average score diagram for submitted quiz attempts in this year and semester.
                     </p>
                     <ChartContainer
-                      id={`score-${group.year}-${group.semester}-${index}`}
+                      id={`subject-average-score-${group.year}-${group.semester}-${index}`}
                       config={scoreChartConfig}
                       className="h-[360px] w-full"
                     >
-                      <BarChart data={group.chartData} margin={{ left: 12, right: 12, top: 16, bottom: 32 }}>
+                      <BarChart
+                        data={group.rows.map((subjectRow) => ({
+                          code: subjectRow.code,
+                          name: subjectRow.name,
+                          averageScore: subjectRow.averageScore,
+                        }))}
+                        margin={{ left: 12, right: 12, top: 16, bottom: 40 }}
+                      >
                         <CartesianGrid vertical={false} />
                         <XAxis
-                          dataKey="shortCourse"
+                          dataKey="code"
                           tickLine={false}
                           axisLine={false}
                           interval={0}
@@ -2402,21 +1973,20 @@ export default function QuizPage() {
                           textAnchor="end"
                           height={72}
                         />
-                        <YAxis yAxisId="left" tickLine={false} axisLine={false} />
-                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          domain={[0, 100]}
+                        />
                         <ChartTooltip
                           cursor={false}
                           content={
                             <ChartTooltipContent
-                              labelFormatter={(_, payload) =>
-                                payload?.[0]?.payload?.course ?? 'Course summary'
-                              }
+                              labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? 'Subject'}
                             />
                           }
                         />
-                        <Bar yAxisId="left" dataKey="participants" fill="var(--color-participants)" radius={4} />
-                        <Bar yAxisId="left" dataKey="attempts" fill="var(--color-attempts)" radius={4} />
-                        <Bar yAxisId="right" dataKey="avgScore" fill="var(--color-avgScore)" radius={4} />
+                        <Bar dataKey="averageScore" name="Average Score %" fill="var(--color-avgScore)" radius={4} />
                       </BarChart>
                     </ChartContainer>
                   </div>
@@ -2426,11 +1996,11 @@ export default function QuizPage() {
               <div className="bg-card border border-border rounded-lg p-4">
                 <h4 className="text-lg font-semibold text-foreground mb-1">Quiz Takers Score Summary</h4>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Score summary for students who took quizzes across all courses.
+                  Score summary for students who took quizzes across all subjects in subject4years.
                 </p>
 
                 <div className="space-y-4">
-                  {searchedCourseTakerScoreByYearSemester.map((yearGroup, index) => (
+                  {searchedSubjectScoreGroups.map((yearGroup, index) => (
                     <div
                       key={`taker-score-${yearGroup.year}-${yearGroup.semester}-${index}`}
                       className="border border-border rounded-lg p-4"
@@ -2442,86 +2012,24 @@ export default function QuizPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-border">
-                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Course</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Code</th>
+                              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Subject</th>
                               <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Takers</th>
                               <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Attempts</th>
                               <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Average Score</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {yearGroup.rows.map((courseRow) => (
+                            {yearGroup.rows.map((subjectRow) => (
                               <tr
-                                key={`${courseRow.year}-${courseRow.semester}-${courseRow.course}`}
+                                key={`${subjectRow.year}-${subjectRow.semester}-${subjectRow.code}`}
                                 className="border-b border-border/60"
                               >
-                                <td className="py-2 pr-4 text-foreground font-medium">
-                                  <div
-                                    className="relative inline-block"
-                                    onMouseEnter={() =>
-                                      setHoveredCourseKey(
-                                        `${courseRow.year}-${courseRow.semester}-${courseRow.course}`,
-                                      )
-                                    }
-                                    onMouseLeave={() => setHoveredCourseKey(null)}
-                                  >
-                                    <span className="cursor-help underline decoration-dotted underline-offset-4">
-                                      {courseRow.course}
-                                    </span>
-
-                                    {hoveredCourseKey ===
-                                      `${courseRow.year}-${courseRow.semester}-${courseRow.course}` && (
-                                      <div className="absolute left-0 top-full mt-2 z-20 min-w-[420px] max-w-[520px] rounded-lg border border-border bg-card p-3 shadow-xl">
-                                        <p className="text-xs font-semibold text-foreground mb-2">
-                                          Child Scores
-                                        </p>
-                                        {(childScoresByCourseGroup[
-                                          `${courseRow.year}-${courseRow.semester}-${courseRow.course}`
-                                        ] || []).length === 0 ? (
-                                          <p className="text-xs text-muted-foreground">
-                                            No child scores yet.
-                                          </p>
-                                        ) : (
-                                          <div>
-                                            <p className="text-[11px] text-muted-foreground mb-2">
-                                              Student name and score
-                                            </p>
-                                            <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
-                                              {(childScoresByCourseGroup[
-                                                `${courseRow.year}-${courseRow.semester}-${courseRow.course}`
-                                              ] || []).map((child) => (
-                                                <div key={child.name} className="space-y-1">
-                                                  <div className="flex items-center justify-between gap-3 text-[11px]">
-                                                    <span className="text-foreground font-medium truncate">
-                                                      {child.name}
-                                                    </span>
-                                                    <span className="text-foreground font-semibold">
-                                                      {child.averageScore}%
-                                                    </span>
-                                                  </div>
-                                                  <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
-                                                    <div
-                                                      className={`h-full rounded-full transition-all ${
-                                                        child.averageScore >= 75
-                                                          ? 'bg-green-500'
-                                                          : child.averageScore >= 50
-                                                          ? 'bg-yellow-500'
-                                                          : 'bg-red-500'
-                                                      }`}
-                                                      style={{ width: `${Math.max(0, Math.min(100, child.averageScore))}%` }}
-                                                    />
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-2 pr-4 text-foreground">{courseRow.takers}</td>
-                                <td className="py-2 pr-4 text-foreground">{courseRow.attempts}</td>
-                                <td className="py-2 pr-4 text-foreground">{courseRow.averageScore}%</td>
+                                <td className="py-2 pr-4 text-foreground font-medium">{subjectRow.code}</td>
+                                <td className="py-2 pr-4 text-foreground font-medium">{subjectRow.name}</td>
+                                <td className="py-2 pr-4 text-foreground">{subjectRow.takers}</td>
+                                <td className="py-2 pr-4 text-foreground">{subjectRow.attempts}</td>
+                                <td className="py-2 pr-4 text-foreground">{subjectRow.averageScore}%</td>
                               </tr>
                             ))}
                           </tbody>
@@ -2530,34 +2038,6 @@ export default function QuizPage() {
                     </div>
                   ))}
                 </div>
-
-                {participantScoreData.length > 0 && (
-                  <div className="mt-6">
-                    <h5 className="text-base font-semibold text-foreground mb-2">Top Takers</h5>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Name</th>
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Attempts</th>
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Quizzes Taken</th>
-                            <th className="text-left py-2 pr-4 text-muted-foreground font-medium">Average Score</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {participantScoreData.slice(0, 8).map((participant) => (
-                            <tr key={participant.name} className="border-b border-border/60">
-                              <td className="py-2 pr-4 text-foreground font-medium">{participant.name}</td>
-                              <td className="py-2 pr-4 text-foreground">{participant.attempts}</td>
-                              <td className="py-2 pr-4 text-foreground">{participant.quizzesTaken}</td>
-                              <td className="py-2 pr-4 text-foreground">{participant.averageScore}%</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -2643,7 +2123,18 @@ export default function QuizPage() {
             </div>
           </div>
         )}
+
+        {loadingQuizPreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-foreground mb-1">Loading Quiz</h3>
+              <p className="text-muted-foreground">Preparing questions and details...</p>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   )
 }
+

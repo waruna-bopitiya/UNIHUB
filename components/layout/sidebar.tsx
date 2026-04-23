@@ -9,9 +9,11 @@ const navItems = [
   { href: '/live', label: 'Kuppi Live', icon: Video },
   //{ href: '/library', label: 'Library', icon: BookOpen },
   { href: '/quiz', label: 'quiz', icon: BookOpen },
-  { href: '/library/resources', label: 'Resources', icon: BookOpen },
+ { href: '/library/resources', label: 'Resources', icon: BookOpen },
   { href: '/community', label: 'Community', icon: Users },
    { href: '/TutorForm1', label: 'Be a Tutor', icon: GraduationCap },
+   { href: '/settings', label: 'Settings', icon: Settings },
+
 ]
 
 interface SidebarProps {
