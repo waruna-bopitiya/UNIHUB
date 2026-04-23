@@ -27,6 +27,8 @@ export async function ensureTablesExist() {
       bio                  TEXT,
       avatar               VARCHAR(500),
       password             TEXT         NOT NULL,
+      gpa                  DECIMAL(3, 2),
+      badges               TEXT[]       DEFAULT '{}',
       created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
       updated_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
       last_login           TIMESTAMPTZ,
@@ -39,6 +41,91 @@ export async function ensureTablesExist() {
   await sql`CREATE INDEX IF NOT EXISTS idx_users_year_semester ON users(year_of_university, semester)`
   await sql`CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login DESC NULLS LAST)`
+
+  // Add badges and GPA columns for existing databases
+  try {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gpa DECIMAL(3, 2)`
+    console.log('✅ Added gpa column to users')
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('ℹ️ gpa column already exists:', e?.message)
+    }
+  }
+
+  try {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS badges TEXT[] DEFAULT '{}'`
+    console.log('✅ Added badges column to users')
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('ℹ️ badges column already exists:', e?.message)
+    }
+  }
+
+  // Create index for GPA queries
+  await sql`CREATE INDEX IF NOT EXISTS idx_users_gpa ON users(gpa)`
+
+  // Create function to automatically update badges based on GPA
+  try {
+    await sql`
+      DROP FUNCTION IF EXISTS update_user_badges() CASCADE;
+    `
+    console.log('✅ Dropped old update_user_badges function')
+  } catch (e: any) {
+    // Function might not exist, that's fine
+  }
+
+  try {
+    await sql`
+      CREATE FUNCTION update_user_badges()
+      RETURNS TRIGGER AS $$
+      DECLARE
+        badge_array TEXT[];
+      BEGIN
+        -- Clear badges first
+        badge_array := '{}';
+        
+        -- Only add badges if GPA is not NULL
+        IF NEW.gpa IS NOT NULL THEN
+          IF NEW.gpa >= 4.0 THEN
+            badge_array := array_append(badge_array, 'Gold Scholar');
+          ELSIF NEW.gpa > 3.7 THEN
+            badge_array := array_append(badge_array, 'Silver Scholar');
+          ELSIF NEW.gpa > 3.5 THEN
+            badge_array := array_append(badge_array, 'Bronze Scholar');
+          END IF;
+        END IF;
+        
+        NEW.badges := badge_array;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `
+    console.log('✅ Created update_user_badges function')
+  } catch (e: any) {
+    console.log('ℹ️ update_user_badges function error:', e?.message)
+  }
+
+  // Create trigger to automatically update badges when GPA changes
+  try {
+    await sql`
+      DROP TRIGGER IF EXISTS trigger_update_user_badges ON users CASCADE;
+    `
+    console.log('✅ Dropped old trigger_update_user_badges')
+  } catch (e: any) {
+    // Trigger might not exist, that's fine
+  }
+
+  try {
+    await sql`
+      CREATE TRIGGER trigger_update_user_badges
+      BEFORE INSERT OR UPDATE ON users
+      FOR EACH ROW
+      EXECUTE FUNCTION update_user_badges();
+    `
+    console.log('✅ Created trigger_update_user_badges')
+  } catch (e: any) {
+    console.log('ℹ️ trigger creation error:', e?.message)
+  }
 
   // Table for storing OTP for password reset
   await sql`

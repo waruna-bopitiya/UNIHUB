@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Trash2, Loader2 } from 'lucide-react'
 
 interface Comment {
@@ -196,12 +197,19 @@ export function Comments({ postId, currentUserId, onCommentAdded }: CommentsProp
         ) : (
           comments.map((comment) => (
             <div key={comment.id} className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs font-bold text-card-foreground shrink-0">
-                {comment.user_avatar}
-              </div>
+              <Link href={`/qna/profile/${comment.user_id}`}>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xs font-bold text-card-foreground shrink-0 hover:opacity-80 transition-opacity">
+                  {comment.user_avatar}
+                </div>
+              </Link>
               <div className="flex-1">
                 <div className="bg-secondary rounded-lg px-3 py-2">
-                  <p className="font-medium text-sm text-foreground">{comment.user_name}</p>
+                  <Link 
+                    href={`/qna/profile/${comment.user_id}`}
+                    className="font-medium text-sm text-foreground hover:text-primary transition-colors"
+                  >
+                    {comment.user_name}
+                  </Link>
                   <p className="text-sm text-foreground py-1">{comment.content}</p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{timeAgo(comment.created_at)}</p>

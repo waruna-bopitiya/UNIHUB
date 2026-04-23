@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
           q.downvotes,
           u.first_name,
           u.second_name,
+          u.badges,
           COUNT(a.id) as answer_count,
           qv.vote_type as user_vote
         FROM questions q
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
         WHERE q.subject_code = ${subjectCode} 
           AND q.year = ${yearNum}
           AND q.semester = ${semesterNum}
-        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, qv.vote_type
+        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, u.badges, qv.vote_type
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
           q.downvotes,
           u.first_name,
           u.second_name,
+          u.badges,
           COUNT(a.id) as answer_count,
           qv.vote_type as user_vote
         FROM questions q
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN answers a ON q.id = a.question_id
         LEFT JOIN question_votes qv ON q.id = qv.question_id AND qv.user_id = ${userId || null}
         WHERE q.subject_code = ${subjectCode}
-        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, qv.vote_type
+        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, u.badges, qv.vote_type
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -94,6 +96,7 @@ export async function GET(request: NextRequest) {
           q.downvotes,
           u.first_name,
           u.second_name,
+          u.badges,
           COUNT(a.id) as answer_count,
           qv.vote_type as user_vote
         FROM questions q
@@ -101,7 +104,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN answers a ON q.id = a.question_id
         LEFT JOIN question_votes qv ON q.id = qv.question_id AND qv.user_id = ${userId || null}
         WHERE q.year = ${yearNum} AND q.semester = ${semesterNum}
-        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, qv.vote_type
+        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, u.badges, qv.vote_type
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -122,13 +125,14 @@ export async function GET(request: NextRequest) {
           q.downvotes,
           u.first_name,
           u.second_name,
+          u.badges,
           COUNT(a.id) as answer_count,
           qv.vote_type as user_vote
         FROM questions q
         JOIN users u ON q.user_id = u.id
         LEFT JOIN answers a ON q.id = a.question_id
         LEFT JOIN question_votes qv ON q.id = qv.question_id AND qv.user_id = ${userId || null}
-        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, qv.vote_type
+        GROUP BY q.id, q.user_id, q.upvotes, q.downvotes, u.id, u.first_name, u.second_name, u.badges, qv.vote_type
         ORDER BY q.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `
@@ -144,7 +148,8 @@ export async function GET(request: NextRequest) {
       author: {
         id: String(q.user_id),
         name: `${q.first_name}${q.second_name ? ' ' + q.second_name : ''}`,
-        avatar: `https://avatar.vercel.sh/${q.first_name.toLowerCase()}`
+        avatar: `https://avatar.vercel.sh/${q.first_name.toLowerCase()}`,
+        badges: q.badges || []
       },
       category: q.subject_code,
       categoryName: q.subject_code,

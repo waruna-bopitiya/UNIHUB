@@ -408,7 +408,16 @@ export default function QuestionDetailPage() {
                 className="w-8 h-8 rounded-full"
               />
               <div>
-                <p className="font-medium">{question.author.name}</p>
+                {question.author.id ? (
+                  <Link 
+                    href={`/qna/profile/${question.author.id}`}
+                    className="font-medium hover:text-primary transition-colors"
+                  >
+                    {question.author.name}
+                  </Link>
+                ) : (
+                  <p className="font-medium">{question.author.name}</p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   asked {formatDistanceToNow(question.createdAt, { addSuffix: true })}
                 </p>

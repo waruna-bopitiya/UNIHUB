@@ -27,7 +27,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Clear GPA and badges from users table (trigger will recalculate badges as empty)
+    await sql`
+      UPDATE users
+      SET gpa = NULL, badges = '{}'
+      WHERE id = ${userId}
+    `
+
     console.log('✅ Tutor profile deleted:', result[0].full_name)
+    console.log('✅ GPA and badges cleared for user:', userId)
 
     return NextResponse.json(
       { 

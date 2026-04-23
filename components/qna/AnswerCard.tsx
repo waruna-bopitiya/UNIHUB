@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns"
 import { MessageCircle, ChevronDown, ChevronUp, ArrowBigUp, ArrowBigDown, Edit2, Trash2, RotateCw } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 
 interface CommentType {
   id: string
@@ -27,6 +28,7 @@ interface AnswerCardProps {
       id: string
       name: string
       avatar: string
+      badges?: string[]
     }
     upvotes: number
     downvotes: number
@@ -487,7 +489,7 @@ export default function AnswerCard({ answer, questionId, userId, onVoteComplete,
 
               {/* Author info and action buttons */}
               <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/50 justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Link href={`/qna/profile/${answer.author.id}`}>
                     <img
                       src={answer.author.avatar}
@@ -495,12 +497,27 @@ export default function AnswerCard({ answer, questionId, userId, onVoteComplete,
                       className="w-6 h-6 rounded-full hover:opacity-80 transition-opacity"
                     />
                   </Link>
-                  <Link
-                    href={`/qna/profile/${answer.author.id}`}
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    {answer.author.name}
-                  </Link>
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={`/qna/profile/${answer.author.id}`}
+                      className="text-sm font-medium hover:text-primary transition-colors"
+                    >
+                      {answer.author.name}
+                    </Link>
+                    {/* Display badges */}
+                    {answer.author.badges && answer.author.badges.length > 0 && (
+                      <div className="flex gap-1">
+                        {answer.author.badges.map((badge, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs h-5 px-1.5">
+                            {badge === 'Gold Scholar' && '🥇'}
+                            {badge === 'Silver Scholar' && '🥈'}
+                            {badge === 'Bronze Scholar' && '🥉'}
+                            {badge}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(answer.createdAt, { addSuffix: true })}
                   </span>

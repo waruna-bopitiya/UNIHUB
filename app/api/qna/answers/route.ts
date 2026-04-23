@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
           a.created_at,
           u.first_name,
           u.second_name,
+          u.badges,
           av.vote_type as user_vote
         FROM answers a
         JOIN users u ON a.user_id = u.id
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
           a.created_at,
           u.first_name,
           u.second_name,
+          u.badges,
           NULL::varchar as user_vote
         FROM answers a
         JOIN users u ON a.user_id = u.id
@@ -68,7 +70,8 @@ export async function GET(request: NextRequest) {
         author: {
           id: a.user_id,
           name: `${a.first_name}${a.second_name ? ' ' + a.second_name : ''}`,
-          avatar: `https://avatar.vercel.sh/${a.first_name.toLowerCase()}`
+          avatar: `https://avatar.vercel.sh/${a.first_name.toLowerCase()}`,
+          badges: a.badges || []
         },
         upvotes: Math.max(0, parseInt(a.upvotes) || 0),
         downvotes: Math.max(0, parseInt(a.downvotes) || 0),
@@ -157,7 +160,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch user details for response
     const userResult = await sql`
-      SELECT first_name, second_name FROM users WHERE id = ${userId}
+      SELECT first_name, second_name, badges FROM users WHERE id = ${userId}
     `
 
     const user = userResult[0]
@@ -173,7 +176,8 @@ export async function POST(request: NextRequest) {
           author: {
             id: userId,
             name: `${user.first_name}${user.second_name ? ' ' + user.second_name : ''}`,
-            avatar: `https://avatar.vercel.sh/${user.first_name.toLowerCase()}`
+            avatar: `https://avatar.vercel.sh/${user.first_name.toLowerCase()}`,
+            badges: user.badges || []
           },
           upvotes: 0,
           downvotes: 0,
